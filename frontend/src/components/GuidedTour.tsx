@@ -83,34 +83,21 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
   const step = steps[i];
   const isLast = i === steps.length - 1;
 
-  // Position the card in a corner-anchored spot near the target, never overlapping
-  // the highlighted element and never off-screen. Falls back to centered.
-  let cardStyle: React.CSSProperties = {
+  // Place the card in the half of the screen OPPOSITE the highlighted element so
+  // it can never overlap it: target in the top half → card pinned to the bottom,
+  // target in the bottom half → card pinned to the top. Centered horizontally.
+  const targetInTopHalf = rect ? rect.top + rect.height / 2 < window.innerHeight / 2 : true;
+  const cardStyle: React.CSSProperties = {
     position: "fixed",
     left: "50%",
-    bottom: "24px",
     transform: "translateX(-50%)",
+    transition: prefersReducedMotion() ? "none" : "top 0.25s ease, bottom 0.25s ease",
+    ...(targetInTopHalf ? { bottom: 24 } : { top: 24 }),
   };
-  if (rect) {
-    const cardW = 360;
-    const margin = 16;
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const placeBelow = spaceBelow > 240;
-    const top = placeBelow ? rect.bottom + margin : Math.max(margin, rect.top - 240);
-    let left = rect.left;
-    if (left + cardW > window.innerWidth - margin) left = window.innerWidth - cardW - margin;
-    if (left < margin) left = margin;
-    cardStyle = {
-      position: "fixed",
-      left,
-      top,
-      transform: "none",
-      transition: prefersReducedMotion() ? "none" : "top 0.28s ease, left 0.28s ease",
-    };
-  }
 
   return (
-    <div className="fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label="Guided tour">
+    // z-[60] sits ABOVE the highlighted element (z-45) so the card is never covered.
+    <div className="fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-label="Guided tour">
       {/* Click-blocker: prevents interacting with the page during the tour but does
           NOT close it. The tour only closes via Skip / Finish. */}
       <div className="absolute inset-0" aria-hidden />
@@ -119,7 +106,7 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
         ref={cardRef}
         tabIndex={-1}
         style={cardStyle}
-        className="z-50 w-[360px] max-w-[92vw] rounded-xl border border-line bg-white shadow-raised focus:outline-none"
+        className="relative z-10 w-[380px] max-w-[92vw] rounded-xl border border-brand/30 bg-white shadow-raised ring-1 ring-black/5 focus:outline-none"
         data-testid="tour-card"
       >
         {/* header row: illustration + progress, full width (no overlap) */}

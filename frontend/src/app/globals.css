@@ -49,11 +49,12 @@ body {
   }
 }
 
-/* Guided-tour spotlight */
+/* Guided-tour spotlight — subtle ring + light page dim.
+   Kept below the tour card's stacking context so the card is never overlapped. */
 .tour-highlight {
   position: relative;
   z-index: 45;
-  box-shadow: 0 0 0 3px #3b82f6, 0 0 0 9999px rgba(15, 23, 42, 0.45);
-  border-radius: 0.875rem;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.55), 0 0 0 9999px rgba(15, 23, 42, 0.28);
+  border-radius: 0.75rem;
   transition: box-shadow 0.2s ease;
 }
