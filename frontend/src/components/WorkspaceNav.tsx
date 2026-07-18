@@ -12,14 +12,10 @@ export function WorkspaceNav({
   persona,
   homeHref,
   links,
-  switchHref,
-  switchLabel,
 }: {
   persona: "VC" | "Founder";
   homeHref: string;
   links: NavLink[];
-  switchHref: string;
-  switchLabel: string;
 }) {
   const pathname = usePathname();
   const tone = persona === "VC" ? "bg-brand text-white" : "bg-positive text-white";
@@ -53,9 +49,6 @@ export function WorkspaceNav({
               </Link>
             );
           })}
-          <Link href={switchHref} className="ml-2 rounded-lg border border-line px-3 py-1.5 text-sm font-medium text-ink-muted hover:bg-surface-sunken">
-            {switchLabel}
-          </Link>
         </nav>
       </div>
     </header>

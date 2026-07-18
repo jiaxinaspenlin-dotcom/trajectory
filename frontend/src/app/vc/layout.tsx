@@ -10,13 +10,7 @@ const VC_LINKS = [
 export default function VcLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <WorkspaceNav
-        persona="VC"
-        homeHref="/vc"
-        links={VC_LINKS}
-        switchHref="/"
-        switchLabel="Switch role"
-      />
+      <WorkspaceNav persona="VC" homeHref="/vc" links={VC_LINKS} />
       <main className="mx-auto max-w-7xl px-4 py-6">{children}</main>
     </>
   );

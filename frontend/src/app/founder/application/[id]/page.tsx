@@ -41,8 +41,8 @@ export default function ApplicationStatus() {
           <p className="text-sm text-ink-muted">{data.sector || "Sector not set"} · {data.geography || "Geography not set"}</p>
         </div>
         <div className="flex gap-2">
-          <Link href="/founder" className="btn-secondary">All applications</Link>
-          {!deckReady && <Link href="/founder/apply" className="btn-primary">Upload pitch deck</Link>}
+          <Link href="/founder/applications" className="btn-secondary">My applications</Link>
+          {!deckReady && <Link href="/founder" className="btn-primary">Start / finish an application</Link>}
         </div>
       </div>
 
