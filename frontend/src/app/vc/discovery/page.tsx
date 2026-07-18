@@ -58,7 +58,7 @@ function NlSearch() {
         rows={2} value={q} onChange={(e) => setQ(e.target.value)}
       />
       <div className="mt-2 flex items-center gap-2">
-        <button className="btn-primary" onClick={parse} disabled={loading}>Interpret query</button>
+        <button className="btn-primary" onClick={parse} disabled={loading}>Interpret Query</button>
         {loading && <Spinner />}
       </div>
       {error && <div className="mt-2"><ErrorState message={error} /></div>}
@@ -77,7 +77,7 @@ function NlSearch() {
           <p className="mt-2 text-xs text-ink-muted">
             Searching: {sources.join(", ")}. Only connected sources are searched — never the entire internet.
           </p>
-          <button className="btn-secondary mt-2" onClick={apply} disabled={loading}>Apply search</button>
+          <button className="btn-secondary mt-2" onClick={apply} disabled={loading}>Apply Search</button>
         </div>
       )}
 
@@ -131,7 +131,7 @@ function GithubSync() {
           <span className="label">Display name (optional)</span>
           <input className="mt-1 w-48 rounded-lg border border-line px-3 py-2 text-sm" value={name} onChange={(e) => setName(e.target.value)} />
         </label>
-        <button className="btn-primary" onClick={sync} disabled={loading || !username.trim()}>Sync from GitHub</button>
+        <button className="btn-primary" onClick={sync} disabled={loading || !username.trim()}>Sync From GitHub</button>
         {loading && <Spinner label="Syncing…" />}
       </div>
       <p className="mt-2 text-xs text-ink-muted">
@@ -142,7 +142,7 @@ function GithubSync() {
         <div className="mt-3 rounded-lg border border-line bg-surface-sunken p-3 text-sm">
           <p className="font-medium text-ink">Sync {result.sync?.status}: {result.sync?.message}</p>
           <p className="text-ink-muted">Evidence added: {result.sync?.evidence_added} · Founder score: {result.founder_score ?? "—"}</p>
-          {result.opportunity_id && <Link href={`/vc/opportunities/${result.opportunity_id}`} className="btn-secondary mt-2">Open founder profile →</Link>}
+          {result.opportunity_id && <Link href={`/vc/opportunities/${result.opportunity_id}`} className="btn-secondary mt-2">Open Founder Profile →</Link>}
         </div>
       )}
     </Section>

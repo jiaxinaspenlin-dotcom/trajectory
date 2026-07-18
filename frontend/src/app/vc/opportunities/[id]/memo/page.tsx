@@ -39,7 +39,7 @@ export default function MemoPage() {
         <div className="flex gap-2">
           <Link href={`/vc/opportunities/${id}`} className="btn-secondary">Back</Link>
           <button className="btn-secondary" onClick={() => window.print()}>Print / PDF</button>
-          <button className="btn-primary" onClick={generate}>Regenerate memo</button>
+          <button className="btn-primary" onClick={generate}>Regenerate Memo</button>
         </div>
       </div>
 
@@ -58,7 +58,7 @@ export default function MemoPage() {
       )}
 
       {memo.loading ? <Spinner /> : memo.error ? (
-        <EmptyState title="No memo yet" hint="Generate the evidence-backed memo." action={<button className="btn-primary" onClick={generate}>Generate memo</button>} />
+        <EmptyState title="No memo yet" hint="Generate the evidence-backed memo." action={<button className="btn-primary" onClick={generate}>Generate Memo</button>} />
       ) : memo.data ? (
         <>
           {memo.data.recommended_action && (

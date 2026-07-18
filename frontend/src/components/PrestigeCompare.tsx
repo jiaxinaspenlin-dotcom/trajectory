@@ -51,7 +51,7 @@ export function PrestigeCompare({ entries }: { entries: RankingEntry[] }) {
                       {e.rank_delta > 0 ? `↑${e.rank_delta}` : `↓${Math.abs(e.rank_delta)}`}
                     </span>
                   )}
-                  {e.substantial_change && <Badge tone="bg-caution-wash text-caution">substantial</Badge>}
+                  {e.substantial_change && <Badge tone="bg-caution-wash text-caution">Substantial</Badge>}
                 </td>
                 <td className="text-xs text-ink-muted">
                   {e.influential_prestige_variables.slice(0, 2).map((v) => v.label).join(", ") || "—"}

@@ -38,7 +38,7 @@ export default function SettingsPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Section title="AI Provider (OpenAI)" subtitle="Server-side only — the key never reaches the browser">
-          <Row label="Status" value={data.openai.connected ? <Badge tone="bg-positive-wash text-positive">connected</Badge> : <Badge tone="bg-negative-wash text-negative">not configured</Badge>} />
+          <Row label="Status" value={data.openai.connected ? <Badge tone="bg-positive-wash text-positive">Connected</Badge> : <Badge tone="bg-negative-wash text-negative">Not Configured</Badge>} />
           <Row label="Model" value={data.openai.model} />
           <Row label="Key" value={<span className="font-mono text-xs">{data.openai.key_hint || "not set"}</span>} />
           {!data.openai.connected && (
@@ -50,21 +50,21 @@ export default function SettingsPage() {
           <Row label="Status" value={<Badge tone="bg-positive-wash text-positive">live</Badge>} />
           <Row label="Authenticated" value={data.github.authenticated ? "Yes" : "No (anonymous)"} />
           <Row label="Token" value={<span className="font-mono text-xs">{data.github.token_hint || "not set"}</span>} />
-          <Row label="Rate limit" value={data.github.rate_limit} />
+          <Row label="Rate Limit" value={data.github.rate_limit} />
           {connectors.data?.live?.[0] && (
             <Row label="Remaining" value={String(connectors.data.live[0].rate_limit_remaining ?? "—")} />
           )}
         </Section>
 
         <Section title="Database" subtitle="Never exposes credentials">
-          <Row label="Status" value={data.database.connected ? <Badge tone="bg-positive-wash text-positive">connected</Badge> : <Badge tone="bg-negative-wash text-negative">down</Badge>} />
+          <Row label="Status" value={data.database.connected ? <Badge tone="bg-positive-wash text-positive">Connected</Badge> : <Badge tone="bg-negative-wash text-negative">Down</Badge>} />
           <Row label="Engine" value={data.database.scheme} />
         </Section>
 
         <Section title="Connectors" subtitle="Live vs planned (honest status)">
           <div className="flex flex-wrap gap-1">
-            {data.live_connectors.map((c) => <Badge key={c} tone="bg-positive-wash text-positive">{c} · live</Badge>)}
-            {data.unavailable_connectors.map((c) => <Badge key={c} tone="bg-neutral-wash text-neutral">{c} · planned</Badge>)}
+            {data.live_connectors.map((c) => <Badge key={c} tone="bg-positive-wash text-positive">{c} · Live</Badge>)}
+            {data.unavailable_connectors.map((c) => <Badge key={c} tone="bg-neutral-wash text-neutral">{c} · Planned</Badge>)}
           </div>
           <p className="mt-2 text-xs text-ink-muted">Planned connectors are not implemented and are never presented as live.</p>
         </Section>
@@ -91,7 +91,7 @@ export default function SettingsPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Section title="Guided Tour">
-          <button className="btn-secondary" onClick={restartTour}>Restart guided tour</button>
+          <button className="btn-secondary" onClick={restartTour}>Restart Guided Tour</button>
           {tourReset && <p className="mt-2 text-xs text-positive">Tour reset — it will appear next time you open the dashboard.</p>}
         </Section>
         <Section title="Privacy & Limitations">

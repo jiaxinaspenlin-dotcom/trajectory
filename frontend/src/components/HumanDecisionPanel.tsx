@@ -52,7 +52,7 @@ export function HumanDecisionPanel({
 
       {saved ? (
         <div className="mt-3 rounded-lg border border-positive/30 bg-positive-wash p-3 text-sm">
-          <Badge tone="bg-white text-positive">recorded</Badge>
+          <Badge tone="bg-white text-positive">Recorded</Badge>
           <p className="mt-1 text-ink-soft">
             <strong>{saved.decided_by}</strong> chose <strong>{saved.chosen_action}</strong> ({saved.decision}).
           </p>

@@ -36,7 +36,7 @@ export default function MyApplications() {
           <h1 className="text-xl font-semibold text-ink">My Applications</h1>
           <p className="text-sm text-ink-muted">Applications you&rsquo;ve submitted from this device.</p>
         </div>
-        <Link href="/founder" className="btn-primary">Start a new application</Link>
+        <Link href="/founder" className="btn-primary">Start a New Application</Link>
       </div>
 
       <Section title="Submitted">
@@ -56,11 +56,11 @@ export default function MyApplications() {
                 </div>
                 <div className="flex items-center gap-2">
                   {a.document?.status === "extracted" ? (
-                    <Badge tone="bg-positive-wash text-positive">deck received</Badge>
+                    <Badge tone="bg-positive-wash text-positive">Deck Received</Badge>
                   ) : (
-                    <Badge tone="bg-caution-wash text-caution">deck pending</Badge>
+                    <Badge tone="bg-caution-wash text-caution">Deck Pending</Badge>
                   )}
-                  <Badge tone="bg-neutral-wash text-neutral">under review</Badge>
+                  <Badge tone="bg-neutral-wash text-neutral">Under Review</Badge>
                 </div>
               </Link>
             ))}
@@ -69,7 +69,7 @@ export default function MyApplications() {
           <EmptyState
             title="You haven't applied yet"
             hint="Start an application — it takes under a minute with a company name and a PDF pitch deck."
-            action={<Link href="/founder" className="btn-primary">Start your application</Link>}
+            action={<Link href="/founder" className="btn-primary">Start Your Application</Link>}
           />
         )}
       </Section>

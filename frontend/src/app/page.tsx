@@ -28,7 +28,7 @@ export default function Landing() {
             className="group card flex flex-col p-6 transition-shadow hover:shadow-raised focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           >
             <div className="flex items-center justify-between">
-              <span className="chip bg-brand-wash text-brand">For investors</span>
+              <span className="chip bg-brand-wash text-brand">For Investors</span>
               <div className="flex -space-x-2">
                 <BullCharacter size={40} />
                 <RefereeCharacter size={40} />
@@ -58,7 +58,7 @@ export default function Landing() {
             className="group card flex flex-col p-6 transition-shadow hover:shadow-raised focus:outline-none focus-visible:ring-2 focus-visible:ring-positive"
           >
             <div className="flex items-center justify-between">
-              <span className="chip bg-positive-wash text-positive">For founders</span>
+              <span className="chip bg-positive-wash text-positive">For Founders</span>
               <BullCharacter size={40} />
             </div>
             <h2 className="mt-4 text-xl font-semibold text-ink">I&rsquo;m a Founder</h2>

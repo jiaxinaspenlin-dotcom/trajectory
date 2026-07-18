@@ -16,7 +16,7 @@ export function ArenaHero() {
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-semibold text-ink">The Investment Arena</h2>
-            <span className="chip bg-brand-wash text-brand">how Trajectory decides</span>
+            <span className="chip bg-brand-wash text-brand">How Trajectory Decides</span>
           </div>
           <p className="mt-2 max-w-xl text-sm text-ink-soft">
             On every founder, a <strong className="text-bull">Bull</strong> makes the strongest

@@ -63,7 +63,7 @@ export default function DashboardPage() {
             Your deal pipeline: Sourcing → Screening → Diligence → Decision. New here? Take the tour.
           </p>
         </div>
-        <button className="btn-secondary" onClick={() => setTourOpen(true)}>Take the guided tour</button>
+        <button className="btn-secondary" onClick={() => setTourOpen(true)}>Take the Guided Tour</button>
       </div>
 
       {/* The Investment Arena — the first thing an investor sees; anchors the tour */}
@@ -83,7 +83,7 @@ export default function DashboardPage() {
                 <p className="mt-2 text-xs text-ink-muted">Every score, ranking and recommendation is evaluated through this thesis.</p>
               </>
             ) : (
-              <Link href="/vc/thesis" className="btn-primary">Set up a thesis</Link>
+              <Link href="/vc/thesis" className="btn-primary">Set Up a Thesis</Link>
             )}
           </div>
         </Section>
@@ -98,10 +98,10 @@ export default function DashboardPage() {
 
         <Section title="Connectors" subtitle="Live vs planned">
           <div className="flex flex-wrap gap-2">
-            {data.connectors.live.map((c) => <Badge key={c} tone="bg-positive-wash text-positive">{c} · live</Badge>)}
-            {data.connectors.planned.map((c) => <Badge key={c} tone="bg-neutral-wash text-neutral">{c} · planned</Badge>)}
+            {data.connectors.live.map((c) => <Badge key={c} tone="bg-positive-wash text-positive">{c} · Live</Badge>)}
+            {data.connectors.planned.map((c) => <Badge key={c} tone="bg-neutral-wash text-neutral">{c} · Planned</Badge>)}
           </div>
-          <Link href="/vc/settings" className="btn-ghost mt-3 text-xs">Data sources &amp; status →</Link>
+          <Link href="/vc/settings" className="btn-ghost mt-3 text-xs">Data Sources &amp; Status →</Link>
         </Section>
       </div>
 

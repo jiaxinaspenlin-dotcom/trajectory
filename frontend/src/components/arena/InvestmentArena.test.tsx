@@ -27,7 +27,7 @@ describe("InvestmentArena", () => {
   it("pins detailed analysis on click", () => {
     render(<InvestmentArena debate={debate} />);
     fireEvent.click(screen.getByTestId("arena-referee"));
-    expect(screen.getByText("Referee assessment")).toBeInTheDocument();
+    expect(screen.getByText("Referee Assessment")).toBeInTheDocument();
     expect(screen.getByText(/Independent traction data/)).toBeInTheDocument();
   });
 

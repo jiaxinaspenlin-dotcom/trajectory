@@ -29,7 +29,7 @@ export function WorkspaceNav({
             <span className="text-sm font-semibold text-ink">Trajectory</span>
           </Link>
           <span className={`chip ${persona === "VC" ? "bg-brand-wash text-brand" : "bg-positive-wash text-positive"}`}>
-            {persona === "VC" ? "Investor workspace" : "Founder portal"}
+            {persona === "VC" ? "Investor Workspace" : "Founder Portal"}
           </span>
         </div>
 

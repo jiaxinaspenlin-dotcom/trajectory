@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { RefereeCharacter } from "./arena/Characters";
 import { api } from "@/lib/api";
 
@@ -17,6 +17,7 @@ function prefersReducedMotion() {
 export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: boolean; onClose: () => void }) {
   const [i, setI] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const highlighted = useRef<Element | null>(null);
 
@@ -79,64 +80,62 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
     if (open) cardRef.current?.focus();
   }, [open, i]);
 
+  // Position the card using its ACTUAL measured height, then clamp so the whole
+  // card — including the pinned footer with Next/Back — is always inside the
+  // viewport. The card's max-height is capped at (viewport - 2*margin) and its
+  // body scrolls, so clamping can never push the footer off-screen. This makes
+  // the "Next button off the bottom" bug structurally impossible on any step.
+  const measure = useCallback(() => {
+    const el = cardRef.current;
+    if (!el) return;
+    const margin = 16;
+    const gap = 12;
+    const vh = window.innerHeight;
+    const vw = window.innerWidth;
+    const h = el.offsetHeight; // real height, already capped by max-height
+    const w = el.offsetWidth;
+    let top: number;
+    let left: number;
+    if (rect) {
+      if (rect.bottom + gap + h <= vh - margin) top = rect.bottom + gap; // below target
+      else if (rect.top - gap - h >= margin) top = rect.top - gap - h; // above target
+      else top = rect.bottom + gap; // clamped below
+      left = rect.left + rect.width / 2 - w / 2;
+    } else {
+      top = (vh - h) / 2;
+      left = (vw - w) / 2;
+    }
+    top = Math.max(margin, Math.min(top, vh - margin - h));
+    left = Math.max(margin, Math.min(left, vw - margin - w));
+    setPos({ top, left });
+  }, [rect]);
+
+  useLayoutEffect(() => {
+    if (open) measure();
+  }, [open, i, rect, measure]);
+
+  useEffect(() => {
+    if (!open) return;
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [open, measure]);
+
   if (!open) return null;
   const step = steps[i];
   const isLast = i === steps.length - 1;
 
-  // Anchor the card beside the highlighted element on whichever side has more
-  // room, and cap its height to the space available. Combined with the card's
-  // scrollable body + pinned footer, the Next/Back/Skip buttons are ALWAYS on
-  // screen — the card can never overflow the viewport. z-[60] keeps it above
-  // the highlight ring. When neither side has enough room (a very tall target),
-  // it falls back to a centered, scrollable card.
-  const gap = 12;
-  const margin = 16;
-  const cardW = 380;
-  const MIN_ADJACENT = 220;
-  const vh = typeof window !== "undefined" ? window.innerHeight : 800;
-  const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
-
-  let cardStyle: React.CSSProperties = {
+  const cardStyle: React.CSSProperties = {
     position: "fixed",
-    left: "50%",
-    top: "50%",
-    transform: "translate(-50%, -50%)",
-    maxHeight: `calc(100vh - ${2 * margin}px)`,
+    top: pos ? pos.top : -9999,
+    left: pos ? pos.left : -9999,
+    maxHeight: "calc(100vh - 32px)",
+    opacity: pos ? 1 : 0,
+    transition: prefersReducedMotion() ? "none" : "top 0.18s ease, left 0.18s ease",
   };
-  if (rect) {
-    const spaceBelow = vh - rect.bottom - gap - margin;
-    const spaceAbove = rect.top - gap - margin;
-    const best = Math.max(spaceBelow, spaceAbove);
-    let left = rect.left + rect.width / 2 - cardW / 2;
-    left = Math.min(Math.max(left, margin), vw - cardW - margin);
-    const transition = prefersReducedMotion() ? "none" : "top 0.2s ease, bottom 0.2s ease, left 0.2s ease";
-
-    if (best >= MIN_ADJACENT) {
-      const placeBelow = spaceBelow >= spaceAbove;
-      cardStyle = {
-        position: "fixed",
-        left,
-        transform: "none",
-        maxHeight: placeBelow ? spaceBelow : spaceAbove,
-        transition,
-        ...(placeBelow ? { top: rect.bottom + gap } : { bottom: vh - rect.top + gap }),
-      };
-    } else {
-      // very tall target — center the card so it always fully fits and scrolls.
-      cardStyle = {
-        position: "fixed",
-        left,
-        top: margin,
-        transform: "none",
-        maxHeight: vh - 2 * margin,
-        transition,
-      };
-    }
-  }
 
   return (
     // z-[60] sits ABOVE the highlighted element (z-45) so the card is never covered.
-    <div className="fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-label="Guided tour">
+    <div className="fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-label="Guided Tour">
       {/* Click-blocker: prevents interacting with the page during the tour but does
           NOT close it. The tour only closes via Skip / Finish. */}
       <div className="absolute inset-0" aria-hidden />
@@ -175,7 +174,7 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
 
         {/* footer — pinned; the Next/Back/Skip buttons are always visible */}
         <div className="flex shrink-0 items-center justify-between gap-2 border-t border-line bg-white px-4 py-3">
-          <button className="btn-ghost text-xs" onClick={skip} data-testid="tour-skip">Skip tour</button>
+          <button className="btn-ghost text-xs" onClick={skip} data-testid="tour-skip">Skip Tour</button>
           <div className="flex gap-2">
             <button className="btn-secondary text-xs" onClick={back} disabled={i === 0} data-testid="tour-back">
               Back

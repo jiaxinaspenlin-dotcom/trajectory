@@ -86,8 +86,8 @@ export function InvestmentArena({ debate, expandable = true }: { debate: Debate 
 
   const detail = (
     <div className="mt-4 border-t border-line pt-4" data-testid="arena-detail">
-      {pinned === "bull" && bull && <SideDetail title="Bull — case to advance" tone="text-bull" argument={bull} />}
-      {pinned === "bear" && bear && <SideDetail title="Bear — case for caution" tone="text-bear" argument={bear} />}
+      {pinned === "bull" && bull && <SideDetail title="Bull — Case to Advance" tone="text-bull" argument={bull} />}
+      {pinned === "bear" && bear && <SideDetail title="Bear — Case for Caution" tone="text-bear" argument={bear} />}
       {pinned === "referee" && referee && <RefereeDetail referee={referee} />}
       {!pinned && (
         <p className="text-sm text-ink-muted">
@@ -107,7 +107,7 @@ export function InvestmentArena({ debate, expandable = true }: { debate: Debate 
       </div>
       {referee && (
         <div className="mt-3 rounded-lg bg-brand-wash p-3 text-center">
-          <div className="label text-brand">Referee recommends</div>
+          <div className="label text-brand">Referee Recommends</div>
           <div className="text-lg font-semibold text-brand">{referee.recommended_action}</div>
           <div className="text-xs text-ink-muted">
             Confidence {pct(referee.confidence)} ·{" "}
@@ -148,8 +148,8 @@ export function InvestmentArena({ debate, expandable = true }: { debate: Debate 
               <button className="btn-secondary" onClick={() => setExpanded(false)}>Close</button>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
-              {bull && <SideDetail title="Bull — case to advance" tone="text-bull" argument={bull} />}
-              {bear && <SideDetail title="Bear — case for caution" tone="text-bear" argument={bear} />}
+              {bull && <SideDetail title="Bull — Case to Advance" tone="text-bull" argument={bull} />}
+              {bear && <SideDetail title="Bear — Case for Caution" tone="text-bear" argument={bear} />}
             </div>
             {referee && <div className="mt-4"><RefereeDetail referee={referee} /></div>}
           </div>
@@ -179,7 +179,7 @@ function SideDetail({ title, tone, argument }: { title: string; tone: string; ar
 function RefereeDetail({ referee }: { referee: NonNullable<Debate["referee"]> }) {
   return (
     <div className="rounded-lg border border-line bg-surface-sunken p-4">
-      <h4 className="text-sm font-semibold text-referee">Referee assessment</h4>
+      <h4 className="text-sm font-semibold text-referee">Referee Assessment</h4>
       <p className="mt-1 text-sm text-ink-soft">{referee.rationale}</p>
       <dl className="mt-3 grid gap-3 sm:grid-cols-2">
         <div>

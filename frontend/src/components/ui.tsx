@@ -7,7 +7,7 @@ export function Badge({ children, tone = "bg-neutral-wash text-neutral", title }
 }
 
 export function DemoBadge() {
-  return <Badge tone="bg-neutral-wash text-neutral" title="Fictional demo data">Demo data</Badge>;
+  return <Badge tone="bg-neutral-wash text-neutral" title="Fictional demo data">Demo Data</Badge>;
 }
 
 export function Section({ title, subtitle, children, right, id }: { title: string; subtitle?: string; children: ReactNode; right?: ReactNode; id?: string }) {

@@ -36,20 +36,20 @@ export default function ApplicationStatus() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-semibold text-ink">{data.company_name}</h1>
-            <Badge tone="bg-positive-wash text-positive">under review</Badge>
+            <Badge tone="bg-positive-wash text-positive">Under Review</Badge>
           </div>
           <p className="text-sm text-ink-muted">{data.sector || "Sector not set"} · {data.geography || "Geography not set"}</p>
         </div>
         <div className="flex gap-2">
           <Link href="/founder/applications" className="btn-secondary">My Applications</Link>
-          {!deckReady && <Link href="/founder" className="btn-primary">Start / finish an application</Link>}
+          {!deckReady && <Link href="/founder" className="btn-primary">Start / Finish an Application</Link>}
         </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <Stat label="Pitch deck" value={deckReady ? "Received" : "Pending"} sub={data.document ? `${data.document.num_pages} pages parsed` : "Not uploaded yet"} tone={deckReady ? "text-positive" : "text-caution"} />
-        <Stat label="Users (reported)" value={data.num_users ?? "—"} />
-        <Stat label="Funding requested" value={data.funding_requested ? `$${data.funding_requested.toLocaleString()}` : "—"} />
+        <Stat label="Pitch Deck" value={deckReady ? "Received" : "Pending"} sub={data.document ? `${data.document.num_pages} pages parsed` : "Not uploaded yet"} tone={deckReady ? "text-positive" : "text-caution"} />
+        <Stat label="Users (Reported)" value={data.num_users ?? "—"} />
+        <Stat label="Funding Requested" value={data.funding_requested ? `$${data.funding_requested.toLocaleString()}` : "—"} />
       </div>
 
       <Section title="First-Pass Screen" subtitle="Automated, before human review">
@@ -61,7 +61,7 @@ export default function ApplicationStatus() {
           <ul className="space-y-2">
             {data.missing_fields.map((m) => (
               <li key={m} className="flex items-center gap-2 rounded-lg bg-surface-sunken px-3 py-2 text-sm text-ink-soft">
-                <Badge tone="bg-caution-wash text-caution">requested</Badge> {m}
+                <Badge tone="bg-caution-wash text-caution">Requested</Badge> {m}
               </li>
             ))}
           </ul>
