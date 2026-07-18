@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-inter: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+html,
+body {
+  background: #f8fafc;
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Respect reduced-motion everywhere. Components also check this in JS. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl border border-line bg-surface shadow-card;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-brand text-white hover:bg-brand-soft;
+  }
+  .btn-secondary {
+    @apply btn border border-line bg-white text-ink-soft hover:bg-surface-sunken;
+  }
+  .btn-ghost {
+    @apply btn text-ink-soft hover:bg-surface-sunken;
+  }
+  .chip {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+  .label {
+    @apply text-xs font-medium uppercase tracking-wide text-ink-muted;
+  }
+}
+
+/* Guided-tour spotlight */
+.tour-highlight {
+  position: relative;
+  z-index: 45;
+  box-shadow: 0 0 0 3px #3b82f6, 0 0 0 9999px rgba(15, 23, 42, 0.45);
+  border-radius: 0.875rem;
+  transition: box-shadow 0.2s ease;
+}

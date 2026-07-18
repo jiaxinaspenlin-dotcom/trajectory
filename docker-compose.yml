@@ -1,0 +1,50 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: trajectory
+      POSTGRES_PASSWORD: trajectory
+      POSTGRES_DB: trajectory
+    ports:
+      - "5432:5432"
+    volumes:
+      - trajectory_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trajectory"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://trajectory:trajectory@db:5432/trajectory
+      BACKEND_CORS_ORIGINS: http://localhost:3000
+      ENVIRONMENT: development
+      # Pass secrets through from your shell / .env — never hardcode here.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-opus-4-8}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      MAX_UPLOAD_SIZE_MB: "15"
+      AI_RATE_LIMIT_PER_MINUTE: "20"
+    ports:
+      - "8000:8000"
+    volumes:
+      - trajectory_uploads:/app/uploads
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+
+volumes:
+  trajectory_pgdata:
+  trajectory_uploads:

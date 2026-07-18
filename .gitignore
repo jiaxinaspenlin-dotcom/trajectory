@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.db
+*.sqlite3
+
+# Env
+.env
+.env.local
+
+# Uploads (evidence files live outside static dir; never commit)
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Node / Next
+node_modules/
+.next/
+out/
+frontend/coverage/
+npm-debug.log*
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+*.log
