@@ -1,4 +1,4 @@
-import { Assessment, Debate, Momentum, RankingEntry, WorkflowStatus } from "@/lib/types";
+import { Assessment, Debate, Momentum, RankingEntry } from "@/lib/types";
 
 export const debate: Debate = {
   id: 1, opportunity_id: 1, version: 1, generated_by: "fallback", computed_at: "2026-07-18T00:00:00Z",
@@ -50,11 +50,3 @@ export const ranking: RankingEntry[] = [
     standard_score: 68, prestige_free_score: 78, substantive_score: 78, prestige_score: 10,
     influential_prestige_variables: [], sensitivity: 0.1, substantial_change: false },
 ];
-
-export const workflow: WorkflowStatus = {
-  opportunity_id: 1, stage: "diligence", status: "in_diligence", first_signal_at: "2026-07-18T00:00:00Z",
-  recommendation_at: "2026-07-18T02:00:00Z", elapsed_seconds: 7200, elapsed_human: "2h 0m",
-  remaining_seconds: 79200, remaining_human: "22h 0m", target_hours: 24, target_met: true,
-  time_to_recommendation_human: "2h 0m", open_diligence_count: 1, blockers: ["1 open diligence item."],
-  current_recommendation: { action: "Continue Diligence", confidence: 0.6, rationale: "Mixed evidence." },
-};

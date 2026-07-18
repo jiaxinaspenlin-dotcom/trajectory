@@ -7,9 +7,19 @@ import { api } from "@/lib/api";
 import { Badge, DemoBadge, ErrorState, Section, Spinner, Stat } from "@/components/ui";
 import { DASHBOARD_TOUR, GuidedTour } from "@/components/GuidedTour";
 import { PrestigeCompare } from "@/components/PrestigeCompare";
-import { WorkflowTimer } from "@/components/WorkflowTimer";
 import { humanStatus, trajectoryTone } from "@/lib/format";
-import { RankingEntry, WorkflowStatus } from "@/lib/types";
+import { RankingEntry } from "@/lib/types";
+
+interface ActionItem {
+  opportunity_id: number;
+  name: string;
+  founder_name: string | null;
+  entry_type: string;
+  stage: string;
+  next_action: string;
+  priority: number;
+  age_days: number;
+}
 
 interface Dashboard {
   thesis: { fund_name: string; sectors: string[]; stages: string[]; geographies: string[] } | null;
@@ -18,8 +28,7 @@ interface Dashboard {
   recent_inbound_applications: any[];
   highest_momentum: { opportunity_id: number; founder_name: string; company_name: string; trajectory: string; change_30d: number | null; current_score: number }[];
   largest_prestige_changes: RankingEntry[];
-  needs_attention: WorkflowStatus[];
-  timers: WorkflowStatus[];
+  action_queue: ActionItem[];
   recent_evidence: { id: number; kind: string; title: string; source_name: string; collected_at: string }[];
   connectors: { live: string[]; planned: string[] };
 }
@@ -105,6 +114,31 @@ export default function DashboardPage() {
         </Section>
       </div>
 
+      {/* Action queue — the primary "what should I do next, and on whom?" list */}
+      <Section title="Action queue" subtitle="Your prioritized next steps — the deals you can act on now come first">
+        <div data-tour="action-queue" className="space-y-2">
+          {data.action_queue.length ? data.action_queue.map((a) => (
+            <Link
+              key={a.opportunity_id}
+              href={`/vc/opportunities/${a.opportunity_id}`}
+              className="flex items-center justify-between gap-3 rounded-lg border border-line bg-surface px-3 py-2.5 hover:border-brand/40"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-ink">
+                  {a.name}
+                  {a.founder_name && a.founder_name !== a.name && <span className="font-normal text-ink-muted"> · {a.founder_name}</span>}
+                </p>
+                <p className="text-xs text-ink-muted">{humanStatus(a.entry_type)} · {humanStatus(a.stage)}</p>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <Badge tone={a.priority === 1 ? "bg-brand-wash text-brand" : "bg-neutral-wash text-neutral"}>{a.next_action}</Badge>
+                <span className="w-14 text-right text-xs text-ink-muted">{a.age_days === 0 ? "today" : `${a.age_days}d open`}</span>
+              </div>
+            </Link>
+          )) : <p className="text-sm text-ink-muted">Nothing needs your action right now. 🎉</p>}
+        </div>
+      </Section>
+
       <div className="grid gap-6 lg:grid-cols-2">
         <Section title="Highest Founder Momentum" subtitle="Direction & rate of change">
           <div data-tour="momentum" className="space-y-2">
@@ -122,31 +156,6 @@ export default function DashboardPage() {
           </div>
         </Section>
 
-        <Section title="Needs attention" subtitle="Open blockers & timers">
-          <div data-tour="attention" className="space-y-2">
-            {data.needs_attention.length ? data.needs_attention.map((t) => (
-              <Link key={t.opportunity_id} href={`/vc/opportunities/${t.opportunity_id}`} className="block rounded-lg bg-surface-sunken px-3 py-2 hover:bg-line/40">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-ink">Opportunity #{t.opportunity_id}</span>
-                  <span className="text-xs text-ink-muted">{t.remaining_human} left</span>
-                </div>
-                <p className="text-xs text-caution">{t.blockers[0]}</p>
-              </Link>
-            )) : <p className="text-sm text-ink-muted">Nothing blocked. 🎉</p>}
-          </div>
-        </Section>
-      </div>
-
-      <Section title="Standard vs prestige-free ranking" subtitle="Largest movements when prestige is masked">
-        {ranking.data ? <PrestigeCompare entries={ranking.data.entries} /> : <Spinner />}
-      </Section>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Section title="24-hour decision timers" subtitle="Time to actionable recommendation">
-          <div data-tour="timers" className="space-y-3">
-            {data.timers.slice(0, 4).map((t) => <WorkflowTimer key={t.opportunity_id} w={t} />)}
-          </div>
-        </Section>
         <Section title="Recent evidence updates" subtitle="Newest collected items" right={<DemoBadge />}>
           <div data-tour="evidence" className="space-y-2">
             {data.recent_evidence.map((e) => (
@@ -161,6 +170,10 @@ export default function DashboardPage() {
           </div>
         </Section>
       </div>
+
+      <Section title="Standard vs prestige-free ranking" subtitle="Largest movements when prestige is masked">
+        {ranking.data ? <PrestigeCompare entries={ranking.data.entries} /> : <Spinner />}
+      </Section>
 
       {/* An Arena reference is present on each founder profile; the tour points here too. */}
       <div data-tour="arena" className="rounded-xl border border-dashed border-line bg-surface-sunken p-4 text-center text-sm text-ink-muted">

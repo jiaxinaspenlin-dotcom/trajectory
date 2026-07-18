@@ -198,8 +198,8 @@ def dashboard(db: Session = Depends(get_db)) -> dict:
     thesis = active_thesis(db, fund.id)
     opps = db.scalars(select(Opportunity).where(Opportunity.fund_id == fund.id)).all()
 
+    from app.services.action_queue import build_action_queue
     from app.services.founder import momentum_for
-    from app.services.workflow import workflow_status
 
     stage_counts: dict[str, int] = {}
     for o in opps:
@@ -222,9 +222,8 @@ def dashboard(db: Session = Depends(get_db)) -> dict:
     inbound = [opportunity_out(db, o) for o in opps if str(o.entry_type) == "inbound"][:6]
     outbound = [opportunity_out(db, o) for o in opps if str(o.entry_type) == "outbound"][:6]
 
-    # timers
-    timers = [workflow_status(db, o) for o in opps]
-    needs_attention = [t for t in timers if t["blockers"]][:6]
+    # prioritized action queue (replaces the old per-deal 24h timers)
+    action_queue = build_action_queue(db, fund.id, limit=8)
 
     from app.services.ranking_service import compute_rankings
     ranking = compute_rankings(db, fund.id, persist=False)
@@ -242,8 +241,7 @@ def dashboard(db: Session = Depends(get_db)) -> dict:
         "recent_inbound_applications": inbound,
         "highest_momentum": momentum_ranked[:5],
         "largest_prestige_changes": largest_changes,
-        "needs_attention": needs_attention,
-        "timers": timers[:8],
+        "action_queue": action_queue,
         "recent_evidence": [
             {"id": e.id, "kind": e.kind, "title": e.title, "source_name": e.source_name,
              "collected_at": e.collected_at.isoformat()}

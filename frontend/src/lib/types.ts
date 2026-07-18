@@ -226,24 +226,6 @@ export interface DiligenceQuestion {
   responses: { id: number; answer: string; answered_by: string; evidence_ids: number[] }[];
 }
 
-export interface WorkflowStatus {
-  opportunity_id: number;
-  stage: string;
-  status: string;
-  first_signal_at: string;
-  recommendation_at: string | null;
-  elapsed_seconds: number;
-  elapsed_human: string;
-  remaining_seconds: number;
-  remaining_human: string;
-  target_hours: number;
-  target_met: boolean | null;
-  time_to_recommendation_human: string | null;
-  open_diligence_count: number;
-  blockers: string[];
-  current_recommendation: { action: string; confidence: number; rationale: string } | null;
-}
-
 export interface Opportunity {
   id: number;
   fund_id: number;
@@ -260,7 +242,6 @@ export interface Opportunity {
   momentum?: Momentum;
   is_demo: boolean;
   current_recommendation?: { action: string; confidence: number; rationale: string } | null;
-  workflow?: WorkflowStatus;
   assessment?: Assessment | null;
   debate?: Debate | null;
   memo?: Memo | null;

@@ -3,9 +3,8 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { ThreeAxes } from "./ThreeAxes";
 import { PrestigeCompare } from "./PrestigeCompare";
 import { MomentumChart } from "./MomentumChart";
-import { WorkflowTimer } from "./WorkflowTimer";
 import { GuidedTour, DASHBOARD_TOUR } from "./GuidedTour";
-import { assessment, ranking, momentum, workflow } from "@/test/fixtures";
+import { assessment, ranking, momentum } from "@/test/fixtures";
 
 vi.mock("@/lib/api", () => ({ api: { put: vi.fn().mockResolvedValue({}) } }));
 
@@ -47,15 +46,6 @@ describe("MomentumChart", () => {
     expect(screen.getByText("+15")).toBeInTheDocument();
     expect(screen.getByText("Accelerating")).toBeInTheDocument();
     expect(screen.getByText(/release frequency increased/i)).toBeInTheDocument();
-  });
-});
-
-describe("WorkflowTimer", () => {
-  it("renders elapsed/remaining and recommendation-ready state", () => {
-    render(<WorkflowTimer w={workflow} />);
-    expect(screen.getByText("2h 0m")).toBeInTheDocument();
-    expect(screen.getByText("22h 0m")).toBeInTheDocument();
-    expect(screen.getByText("recommendation ready")).toBeInTheDocument();
   });
 });
 

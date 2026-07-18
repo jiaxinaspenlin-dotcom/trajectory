@@ -110,8 +110,6 @@ def test_full_happy_path(client, seeded, mock_ai):
     assert detail["debate"]["referee"]["recommended_action"]
     # memo generated
     assert detail["memo"]["sections"]
-    # workflow tracked
-    assert detail["workflow"]["target_hours"] == 24
 
     # 5. record a SEPARATE human decision
     dec = client.post(f"/api/opportunities/{opp_id}/decision", json={
@@ -142,6 +140,26 @@ def test_ranking_and_prestige_audit(client, seeded):
     for e in entries:
         assert "standard_rank" in e and "prestige_free_rank" in e
     assert "bias & sensitivity audit" in r.json()["note"]
+
+
+def test_dashboard_action_queue_is_named_and_prioritized(client, seeded):
+    body = client.get("/api/dashboard").json()
+    assert "action_queue" in body
+    assert "needs_attention" not in body and "timers" not in body  # 24h clock removed
+    q = body["action_queue"]
+    assert len(q) >= 1
+    for row in q:
+        assert row["name"] and not row["name"].startswith("Opportunity #")  # specific, named
+        assert row["next_action"]
+        assert "priority" in row and "age_days" in row
+    # sorted by priority ascending (act-now first)
+    priorities = [row["priority"] for row in q]
+    assert priorities == sorted(priorities)
+
+
+def test_workflow_endpoint_removed(client, seeded):
+    assert client.get("/api/opportunities/1/workflow").status_code == 404
+    assert "workflow" not in client.get("/api/opportunities/1").json()
 
 
 def test_search_parse_shows_editable_filters(client, mock_ai):

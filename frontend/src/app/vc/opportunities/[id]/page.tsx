@@ -10,7 +10,6 @@ import { MomentumChart } from "@/components/MomentumChart";
 import { ThreeAxes } from "@/components/ThreeAxes";
 import { InvestmentArena } from "@/components/arena/InvestmentArena";
 import { ClaimsTable } from "@/components/ClaimsTable";
-import { WorkflowTimer } from "@/components/WorkflowTimer";
 import { FounderScoreBreakdown } from "@/components/FounderScoreBreakdown";
 import { HumanDecisionPanel } from "@/components/HumanDecisionPanel";
 import { Claim, Evidence, Opportunity } from "@/lib/types";
@@ -161,10 +160,9 @@ export default function OpportunityPage() {
 
         {/* right column — Arena + decision */}
         <div className="space-y-6">
-          <WorkflowTimer w={o.workflow!} />
           <InvestmentArena debate={o.debate || null} />
           <Section title="Recommendation & human decision" subtitle="System recommends; a human decides">
-            <HumanDecisionPanel opportunityId={o.id} recommendation={o.workflow?.current_recommendation || null} onDecision={reload} />
+            <HumanDecisionPanel opportunityId={o.id} recommendation={o.current_recommendation || null} onDecision={reload} />
           </Section>
           <Section title="Thesis fit" subtitle="Evaluated through the active thesis">
             <div className="text-3xl font-semibold text-ink">{Math.round(o.thesis_fit_score)}<span className="text-base text-ink-muted"> / 100</span></div>

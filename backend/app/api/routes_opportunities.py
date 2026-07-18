@@ -34,7 +34,6 @@ from app.services.serializers import (
     memo_out,
     opportunity_out,
 )
-from app.services.workflow import workflow_status
 
 router = APIRouter(tags=["opportunities"], prefix="/api")
 
@@ -66,7 +65,6 @@ def list_opportunities(
 def get_opportunity(opp_id: int, db: Session = Depends(get_db)) -> dict:
     o = _get_opp(db, opp_id)
     base = opportunity_out(db, o, detail=True)
-    base["workflow"] = workflow_status(db, o)
     base["assessment"] = _latest_assessment(db, opp_id)
     base["debate"] = _latest_debate(db, opp_id)
     base["memo"] = _latest_memo(db, opp_id)
@@ -178,12 +176,6 @@ def get_memo(opp_id: int, db: Session = Depends(get_db)) -> dict:
     if not m:
         raise HTTPException(404, "No memo yet. POST to generate one.")
     return memo_out(m)
-
-
-@router.get("/opportunities/{opp_id}/workflow")
-def get_workflow(opp_id: int, db: Session = Depends(get_db)) -> dict:
-    o = _get_opp(db, opp_id)
-    return workflow_status(db, o)
 
 
 # ---- human decision (recorded SEPARATELY from system recommendation) ------

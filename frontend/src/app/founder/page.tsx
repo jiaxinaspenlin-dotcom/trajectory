@@ -139,7 +139,7 @@ export default function ApplyFlow() {
             )}
           </p>
           <p className="mt-2 text-sm text-ink-muted">
-            A human investor reviews every application and makes the final decision — the fund aims to respond within 24 hours.
+            A human investor reviews every application and makes the final decision — the fund aims to respond promptly.
           </p>
           <div className="mt-3 flex gap-2">
             <Link href={`/founder/application/${appResult.application_id}`} className="btn-primary">

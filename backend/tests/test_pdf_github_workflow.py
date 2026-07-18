@@ -1,8 +1,6 @@
-"""PDF validation, GitHub API failure/rate-limit handling, 24h workflow tests."""
+"""PDF validation and GitHub API failure/rate-limit handling tests."""
 
 from __future__ import annotations
-
-from datetime import UTC, datetime, timedelta
 
 import httpx
 import pytest
@@ -107,15 +105,3 @@ async def test_github_success_normalizes_evidence():
     # stars captured but explicitly labeled as not commercial traction
     repo_ev = next(e for e in result.evidence if e.kind == "github_repo")
     assert "not commercial traction" in repo_ev.structured_value["stars_note"].lower()
-
-
-# ---- 24h workflow timer ---------------------------------------------------
-
-def test_workflow_timer_math():
-    from app.services.workflow import TARGET, _human
-
-    now = datetime.now(UTC)
-    delta = now - (now - timedelta(hours=2))
-    assert _human(delta).startswith("2h")
-    # target is 24h
-    assert TARGET == timedelta(hours=24)

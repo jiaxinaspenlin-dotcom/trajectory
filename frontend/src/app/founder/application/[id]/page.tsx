@@ -73,7 +73,7 @@ export default function ApplicationStatus() {
       <div className="rounded-xl border border-line bg-surface-sunken p-4 text-sm text-ink-muted">
         A human investor reviews every application and makes the final decision. Trajectory never
         auto-invests or sends automated messages. You&rsquo;ll be contacted with a next step
-        (interview, information request, or a pass) — the fund aims for within 24 hours.
+        (interview, information request, or a pass) — the fund aims to respond promptly.
       </div>
     </div>
   );
