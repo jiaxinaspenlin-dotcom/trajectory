@@ -61,12 +61,13 @@ describe("WorkflowTimer", () => {
 
 describe("GuidedTour", () => {
   it("progresses Next → Back and shows step counter", () => {
+    const n = DASHBOARD_TOUR.length;
     render(<GuidedTour steps={DASHBOARD_TOUR} open onClose={() => {}} />);
-    expect(screen.getByText("Step 1 of 12")).toBeInTheDocument();
+    expect(screen.getByText(`1 / ${n}`)).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("tour-next"));
-    expect(screen.getByText("Step 2 of 12")).toBeInTheDocument();
+    expect(screen.getByText(`2 / ${n}`)).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("tour-back"));
-    expect(screen.getByText("Step 1 of 12")).toBeInTheDocument();
+    expect(screen.getByText(`1 / ${n}`)).toBeInTheDocument();
   });
 
   it("calls onClose when skipped", () => {

@@ -43,15 +43,17 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-ink">Fund dashboard</h1>
-          <p className="text-sm text-ink-muted">Sourcing → Screening → Diligence → Decision</p>
+          <h1 className="text-xl font-semibold text-ink">Investor dashboard</h1>
+          <p className="text-sm text-ink-muted">
+            Your deal pipeline: Sourcing → Screening → Diligence → Decision. New here? Take the tour.
+          </p>
         </div>
-        <button className="btn-secondary" onClick={() => setTourOpen(true)}>Take the guided tour</button>
+        <button className="btn-primary" onClick={() => setTourOpen(true)}>Take the guided tour</button>
       </div>
 
       {/* thesis + stage counts */}
       <div className="grid gap-6 lg:grid-cols-3">
-        <Section title="Active thesis" id="thesis-section" right={<Link href="/thesis" className="btn-ghost text-xs">Edit</Link>}>
+        <Section title="Your investment thesis" subtitle="Your fund's strategy — everything is scored against it" id="thesis-section" right={<Link href="/vc/thesis" className="btn-ghost text-xs">Edit</Link>}>
           <div data-tour="thesis">
             {data.thesis ? (
               <>
@@ -63,7 +65,7 @@ export default function DashboardPage() {
                 <p className="mt-2 text-xs text-ink-muted">Every score, ranking and recommendation is evaluated through this thesis.</p>
               </>
             ) : (
-              <Link href="/thesis" className="btn-primary">Set up a thesis</Link>
+              <Link href="/vc/thesis" className="btn-primary">Set up a thesis</Link>
             )}
           </div>
         </Section>
@@ -81,7 +83,7 @@ export default function DashboardPage() {
             {data.connectors.live.map((c) => <Badge key={c} tone="bg-positive-wash text-positive">{c} · live</Badge>)}
             {data.connectors.planned.map((c) => <Badge key={c} tone="bg-neutral-wash text-neutral">{c} · planned</Badge>)}
           </div>
-          <Link href="/settings" className="btn-ghost mt-3 text-xs">Data sources &amp; status →</Link>
+          <Link href="/vc/settings" className="btn-ghost mt-3 text-xs">Data sources &amp; status →</Link>
         </Section>
       </div>
 
@@ -108,7 +110,7 @@ export default function DashboardPage() {
           <div data-tour="momentum" className="space-y-2">
             {data.highest_momentum.map((m) => (
               <div key={m.opportunity_id} className="flex items-center justify-between rounded-lg bg-surface-sunken px-3 py-2">
-                <Link href={`/opportunities/${m.opportunity_id}`} className="text-sm font-medium text-ink hover:text-brand">
+                <Link href={`/vc/opportunities/${m.opportunity_id}`} className="text-sm font-medium text-ink hover:text-brand">
                   {m.company_name || m.founder_name}
                 </Link>
                 <div className="flex items-center gap-2">
@@ -123,7 +125,7 @@ export default function DashboardPage() {
         <Section title="Needs attention" subtitle="Open blockers & timers">
           <div data-tour="attention" className="space-y-2">
             {data.needs_attention.length ? data.needs_attention.map((t) => (
-              <Link key={t.opportunity_id} href={`/opportunities/${t.opportunity_id}`} className="block rounded-lg bg-surface-sunken px-3 py-2 hover:bg-line/40">
+              <Link key={t.opportunity_id} href={`/vc/opportunities/${t.opportunity_id}`} className="block rounded-lg bg-surface-sunken px-3 py-2 hover:bg-line/40">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-ink">Opportunity #{t.opportunity_id}</span>
                   <span className="text-xs text-ink-muted">{t.remaining_human} left</span>
@@ -163,7 +165,7 @@ export default function DashboardPage() {
       {/* An Arena reference is present on each founder profile; the tour points here too. */}
       <div data-tour="arena" className="rounded-xl border border-dashed border-line bg-surface-sunken p-4 text-center text-sm text-ink-muted">
         Open any founder to see the full <strong>Investment Arena</strong>, the evidence-backed memo, and the
-        recommended next action. <Link href="/opportunities/1" className="text-brand">View a founder →</Link>
+        recommended next action. <Link href="/vc/opportunities/1" className="text-brand">View a founder →</Link>
       </div>
 
       <GuidedTour steps={DASHBOARD_TOUR} open={tourOpen} onClose={() => setTourOpen(false)} />
@@ -173,7 +175,7 @@ export default function DashboardPage() {
 
 function OppRow({ o }: { o: any }) {
   return (
-    <Link href={`/opportunities/${o.id}`} className="flex items-center justify-between rounded-lg bg-surface-sunken px-3 py-2 hover:bg-line/40">
+    <Link href={`/vc/opportunities/${o.id}`} className="flex items-center justify-between rounded-lg bg-surface-sunken px-3 py-2 hover:bg-line/40">
       <div className="min-w-0">
         <p className="truncate text-sm font-medium text-ink">{o.company?.name || o.founder?.full_name || `Opportunity #${o.id}`}</p>
         <p className="truncate text-xs text-ink-muted">{o.company?.one_liner || o.surfaced_reason}</p>

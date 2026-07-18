@@ -66,8 +66,8 @@ export default function OpportunityPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Link href={`/opportunities/${id}/diligence`} className="btn-secondary">Diligence workspace</Link>
-          <Link href={`/opportunities/${id}/memo`} className="btn-secondary">Investment memo</Link>
+          <Link href={`/vc/opportunities/${id}/diligence`} className="btn-secondary">Diligence workspace</Link>
+          <Link href={`/vc/opportunities/${id}/memo`} className="btn-secondary">Investment memo</Link>
           <button className="btn-primary" onClick={() => setConfirmRegen(true)} disabled={busy}>
             {busy ? "Regenerating…" : "Regenerate analysis"}
           </button>

@@ -84,7 +84,6 @@ export default function ApplyPage() {
                 </div>
               </div>
             )}
-            <p className="mt-2 text-sm text-ink-muted">Thesis fit: {Math.round(appResult.thesis_fit_score)} / 100</p>
           </Section>
 
           <Section title="2. Pitch deck (PDF)" subtitle="Validated, stored outside any public directory, and parsed">
@@ -102,8 +101,8 @@ export default function ApplyPage() {
                   <p className="mt-1 text-xs text-ink-muted">Deck appears to be missing: {uploadResult.extracted_fields.missing.join(", ")}</p>
                 )}
                 <p className="mt-1 text-xs text-ink-muted">{uploadResult.note}</p>
-                <Link href={`/opportunities/${appResult.opportunity_id}`} className="btn-secondary mt-2">
-                  Go to founder workflow →
+                <Link href={`/founder/application/${appResult.application_id}`} className="btn-primary mt-2">
+                  View my application status →
                 </Link>
               </div>
             )}

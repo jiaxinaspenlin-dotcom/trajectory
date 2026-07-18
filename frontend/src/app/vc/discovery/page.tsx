@@ -142,7 +142,7 @@ function GithubSync() {
         <div className="mt-3 rounded-lg border border-line bg-surface-sunken p-3 text-sm">
           <p className="font-medium text-ink">Sync {result.sync?.status}: {result.sync?.message}</p>
           <p className="text-ink-muted">Evidence added: {result.sync?.evidence_added} · Founder score: {result.founder_score ?? "—"}</p>
-          {result.opportunity_id && <Link href={`/opportunities/${result.opportunity_id}`} className="btn-secondary mt-2">Open founder profile →</Link>}
+          {result.opportunity_id && <Link href={`/vc/opportunities/${result.opportunity_id}`} className="btn-secondary mt-2">Open founder profile →</Link>}
         </div>
       )}
     </Section>
@@ -164,7 +164,7 @@ function Prospects() {
           <div key={o.id} className="rounded-lg border border-line bg-surface p-3">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <Link href={`/opportunities/${o.id}`} className="text-sm font-semibold text-ink hover:text-brand">
+                <Link href={`/vc/opportunities/${o.id}`} className="text-sm font-semibold text-ink hover:text-brand">
                   {o.company?.name || o.founder?.full_name}
                 </Link>
                 <p className="text-xs text-ink-muted">{o.surfaced_reason}</p>
@@ -190,7 +190,7 @@ function Prospects() {
 
 function CandidateCard({ o }: { o: Opportunity }) {
   return (
-    <Link href={`/opportunities/${o.id}`} className="block rounded-lg border border-line bg-surface p-3 hover:border-brand/40">
+    <Link href={`/vc/opportunities/${o.id}`} className="block rounded-lg border border-line bg-surface p-3 hover:border-brand/40">
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-ink">{o.company?.name || o.founder?.full_name}</span>
         <Badge tone="bg-brand-wash text-brand">fit {Math.round(o.thesis_fit_score)}</Badge>

@@ -46,7 +46,7 @@ export default function DiligencePage() {
           <p className="text-sm text-ink-muted">Open claims, verification, contradictions, and targeted questions.</p>
         </div>
         <div className="flex gap-2">
-          <Link href={`/opportunities/${id}`} className="btn-secondary">Back to founder</Link>
+          <Link href={`/vc/opportunities/${id}`} className="btn-secondary">Back to founder</Link>
           <button className="btn-primary" onClick={generate}>Generate questions</button>
         </div>
       </div>

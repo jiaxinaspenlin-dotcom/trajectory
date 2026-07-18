@@ -37,7 +37,7 @@ export default function MemoPage() {
           <p className="text-sm text-ink-muted">Evidence-backed. Missing data is explicitly labeled, never invented.</p>
         </div>
         <div className="flex gap-2">
-          <Link href={`/opportunities/${id}`} className="btn-secondary">Back</Link>
+          <Link href={`/vc/opportunities/${id}`} className="btn-secondary">Back</Link>
           <button className="btn-secondary" onClick={() => window.print()}>Print / PDF</button>
           <button className="btn-primary" onClick={generate}>Regenerate memo</button>
         </div>

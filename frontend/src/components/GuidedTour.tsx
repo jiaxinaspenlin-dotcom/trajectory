@@ -34,8 +34,7 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
       el.classList.add("tour-highlight");
       highlighted.current = el;
       el.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "center" });
-      // measure after scroll settles
-      setTimeout(() => setRect(el.getBoundingClientRect()), prefersReducedMotion() ? 0 : 260);
+      setTimeout(() => setRect(el.getBoundingClientRect()), prefersReducedMotion() ? 0 : 280);
     } else {
       setRect(null);
     }
@@ -46,12 +45,9 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
     return clearHighlight;
   }, [open, i, locate]);
 
-  const persist = useCallback(
-    (completed: boolean, skipped: boolean, lastStep: number) => {
-      api.put("/api/tour", { completed, skipped, last_step: lastStep }).catch(() => {});
-    },
-    []
-  );
+  const persist = useCallback((completed: boolean, skipped: boolean, lastStep: number) => {
+    api.put("/api/tour", { completed, skipped, last_step: lastStep }).catch(() => {});
+  }, []);
 
   const finish = useCallback(() => {
     clearHighlight();
@@ -65,16 +61,19 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
     onClose();
   }, [i, onClose, persist]);
 
+  const next = useCallback(() => setI((v) => Math.min(steps.length - 1, v + 1)), [steps.length]);
+  const back = useCallback(() => setI((v) => Math.max(0, v - 1)), []);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") skip();
-      else if (e.key === "ArrowRight") setI((v) => Math.min(steps.length - 1, v + 1));
-      else if (e.key === "ArrowLeft") setI((v) => Math.max(0, v - 1));
+      else if (e.key === "ArrowRight" || e.key === "Enter") next();
+      else if (e.key === "ArrowLeft") back();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, skip, steps.length]);
+  }, [open, skip, next, back]);
 
   useEffect(() => {
     if (open) cardRef.current?.focus();
@@ -84,59 +83,79 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
   const step = steps[i];
   const isLast = i === steps.length - 1;
 
-  // position card near target (below if room, else centered)
+  // Position the card in a corner-anchored spot near the target, never overlapping
+  // the highlighted element and never off-screen. Falls back to centered.
   let cardStyle: React.CSSProperties = {
     position: "fixed",
     left: "50%",
-    top: "50%",
-    transform: "translate(-50%, -50%)",
+    bottom: "24px",
+    transform: "translateX(-50%)",
   };
   if (rect) {
-    const belowTop = rect.bottom + 16;
-    const placeBelow = belowTop < window.innerHeight - 220;
-    const left = Math.min(Math.max(rect.left, 16), window.innerWidth - 360);
+    const cardW = 360;
+    const margin = 16;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const placeBelow = spaceBelow > 240;
+    const top = placeBelow ? rect.bottom + margin : Math.max(margin, rect.top - 240);
+    let left = rect.left;
+    if (left + cardW > window.innerWidth - margin) left = window.innerWidth - cardW - margin;
+    if (left < margin) left = margin;
     cardStyle = {
       position: "fixed",
       left,
-      top: placeBelow ? belowTop : Math.max(16, rect.top - 220),
+      top,
       transform: "none",
-      transition: prefersReducedMotion() ? "none" : "top 0.25s ease, left 0.25s ease",
+      transition: prefersReducedMotion() ? "none" : "top 0.28s ease, left 0.28s ease",
     };
   }
 
   return (
     <div className="fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label="Guided tour">
-      {/* dimming handled by .tour-highlight box-shadow; clicking backdrop skips */}
-      <div className="absolute inset-0" onClick={skip} aria-hidden />
+      {/* Click-blocker: prevents interacting with the page during the tour but does
+          NOT close it. The tour only closes via Skip / Finish. */}
+      <div className="absolute inset-0" aria-hidden />
+
       <div
         ref={cardRef}
         tabIndex={-1}
         style={cardStyle}
-        className="z-50 w-[340px] max-w-[92vw] rounded-xl border border-line bg-white p-4 shadow-raised focus:outline-none"
+        className="z-50 w-[360px] max-w-[92vw] rounded-xl border border-line bg-white shadow-raised focus:outline-none"
         data-testid="tour-card"
       >
-        <div className="flex items-start gap-3">
-          <div className="shrink-0 motion-safe:animate-[bounce_1s_ease-in-out_1]">
-            <RefereeCharacter state="pointing" size={56} />
+        {/* header row: illustration + progress, full width (no overlap) */}
+        <div className="flex items-center gap-3 border-b border-line px-4 py-3">
+          <div className="shrink-0 motion-safe:animate-[bounce_0.9s_ease-in-out_1]">
+            <RefereeCharacter state="pointing" size={44} />
           </div>
-          <div className="min-w-0">
-            <div className="label">Step {i + 1} of {steps.length}</div>
-            <h3 className="text-sm font-semibold text-ink">{step.title}</h3>
-            <p className="mt-1 text-sm text-ink-soft">{step.body}</p>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between">
+              <span className="label">Referee tour</span>
+              <span className="text-xs font-medium text-ink-muted">{i + 1} / {steps.length}</span>
+            </div>
+            {/* progress dots */}
+            <div className="mt-1 flex gap-1" aria-hidden>
+              {steps.map((_, idx) => (
+                <span key={idx} className={`h-1 flex-1 rounded-full ${idx <= i ? "bg-brand" : "bg-line"}`} />
+              ))}
+            </div>
           </div>
         </div>
-        <div className="mt-4 flex items-center justify-between gap-2">
+
+        <div className="px-4 py-3">
+          <h3 className="text-sm font-semibold text-ink">{step.title}</h3>
+          <p className="mt-1 text-sm leading-relaxed text-ink-soft">{step.body}</p>
+        </div>
+
+        <div className="flex items-center justify-between gap-2 border-t border-line px-4 py-3">
           <button className="btn-ghost text-xs" onClick={skip} data-testid="tour-skip">Skip tour</button>
           <div className="flex gap-2">
-            <button className="btn-secondary text-xs" onClick={() => setI((v) => Math.max(0, v - 1))} disabled={i === 0} data-testid="tour-back">
+            <button className="btn-secondary text-xs" onClick={back} disabled={i === 0} data-testid="tour-back">
               Back
             </button>
             {isLast ? (
               <button className="btn-primary text-xs" onClick={finish} data-testid="tour-finish">Finish</button>
             ) : (
-              <button className="btn-primary text-xs" onClick={() => setI((v) => Math.min(steps.length - 1, v + 1))} data-testid="tour-next">
-                Next
-              </button>
+              <button className="btn-primary text-xs" onClick={next} data-testid="tour-next">Next</button>
             )}
           </div>
         </div>
@@ -146,16 +165,13 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
 }
 
 export const DASHBOARD_TOUR: TourStep[] = [
-  { target: "thesis", title: "1. Investment thesis", body: "Your fund’s configurable thesis. Every sourcing result, score, ranking and recommendation is evaluated through it." },
-  { target: "sourcing", title: "2. Sourcing feed", body: "Outbound prospects surfaced from real public GitHub execution signals — before founders formally fundraise." },
-  { target: "inbound", title: "3. Inbound applications", body: "Founder applications enter here with a company name and a pitch deck, then converge into the same workflow." },
-  { target: "momentum", title: "4 & 5. Founder Score & Momentum", body: "A persistent, evidence-based Founder Score plus its direction and rate of change over time." },
-  { target: "prestige", title: "6. Standard vs prestige-free ranking", body: "A bias & sensitivity audit: how much do university/employer/accelerator brands move the ranking?" },
-  { target: "attention", title: "7–9. Three screening axes", body: "Founder, Market, and Idea-vs-Market are assessed independently and never averaged into one number." },
-  { target: "evidence", title: "10. Evidence & Trust Scores", body: "Every claim links to stored evidence with a per-claim Trust Score and verification status." },
-  { target: "attention", title: "11. Diligence & contradictions", body: "Contradictions and missing information are surfaced, and targeted diligence questions are generated." },
-  { target: "arena", title: "12. Investment Arena", body: "Bull, Bear, and a neutral Referee weigh the evidence. The Referee judges quality, not persuasiveness." },
-  { target: "arena", title: "13. Investment memo", body: "From the same evidence we generate an evidence-backed memo, labeling anything not disclosed or unverified." },
-  { target: "arena", title: "14. Recommended next action", body: "The Referee recommends an actionable next step — but a human always approves consequential actions." },
-  { target: "timers", title: "15. 24-hour decision status", body: "We track time from first signal to an actionable recommendation, aiming for within 24 hours." },
+  { target: "thesis", title: "Your investment thesis", body: "This is your fund's strategy — sectors, stages, geographies, check sizes and exclusions. Every score, ranking and recommendation you see is filtered through it. Edit it any time from the Thesis tab." },
+  { target: "sourcing", title: "Sourcing feed (outbound)", body: "Prospects you've surfaced proactively from real public GitHub activity — founders you can evaluate before they ever apply. Add more from the Discovery tab." },
+  { target: "inbound", title: "Inbound applications", body: "Founders who applied to you directly with a company name and pitch deck. Inbound and outbound converge into the same evaluation workflow." },
+  { target: "momentum", title: "Founder Score & Momentum", body: "A persistent, evidence-based Founder Score (computed in code, not invented by AI) plus its direction and rate of change over time: accelerating, improving, stable, or declining." },
+  { target: "prestige", title: "Standard vs prestige-free ranking", body: "A bias audit: it masks university, employer, accelerator and geography signals to show how much 'pedigree' is moving your ranking — without claiming the prestige-free view is automatically better." },
+  { target: "attention", title: "Screening, diligence & what needs you", body: "Opportunities are assessed on three independent axes (Founder, Market, Idea-vs-Market — never averaged). Open blockers and unresolved diligence surface here." },
+  { target: "evidence", title: "Evidence & Trust Scores", body: "Every claim links to stored evidence with a per-claim Trust Score and verification status. The AI is only ever given this stored evidence and can't cite anything that doesn't exist." },
+  { target: "timers", title: "24-hour decision status", body: "Trajectory tracks time from first signal to an actionable recommendation, aiming for within 24 hours." },
+  { target: "arena", title: "Investment Arena & the memo", body: "Open any founder to see the Bull, Bear and neutral Referee debate the evidence, the evidence-backed memo, and a recommended next step — which you, the human, approve or override." },
 ];
