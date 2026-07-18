@@ -49,7 +49,7 @@ export default function ApplyFlow() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-ink">Apply to the fund</h1>
+        <h1 className="text-xl font-semibold text-ink">Apply to the Fund</h1>
         <p className="text-sm text-ink-muted">
           You only need a company name and a PDF pitch deck. We ask for nothing you don&rsquo;t need to provide.
         </p>
@@ -105,7 +105,7 @@ export default function ApplyFlow() {
 
       {/* Step 1 result: first-pass screen */}
       {appResult && (
-        <Section title="First-pass screen" subtitle="Automatic, before the deck">
+        <Section title="First-Pass Screen" subtitle="Automatic, before the deck">
           <p className="text-sm text-ink-soft">{appResult.screen_summary}</p>
           {appResult.missing_fields?.length > 0 && (
             <div className="mt-2">
@@ -120,7 +120,7 @@ export default function ApplyFlow() {
 
       {/* Step 2: pitch deck */}
       {appResult && !uploadResult && (
-        <Section title="2. Pitch deck (PDF)" subtitle="Validated, stored securely, and read automatically">
+        <Section title="2. Pitch Deck (PDF)" subtitle="Validated, stored securely, and read automatically">
           <input type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} className="text-sm" />
           <button className="btn-primary ml-3" onClick={uploadDeck} disabled={!file || status === "uploading"}>
             {status === "uploading" ? "Uploading & reading…" : "Submit application"}
@@ -131,7 +131,7 @@ export default function ApplyFlow() {
 
       {/* Step 3: submitted */}
       {uploadResult && (
-        <Section title="Application submitted 🎉" subtitle="Thank you — the fund will review it">
+        <Section title="Application Submitted 🎉" subtitle="Thank you — the fund will review it">
           <p className="text-sm text-ink-soft">
             We read <strong>{uploadResult.num_pages}</strong> page(s) of your deck ({uploadResult.extraction_status}).
             {uploadResult.extracted_fields?.missing?.length > 0 && (
@@ -145,7 +145,7 @@ export default function ApplyFlow() {
             <Link href={`/founder/application/${appResult.application_id}`} className="btn-primary">
               View my application status →
             </Link>
-            <Link href="/founder/applications" className="btn-secondary">My applications</Link>
+            <Link href="/founder/applications" className="btn-secondary">My Applications</Link>
           </div>
         </Section>
       )}

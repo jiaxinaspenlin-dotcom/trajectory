@@ -144,7 +144,7 @@ export function InvestmentArena({ debate, expandable = true }: { debate: Debate 
         >
           <div className="max-h-[90vh] w-full max-w-3xl overflow-auto rounded-xl bg-white p-6 shadow-raised" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-ink">Investment Arena — full debate</h3>
+              <h3 className="text-lg font-semibold text-ink">Investment Arena — Full Debate</h3>
               <button className="btn-secondary" onClick={() => setExpanded(false)}>Close</button>
             </div>
             <div className="grid gap-4 md:grid-cols-2">

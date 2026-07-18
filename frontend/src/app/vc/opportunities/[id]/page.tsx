@@ -65,8 +65,8 @@ export default function OpportunityPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Link href={`/vc/opportunities/${id}/diligence`} className="btn-secondary">Diligence workspace</Link>
-          <Link href={`/vc/opportunities/${id}/memo`} className="btn-secondary">Investment memo</Link>
+          <Link href={`/vc/opportunities/${id}/diligence`} className="btn-secondary">Diligence Workspace</Link>
+          <Link href={`/vc/opportunities/${id}/memo`} className="btn-secondary">Investment Memo</Link>
           <button className="btn-primary" onClick={() => setConfirmRegen(true)} disabled={busy}>
             {busy ? "Regenerating…" : "Regenerate analysis"}
           </button>
@@ -114,7 +114,7 @@ export default function OpportunityPage() {
             {o.momentum ? <MomentumChart momentum={o.momentum} /> : <EmptyState title="No momentum history" />}
           </Section>
 
-          <Section title="Three independent screening axes" subtitle="Founder · Market · Idea vs Market — never averaged">
+          <Section title="Three Independent Screening Axes" subtitle="Founder · Market · Idea vs Market — never averaged">
             {o.assessment ? <ThreeAxes assessment={o.assessment} /> : (
               <EmptyState title="No assessment yet" hint="Run Regenerate analysis to generate the three axes." />
             )}
@@ -124,7 +124,7 @@ export default function OpportunityPage() {
             {claims.data ? <ClaimsTable claims={claims.data.items} /> : <Spinner />}
           </Section>
 
-          <Section title="Contradictions & missing information" subtitle="Surfaced from evidence">
+          <Section title="Contradictions & Missing Information" subtitle="Surfaced from evidence">
             {contradictions.data?.items.length ? (
               <ul className="space-y-2">
                 {contradictions.data.items.map((c) => (
@@ -136,7 +136,7 @@ export default function OpportunityPage() {
             ) : <p className="text-sm text-ink-muted">No contradictions detected.</p>}
           </Section>
 
-          <Section title="Evidence timeline" subtitle="Normalized, timestamped, attributed" right={o.is_demo ? <DemoBadge /> : undefined}>
+          <Section title="Evidence Timeline" subtitle="Normalized, timestamped, attributed" right={o.is_demo ? <DemoBadge /> : undefined}>
             {founderEvidence.length ? (
               <ol className="relative space-y-3 border-l border-line pl-4">
                 {founderEvidence.slice(0, 20).map((e) => (
@@ -161,10 +161,10 @@ export default function OpportunityPage() {
         {/* right column — Arena + decision */}
         <div className="space-y-6">
           <InvestmentArena debate={o.debate || null} />
-          <Section title="Recommendation & human decision" subtitle="System recommends; a human decides">
+          <Section title="Recommendation & Human Decision" subtitle="System recommends; a human decides">
             <HumanDecisionPanel opportunityId={o.id} recommendation={o.current_recommendation || null} onDecision={reload} />
           </Section>
-          <Section title="Thesis fit" subtitle="Evaluated through the active thesis">
+          <Section title="Thesis Fit" subtitle="Evaluated through the active thesis">
             <div className="text-3xl font-semibold text-ink">{Math.round(o.thesis_fit_score)}<span className="text-base text-ink-muted"> / 100</span></div>
             <p className="mt-1 text-sm text-ink-muted">{o.surfaced_reason}</p>
           </Section>

@@ -2,7 +2,7 @@ import { WorkspaceNav } from "@/components/WorkspaceNav";
 
 const FOUNDER_LINKS = [
   { href: "/founder", label: "Apply" },
-  { href: "/founder/applications", label: "My applications" },
+  { href: "/founder/applications", label: "My Applications" },
 ];
 
 export default function FounderLayout({ children }: { children: React.ReactNode }) {

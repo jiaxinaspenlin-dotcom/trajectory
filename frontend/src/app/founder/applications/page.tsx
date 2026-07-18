@@ -33,7 +33,7 @@ export default function MyApplications() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-ink">My applications</h1>
+          <h1 className="text-xl font-semibold text-ink">My Applications</h1>
           <p className="text-sm text-ink-muted">Applications you&rsquo;ve submitted from this device.</p>
         </div>
         <Link href="/founder" className="btn-primary">Start a new application</Link>

@@ -33,7 +33,7 @@ export default function MemoPage() {
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex items-center justify-between print:hidden">
         <div>
-          <h1 className="text-xl font-semibold text-ink">Investment memo</h1>
+          <h1 className="text-xl font-semibold text-ink">Investment Memo</h1>
           <p className="text-sm text-ink-muted">Evidence-backed. Missing data is explicitly labeled, never invented.</p>
         </div>
         <div className="flex gap-2">

@@ -34,10 +34,10 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-ink">Settings & data sources</h1>
+      <h1 className="text-xl font-semibold text-ink">Settings & Data Sources</h1>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Section title="AI provider (OpenAI)" subtitle="Server-side only — the key never reaches the browser">
+        <Section title="AI Provider (OpenAI)" subtitle="Server-side only — the key never reaches the browser">
           <Row label="Status" value={data.openai.connected ? <Badge tone="bg-positive-wash text-positive">connected</Badge> : <Badge tone="bg-negative-wash text-negative">not configured</Badge>} />
           <Row label="Model" value={data.openai.model} />
           <Row label="Key" value={<span className="font-mono text-xs">{data.openai.key_hint || "not set"}</span>} />
@@ -46,7 +46,7 @@ export default function SettingsPage() {
           )}
         </Section>
 
-        <Section title="GitHub connector" subtitle="Live public-data connector">
+        <Section title="GitHub Connector" subtitle="Live public-data connector">
           <Row label="Status" value={<Badge tone="bg-positive-wash text-positive">live</Badge>} />
           <Row label="Authenticated" value={data.github.authenticated ? "Yes" : "No (anonymous)"} />
           <Row label="Token" value={<span className="font-mono text-xs">{data.github.token_hint || "not set"}</span>} />
@@ -70,7 +70,7 @@ export default function SettingsPage() {
         </Section>
       </div>
 
-      <Section title="Founder Score weights" subtitle="Configurable component weights">
+      <Section title="Founder Score Weights" subtitle="Configurable component weights">
         <div className="grid gap-2 sm:grid-cols-2">
           {data.scoring_weights.map((w) => (
             <Row key={w.key} label={w.name} value={`${Math.round(w.weight * 100)}%`} />
@@ -78,7 +78,7 @@ export default function SettingsPage() {
         </div>
       </Section>
 
-      <Section title="Data sources" subtitle="Last sync per source">
+      <Section title="Data Sources" subtitle="Last sync per source">
         <div className="space-y-1">
           {data.data_sources.length ? data.data_sources.map((s) => (
             <div key={s.id} className="flex items-center justify-between rounded bg-surface-sunken px-3 py-1.5 text-sm">
@@ -90,11 +90,11 @@ export default function SettingsPage() {
       </Section>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Section title="Guided tour">
+        <Section title="Guided Tour">
           <button className="btn-secondary" onClick={restartTour}>Restart guided tour</button>
           {tourReset && <p className="mt-2 text-xs text-positive">Tour reset — it will appear next time you open the dashboard.</p>}
         </Section>
-        <Section title="Privacy & limitations">
+        <Section title="Privacy & Limitations">
           <ul className="list-inside list-disc space-y-1 text-sm text-ink-soft">
             {data.privacy_and_limitations.map((p, i) => <li key={i}>{p}</li>)}
           </ul>

@@ -41,7 +41,7 @@ export default function ApplicationStatus() {
           <p className="text-sm text-ink-muted">{data.sector || "Sector not set"} · {data.geography || "Geography not set"}</p>
         </div>
         <div className="flex gap-2">
-          <Link href="/founder/applications" className="btn-secondary">My applications</Link>
+          <Link href="/founder/applications" className="btn-secondary">My Applications</Link>
           {!deckReady && <Link href="/founder" className="btn-primary">Start / finish an application</Link>}
         </div>
       </div>
@@ -52,11 +52,11 @@ export default function ApplicationStatus() {
         <Stat label="Funding requested" value={data.funding_requested ? `$${data.funding_requested.toLocaleString()}` : "—"} />
       </div>
 
-      <Section title="First-pass screen" subtitle="Automated, before human review">
+      <Section title="First-Pass Screen" subtitle="Automated, before human review">
         <p className="text-sm text-ink-soft">{data.screen_summary || "Your application is queued for screening."}</p>
       </Section>
 
-      <Section title="What the fund still needs from you" subtitle="Only what genuinely helps a confident decision">
+      <Section title="What the Fund Still Needs From You" subtitle="Only what genuinely helps a confident decision">
         {data.missing_fields.length > 0 ? (
           <ul className="space-y-2">
             {data.missing_fields.map((m) => (

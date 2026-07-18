@@ -58,7 +58,7 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-ink">Investor dashboard</h1>
+          <h1 className="text-xl font-semibold text-ink">Investor Dashboard</h1>
           <p className="text-sm text-ink-muted">
             Your deal pipeline: Sourcing → Screening → Diligence → Decision. New here? Take the tour.
           </p>
@@ -71,7 +71,7 @@ export default function DashboardPage() {
 
       {/* thesis + stage counts */}
       <div className="grid gap-6 lg:grid-cols-3">
-        <Section title="Your investment thesis" subtitle="Your fund's strategy — everything is scored against it" id="thesis-section" right={<Link href="/vc/thesis" className="btn-ghost text-xs">Edit</Link>}>
+        <Section title="Your Investment Thesis" subtitle="Your fund's strategy — everything is scored against it" id="thesis-section" right={<Link href="/vc/thesis" className="btn-ghost text-xs">Edit</Link>}>
           <div data-tour="thesis">
             {data.thesis ? (
               <>
@@ -88,7 +88,7 @@ export default function DashboardPage() {
           </div>
         </Section>
 
-        <Section title="Workflow stages" subtitle="Pipeline counts">
+        <Section title="Workflow Stages" subtitle="Pipeline counts">
           <div className="grid grid-cols-2 gap-2">
             {["sourcing", "screening", "diligence", "decision"].map((s) => (
               <Stat key={s} label={humanStatus(s)} value={data.stage_counts[s] || 0} />
@@ -106,7 +106,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Section title="Top outbound prospects" subtitle="Surfaced before they formally apply">
+        <Section title="Top Outbound Prospects" subtitle="Surfaced before they formally apply">
           <div data-tour="sourcing" className="space-y-2">
             {data.top_outbound_prospects.length ? data.top_outbound_prospects.map((o) => (
               <OppRow key={o.id} o={o} />
@@ -114,7 +114,7 @@ export default function DashboardPage() {
           </div>
         </Section>
 
-        <Section title="Recent inbound applications" subtitle="Founder-initiated">
+        <Section title="Recent Inbound Applications" subtitle="Founder-initiated">
           <div data-tour="inbound" className="space-y-2">
             {data.recent_inbound_applications.length ? data.recent_inbound_applications.map((o) => (
               <OppRow key={o.id} o={o} />
@@ -124,7 +124,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Action queue — the primary "what should I do next, and on whom?" list */}
-      <Section title="Action queue" subtitle="Your prioritized next steps — the deals you can act on now come first">
+      <Section title="Action Queue" subtitle="Your prioritized next steps — the deals you can act on now come first">
         <div data-tour="action-queue" className="space-y-2">
           {data.action_queue.length ? data.action_queue.map((a) => (
             <Link
@@ -165,7 +165,7 @@ export default function DashboardPage() {
           </div>
         </Section>
 
-        <Section title="Recent evidence updates" subtitle="Newest collected items" right={<DemoBadge />}>
+        <Section title="Recent Evidence Updates" subtitle="Newest collected items" right={<DemoBadge />}>
           <div data-tour="evidence" className="space-y-2">
             {data.recent_evidence.map((e) => (
               <div key={e.id} className="rounded-lg bg-surface-sunken px-3 py-2">
@@ -180,7 +180,7 @@ export default function DashboardPage() {
         </Section>
       </div>
 
-      <Section title="Standard vs prestige-free ranking" subtitle="Largest movements when prestige is masked">
+      <Section title="Standard vs Prestige-Free Ranking" subtitle="Largest movements when prestige is masked">
         {ranking.data ? <PrestigeCompare entries={ranking.data.entries} /> : <Spinner />}
       </Section>
 

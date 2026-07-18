@@ -83,30 +83,55 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
   const step = steps[i];
   const isLast = i === steps.length - 1;
 
-  // Anchor the card directly beside the highlighted element — centered under it
-  // (or above it when there's no room below), so it reads as pointing at the
-  // target (e.g. the Referee's speech bubble). z-[60] keeps it above the ring.
-  const gap = 14;
+  // Anchor the card beside the highlighted element on whichever side has more
+  // room, and cap its height to the space available. Combined with the card's
+  // scrollable body + pinned footer, the Next/Back/Skip buttons are ALWAYS on
+  // screen — the card can never overflow the viewport. z-[60] keeps it above
+  // the highlight ring. When neither side has enough room (a very tall target),
+  // it falls back to a centered, scrollable card.
+  const gap = 12;
+  const margin = 16;
   const cardW = 380;
-  const approxH = 240;
+  const MIN_ADJACENT = 220;
+  const vh = typeof window !== "undefined" ? window.innerHeight : 800;
+  const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
+
   let cardStyle: React.CSSProperties = {
     position: "fixed",
     left: "50%",
-    bottom: 24,
-    transform: "translateX(-50%)",
+    top: "50%",
+    transform: "translate(-50%, -50%)",
+    maxHeight: `calc(100vh - ${2 * margin}px)`,
   };
   if (rect) {
-    const fitsBelow = rect.bottom + gap + approxH <= window.innerHeight;
-    const top = fitsBelow ? rect.bottom + gap : Math.max(gap, rect.top - approxH - gap);
+    const spaceBelow = vh - rect.bottom - gap - margin;
+    const spaceAbove = rect.top - gap - margin;
+    const best = Math.max(spaceBelow, spaceAbove);
     let left = rect.left + rect.width / 2 - cardW / 2;
-    left = Math.min(Math.max(left, gap), window.innerWidth - cardW - gap);
-    cardStyle = {
-      position: "fixed",
-      top,
-      left,
-      transform: "none",
-      transition: prefersReducedMotion() ? "none" : "top 0.25s ease, left 0.25s ease",
-    };
+    left = Math.min(Math.max(left, margin), vw - cardW - margin);
+    const transition = prefersReducedMotion() ? "none" : "top 0.2s ease, bottom 0.2s ease, left 0.2s ease";
+
+    if (best >= MIN_ADJACENT) {
+      const placeBelow = spaceBelow >= spaceAbove;
+      cardStyle = {
+        position: "fixed",
+        left,
+        transform: "none",
+        maxHeight: placeBelow ? spaceBelow : spaceAbove,
+        transition,
+        ...(placeBelow ? { top: rect.bottom + gap } : { bottom: vh - rect.top + gap }),
+      };
+    } else {
+      // very tall target — center the card so it always fully fits and scrolls.
+      cardStyle = {
+        position: "fixed",
+        left,
+        top: margin,
+        transform: "none",
+        maxHeight: vh - 2 * margin,
+        transition,
+      };
+    }
   }
 
   return (
@@ -120,17 +145,17 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
         ref={cardRef}
         tabIndex={-1}
         style={cardStyle}
-        className="relative z-10 w-[380px] max-w-[92vw] rounded-xl border border-brand/30 bg-white shadow-raised ring-1 ring-black/5 focus:outline-none"
+        className="relative z-10 flex w-[380px] max-w-[92vw] flex-col overflow-hidden rounded-xl border border-brand/30 bg-white shadow-raised ring-1 ring-black/5 focus:outline-none"
         data-testid="tour-card"
       >
-        {/* header row: illustration + progress, full width (no overlap) */}
-        <div className="flex items-center gap-3 border-b border-line px-4 py-3">
+        {/* header — fixed */}
+        <div className="flex shrink-0 items-center gap-3 border-b border-line px-4 py-3">
           <div className="shrink-0 motion-safe:animate-[bounce_0.9s_ease-in-out_1]">
             <RefereeCharacter state="pointing" size={44} />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between">
-              <span className="label">Referee tour</span>
+              <span className="label">Referee Tour</span>
               <span className="text-xs font-medium text-ink-muted">{i + 1} / {steps.length}</span>
             </div>
             {/* progress dots */}
@@ -142,12 +167,14 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
           </div>
         </div>
 
-        <div className="px-4 py-3">
+        {/* body — scrollable if the copy is long / space is tight */}
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
           <h3 className="text-sm font-semibold text-ink">{step.title}</h3>
           <p className="mt-1 text-sm leading-relaxed text-ink-soft">{step.body}</p>
         </div>
 
-        <div className="flex items-center justify-between gap-2 border-t border-line px-4 py-3">
+        {/* footer — pinned; the Next/Back/Skip buttons are always visible */}
+        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-line bg-white px-4 py-3">
           <button className="btn-ghost text-xs" onClick={skip} data-testid="tour-skip">Skip tour</button>
           <div className="flex gap-2">
             <button className="btn-secondary text-xs" onClick={back} disabled={i === 0} data-testid="tour-back">

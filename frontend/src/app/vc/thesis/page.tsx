@@ -92,7 +92,7 @@ export default function ThesisPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-ink">Investment thesis</h1>
+        <h1 className="text-xl font-semibold text-ink">Investment Thesis</h1>
         <p className="text-sm text-ink-muted">
           Configure your fund’s thesis. Every sourcing result, score, ranking and recommendation is
           evaluated through it — nothing is hardcoded to a single fund.
@@ -102,7 +102,7 @@ export default function ThesisPage() {
       {error && <ErrorState message={error} />}
       {impact && <div className="rounded-lg border border-brand/30 bg-brand-wash p-3 text-sm text-brand">{impact}</div>}
 
-      <Section title="Fund & focus">
+      <Section title="Fund & Focus">
         <div className="grid gap-4 sm:grid-cols-2">
           {field("fund_name", "Fund name", "Northstar Ventures")}
           {field("risk_tolerance", "Risk tolerance", "balanced")}

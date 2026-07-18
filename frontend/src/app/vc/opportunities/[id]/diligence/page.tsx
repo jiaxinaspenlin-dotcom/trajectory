@@ -42,7 +42,7 @@ export default function DiligencePage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-ink">Diligence workspace</h1>
+          <h1 className="text-xl font-semibold text-ink">Diligence Workspace</h1>
           <p className="text-sm text-ink-muted">Open claims, verification, contradictions, and targeted questions.</p>
         </div>
         <div className="flex gap-2">
@@ -53,7 +53,7 @@ export default function DiligencePage() {
 
       {genError && <ErrorState message={genError} />}
 
-      <Section title="Diligence questions" subtitle="Track each to resolution">
+      <Section title="Diligence Questions" subtitle="Track each to resolution">
         {diligence.loading ? <Spinner /> : diligence.error ? <ErrorState message={diligence.error} /> : (
           <div className="space-y-2">
             {diligence.data?.items.length ? diligence.data.items.map((q) => (
@@ -82,7 +82,7 @@ export default function DiligencePage() {
         {claims.data ? <ClaimsTable claims={claims.data.items} /> : <Spinner />}
       </Section>
 
-      <Section title="Contradictions & validation failures">
+      <Section title="Contradictions & Validation Failures">
         {contradictions.data?.items.length ? (
           <ul className="space-y-2">
             {contradictions.data.items.map((c) => (

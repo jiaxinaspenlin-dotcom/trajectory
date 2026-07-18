@@ -12,7 +12,7 @@ export default function DiscoveryPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-ink">Founder discovery</h1>
+        <h1 className="text-xl font-semibold text-ink">Founder Discovery</h1>
         <p className="text-sm text-ink-muted">
           Natural-language search over your indexed dataset, plus live outbound sourcing from public GitHub.
         </p>
@@ -52,7 +52,7 @@ function NlSearch() {
   }
 
   return (
-    <Section title="Natural-language search" subtitle="We show the interpreted filters for you to edit before searching">
+    <Section title="Natural-Language Search" subtitle="We show the interpreted filters for you to edit before searching">
       <textarea
         className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-brand focus:outline-none"
         rows={2} value={q} onChange={(e) => setQ(e.target.value)}
@@ -121,7 +121,7 @@ function GithubSync() {
   }
 
   return (
-    <Section title="Add a real public GitHub profile" subtitle="Live connector — collects only public data, with source attribution">
+    <Section title="Add a Real Public GitHub Profile" subtitle="Live connector — collects only public data, with source attribution">
       <div className="flex flex-wrap items-end gap-2">
         <label className="block">
           <span className="label">GitHub username</span>
@@ -158,7 +158,7 @@ function Prospects() {
   if (loading) return <Section title="Prospects"><Spinner /></Section>;
   if (error) return <Section title="Prospects"><ErrorState message={error} /></Section>;
   return (
-    <Section title="Sourced prospects" subtitle="Save, dismiss, monitor, recommend outreach, or invite to apply">
+    <Section title="Sourced Prospects" subtitle="Save, dismiss, monitor, recommend outreach, or invite to apply">
       <div className="space-y-2">
         {data?.items.length ? data.items.map((o) => (
           <div key={o.id} className="rounded-lg border border-line bg-surface p-3">
