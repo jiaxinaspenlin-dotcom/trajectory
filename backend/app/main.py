@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
+from app.ai.provider import AIError
 from app.api import (
     routes_applications,
     routes_entities,
@@ -36,6 +38,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(AIError)
+async def _ai_error_handler(request: Request, exc: AIError) -> JSONResponse:
+    """AI unavailable/failed -> honest 503. No fake fallback is ever returned."""
+    return JSONResponse(
+        status_code=503,
+        content={
+            "detail": str(exc),
+            "ai_unavailable": True,
+            "hint": "Set OPENAI_API_KEY to enable AI features (assessment, arena, memo, diligence, search).",
+        },
+    )
 
 
 @app.on_event("startup")

@@ -11,7 +11,7 @@ marketing: where something is a dev-only convenience or not yet built, it says s
 ### Secrets & configuration
 - All secrets are loaded from the environment / `.env`
   (`app/core/config.py`, pydantic-settings). No secret is hardcoded.
-- The Anthropic API key is loaded on the backend only, **never logged** (the AI
+- The OpenAI API key is loaded on the backend only, **never logged** (the AI
   provider logs only model + token counts + elapsed time) and **never sent to
   the client**.
 - `GET /api/settings` returns only masked hints (`…{last4}`), never full keys
@@ -100,10 +100,13 @@ several are surfaced through API responses and status endpoints.
   "Demo Fund" if none exists). Multi-fund is fully *modeled* (Fund → Thesis →
   Opportunity) but not gated by user identity or access control.
 
-- **AI requires a key or runs in deterministic fallback.** With no
-  `ANTHROPIC_API_KEY`, `ai_enabled` is False and every AI service uses its
-  evidence-only fallback. The product is fully functional this way, but LLM
-  interpretation quality is only available when a key is configured.
+- **AI features require an OpenAI key.** With no `OPENAI_API_KEY`, AI services
+  raise `AIError` and AI endpoints return HTTP **503** (there is no fake
+  fallback — output is never fabricated). The deterministic scoring engines
+  (Founder Score, momentum, ranking, Trust) still work without a key, and the
+  seeded demo analysis is static demo data (`generated_by="demo"`,
+  `is_demo=True`) so the product stays browsable. LLM interpretation is only
+  available when a key is configured.
 
 - **GitHub anonymous rate limit is 60 requests/hour.** Without `GITHUB_TOKEN`
   the connector uses the anonymous public API (60/hr); a token raises this to

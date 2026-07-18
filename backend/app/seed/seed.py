@@ -13,7 +13,7 @@ from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from app.db.base import SessionLocal, init_db
-from app.models.assessment import Opportunity
+from app.models.assessment import AxisAssessment, Opportunity, OpportunityAssessment
 from app.models.core import Fund, InvestmentThesis, User
 from app.models.entities import Application, Company, Founder, FounderCompanyRelationship
 from app.models.enums import (
@@ -31,10 +31,18 @@ from app.models.sources import (
     ClaimEvidenceLink,
     Evidence,
 )
-from app.models.workflow import TourProgress
+from app.models.workflow import (
+    Debate,
+    DebateArgument,
+    DiligenceQuestion,
+    InvestmentMemo,
+    RecommendedAction,
+    RefereeDecision,
+    TourProgress,
+)
 from app.scoring.founder_score import compute_founder_score
 from app.seed.data import COMPANIES, FOUNDERS
-from app.services.analysis import run_full_pipeline
+from app.services.context import build_opportunity_context
 from app.services.thesis import compute_thesis_fit
 
 NOW = datetime.now(UTC)
@@ -192,6 +200,148 @@ def _score_versions(db: Session, founder_id: int, evidence: list[Evidence], stre
     db.flush()
 
 
+def _seed_static_analysis(db: Session, opp: Opportunity) -> None:
+    """Write static, clearly-demo assessment/debate/diligence/memo fixtures.
+
+    These are fixture data (generated_by="demo"), NOT AI output and NOT a
+    disguised fallback — they let the demo be browsed without an OpenAI key.
+    Content references real evidence/claim IDs for this opportunity.
+    """
+    ctx = build_opportunity_context(db, opp)
+    fscore = ctx["founder_score"]
+    momentum = ctx["momentum"]
+    ev_ids = [e["id"] for e in ctx["evidence"]]
+    claims = ctx["claims"]
+    contradictions = ctx["contradictions"]
+    thesis_fit = ctx["thesis_fit_score"]
+    score = float(fscore.get("score", 0))
+    conf = float(fscore.get("confidence", 0.3))
+    strong_ev = ev_ids[:5]
+
+    def label(s: float, n: int) -> str:
+        if n == 0:
+            return "Insufficient Evidence"
+        return "Strong" if s >= 75 else "Promising" if s >= 58 else "Mixed" if s >= 40 else "Weak"
+
+    # ---- assessment (three independent axes) ----
+    assessment = OpportunityAssessment(
+        opportunity_id=opp.id, version=1, generated_by="demo", computed_at=NOW,
+    )
+    db.add(assessment)
+    db.flush()
+    axes = [
+        ("founder", score, label(score, len(fscore.get("evidence_ids", []))), conf, "neutral",
+         [{"text": fscore.get("explanation", "Founder Score computed from evidence."),
+           "evidence_ids": fscore.get("evidence_ids", [])[:5], "unverified": False}],
+         [], [c["name"] for c in fscore.get("components", []) if c.get("missingness", 0) >= 0.99][:4],
+         "Founder axis reflects the persistent Founder Score and momentum; independent of market."),
+        ("market", 45.0, "Mixed", 0.35, "neutral",
+         [{"text": "Market signals are thin at this stage and not independently verified.",
+           "evidence_ids": [], "unverified": True}],
+         ["Market sizing not independently verified."], ["Market size", "Growth rate", "Competition"],
+         "Market axis assessed independently; conservative where independent evidence is thin."),
+        ("idea_vs_market", min(70.0, 40.0 + thesis_fit * 0.3),
+         label(min(70.0, 40.0 + thesis_fit * 0.3), len(strong_ev)), 0.4, "neutral",
+         [{"text": "Technical feasibility supported by public repositories/releases.",
+           "evidence_ids": strong_ev, "unverified": len(strong_ev) == 0}],
+         ["Differentiation and distribution need validation."],
+         ["Competitive wedge", "Distribution strategy"],
+         "Idea-vs-Market assessed independently on thesis fit and technical evidence."),
+    ]
+    for (axis, sc, lb, cf, outlook, points, risks, missing, narrative) in axes:
+        db.add(AxisAssessment(
+            assessment_id=assessment.id, axis=axis, display_score=round(sc, 1), label=lb,
+            confidence=cf, trend="stable", supporting_evidence_ids=[i for p in points for i in p["evidence_ids"]],
+            supporting_points=points, risks=risks, missing_information=missing,
+            contradictions=[c["description"] for c in contradictions][:2] if axis == "founder" else [],
+            outlook=outlook, narrative=narrative,
+        ))
+
+    # ---- debate (bull / bear / referee) ----
+    debate = Debate(opportunity_id=opp.id, version=1, generated_by="demo", computed_at=NOW, is_demo=True)
+    db.add(debate)
+    db.flush()
+    bull_points = [
+        {"text": f"Founder Score is {score:.0f}/100 with independent GitHub evidence.",
+         "evidence_ids": strong_ev, "unverified": len(strong_ev) == 0},
+        {"text": f"Founder Momentum is {momentum.get('trajectory', 'n/a')}.",
+         "evidence_ids": [], "unverified": True},
+    ]
+    bear_points = [
+        {"text": f"{len([c for c in claims if c['verification_status'] in ('founder_reported', 'unverified')])} "
+                 "material claim(s) are founder-reported and lack independent corroboration.",
+         "evidence_ids": [], "unverified": True},
+    ]
+    for con in contradictions[:2]:
+        bear_points.insert(0, {"text": f"Contradiction: {con['description']}", "evidence_ids": [], "unverified": True})
+    db.add(DebateArgument(debate_id=debate.id, role="bull", headline="Evidence-backed case to advance",
+                          points=bull_points, speech_bubble="Momentum and thesis fit look promising.",
+                          referenced_evidence_ids=strong_ev))
+    db.add(DebateArgument(debate_id=debate.id, role="bear", headline="Evidence-backed case for caution",
+                          points=bear_points, speech_bubble="Key claims are unverified.", referenced_evidence_ids=[]))
+
+    action = ("Continue Diligence" if contradictions else
+              "Schedule Interview" if (score >= 68 and thesis_fit >= 60 and conf >= 0.6) else
+              "Continue Diligence" if score >= 50 else "Monitor")
+    db.add(RefereeDecision(
+        debate_id=debate.id, recommended_action=action, confidence=round(min(0.9, conf + 0.1), 2),
+        strongest_bull_point=bull_points[0]["text"], strongest_bear_point=bear_points[0]["text"],
+        unresolved_questions=[c["description"] for c in contradictions][:3] or ["Independent verification of traction claims."],
+        required_diligence=["Corroborate founder-reported metrics with independent sources.", "Resolve open contradictions."],
+        evidence_that_would_change="Independent verification of traction and resolution of contradictions.",
+        final_decision_supportable=bool(score >= 75 and conf >= 0.7 and not contradictions),
+        rationale=f"Demo referee: Founder Score {score:.0f} at {conf*100:.0f}% confidence, thesis fit "
+                  f"{thesis_fit:.0f}, {len(contradictions)} open contradiction(s). Weighs independence over rhetoric.",
+        speech_bubble=f"My call: {action}. Evidence quality drives this.",
+    ))
+    db.add(RecommendedAction(opportunity_id=opp.id, action=action,
+                             rationale="Demo recommendation from the seeded referee.", confidence=round(min(0.9, conf + 0.1), 2),
+                             source="referee", created_from_debate_id=debate.id))
+
+    # ---- diligence questions ----
+    for con in contradictions[:2]:
+        db.add(DiligenceQuestion(opportunity_id=opp.id, question=f"Please reconcile: {con['description']}",
+                                 category="contradiction", rationale="Contradictions must be resolved before a confident decision.",
+                                 related_claim_ids=[i for i in [con.get("claim_a_id"), con.get("claim_b_id")] if i],
+                                 generated_by="demo", is_demo=True))
+    for q, cat in [("Provide monthly cohort retention for the last six months.", "traction"),
+                   ("Confirm whether current pilots are paid or unpaid, with amounts.", "revenue"),
+                   ("Clarify whether repository contributors are employees or independent.", "team")]:
+        db.add(DiligenceQuestion(opportunity_id=opp.id, question=q, category=cat,
+                                 rationale=f"No {cat} evidence independently verified yet.", related_claim_ids=[],
+                                 generated_by="demo", is_demo=True))
+
+    # ---- memo ----
+    company = ctx["company"]
+    tr_claims = [c for c in claims if c["category"] in ("traction", "revenue", "users")]
+    memo_sections = [
+        {"key": "snapshot", "title": "Company Snapshot",
+         "body": f"{company.get('name')} — {company.get('one_liner') or 'Not disclosed'}. "
+                 f"Sector: {company.get('sector') or 'Not disclosed'}. Stage: {company.get('stage') or 'Not disclosed'}.",
+         "evidence_ids": strong_ev, "unavailable_label": None},
+        {"key": "hypotheses", "title": "Investment Hypotheses",
+         "body": f"Founder axis and momentum suggest execution capability (Founder Score {score:.0f}/100). "
+                 f"Thesis fit {thesis_fit:.0f}/100. Core hypotheses require independent traction verification.",
+         "evidence_ids": fscore.get("evidence_ids", [])[:5], "unavailable_label": None},
+        {"key": "swot", "title": "SWOT",
+         "body": "Strengths: technical execution on public repositories. Weaknesses: unverified traction. "
+                 "Opportunities: thesis-aligned market entry. Threats: competitive uncertainty.",
+         "evidence_ids": [], "unavailable_label": None},
+        {"key": "traction", "title": "Traction & KPIs",
+         "body": " ".join(f"{c['text']} (status: {c['verification_status']}, trust {c['trust_score']:.0f})."
+                          for c in tr_claims[:4]) or "No independently verified traction metrics at this stage.",
+         "evidence_ids": [c["id"] for c in tr_claims][:4],
+         "unavailable_label": None if tr_claims else "Not verified"},
+        {"key": "financials", "title": "Financials & Round Structure",
+         "body": "Round structure and financials not disclosed at this stage.", "evidence_ids": [],
+         "unavailable_label": "Not disclosed"},
+    ]
+    db.add(InvestmentMemo(opportunity_id=opp.id, version=1, generated_by="demo", computed_at=NOW,
+                          sections=memo_sections, recommended_action=action, confidence=round(min(0.9, conf + 0.1), 2),
+                          is_demo=True))
+    db.flush()
+
+
 def run_seed() -> dict:
     init_db()
     db = SessionLocal()
@@ -285,11 +435,13 @@ def run_seed() -> dict:
 
         db.commit()
 
-        # Run the full analysis pipeline (fallback/AI) on the first 3 opps so the
-        # demo ships with completed assessments, >=2 debates, diligence, and memos.
+        # Ship the demo with completed assessments, >=2 debates, diligence, and
+        # memos as STATIC demo fixtures (not AI calls) so the app is fully
+        # browsable without an OpenAI key. Live regeneration uses OpenAI.
         for opp in opportunities[:3]:
-            run_full_pipeline(db, opp)
+            _seed_static_analysis(db, opp)
             opp.stage = WorkflowStage.DILIGENCE
+            opp.recommendation_at = NOW - timedelta(hours=1)
         db.commit()
 
         counts = {

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -12,10 +13,20 @@ export default function MemoPage() {
   const { id } = useParams<{ id: string }>();
   const opp = useFetch<Opportunity>(`/api/opportunities/${id}`);
   const memo = useFetch<Memo>(`/api/opportunities/${id}/memo`);
+  const [genError, setGenError] = useState<string | null>(null);
 
   async function generate() {
-    await api.post(`/api/opportunities/${id}/memo`);
-    memo.reload();
+    setGenError(null);
+    try {
+      await api.post(`/api/opportunities/${id}/memo`);
+      memo.reload();
+    } catch (e) {
+      setGenError(
+        e instanceof Error && (e.message.toLowerCase().includes("ai provider") || e.message.includes("OPENAI"))
+          ? "AI is not configured — set OPENAI_API_KEY to regenerate the memo. The seeded demo memo remains available."
+          : e instanceof Error ? e.message : "Memo generation failed."
+      );
+    }
   }
 
   return (
@@ -31,6 +42,8 @@ export default function MemoPage() {
           <button className="btn-primary" onClick={generate}>Regenerate memo</button>
         </div>
       </div>
+
+      {genError && <ErrorState message={genError} />}
 
       {opp.data && (
         <div className="rounded-xl border border-line bg-surface p-5">

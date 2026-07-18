@@ -21,7 +21,7 @@ while **a human approves every consequential action**.
 - [Quick start (local, no Docker)](#quick-start-local-no-docker)
 - [Quick start (Docker)](#quick-start-docker)
 - [Environment variables](#environment-variables)
-- [Anthropic setup](#anthropic-setup)
+- [OpenAI setup](#openai-setup)
 - [GitHub setup](#github-setup)
 - [Database, migrations, seed](#database-migrations-seed)
 - [Running tests, lint, type-checks, builds](#running-tests-lint-type-checks-builds)
@@ -87,8 +87,8 @@ while **a human approves every consequential action**.
 │  Guided tour       │                         │  │   (score/momentum/rank/   │
 └────────────────────┘                         │  │    trust) — pure Python   │
                                                │  ├─ Connector layer (GitHub) │
-                                               │  ├─ AI provider (Anthropic)  │
-                                               │  │   + deterministic fallback│
+                                               │  ├─ AI provider (OpenAI)     │
+                                               │  │   required for AI features│
                                                │  └─ SQLAlchemy 2 + Alembic   │
                                                └───────────────┬──────────────┘
                                                                │
@@ -101,8 +101,8 @@ while **a human approves every consequential action**.
 - **Python owns** API integration, evidence processing, scoring/ranking, PDF processing, AI
   orchestration, data validation, and business logic.
 - The **AI provider layer** is abstracted so another provider can be added without rewriting the app.
-  With no `ANTHROPIC_API_KEY`, every AI service falls back to a deterministic, evidence-only result
-  and the app still works end-to-end.
+  The AI features require an `OPENAI_API_KEY`; without one those endpoints return HTTP 503 (no fake
+  fallback). The deterministic engines (Founder Score, Momentum, ranking, Trust) never need a key.
 - Inbound applications and outbound GitHub prospects **converge into the same `Opportunity`**
   workflow object.
 
@@ -147,7 +147,7 @@ first dashboard visit.
 
 ```bash
 # Optional: export secrets so the containers pick them up (never commit them)
-export ANTHROPIC_API_KEY=sk-ant-...        # optional — omit for fallback mode
+export OPENAI_API_KEY=sk-...                # enables AI features; omit and they return 503
 export GITHUB_TOKEN=ghp_...                # optional — omit for anonymous 60/hr
 
 docker compose up --build
@@ -164,8 +164,8 @@ Copy `.env.example` to `.env`. **Never commit `.env` or put real values in `.env
 
 | Variable | Purpose | Default / notes |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | Anthropic API key (server-side only) | empty → deterministic fallback mode |
-| `ANTHROPIC_MODEL` | Claude model id | `claude-opus-4-8` |
+| `OPENAI_API_KEY` | OpenAI API key (server-side only) | empty → AI features return 503 (no fallback) |
+| `OPENAI_MODEL` | OpenAI model id | `gpt-4o` |
 | `GITHUB_TOKEN` | Raises GitHub rate limit to 5000/hr | empty → anonymous 60/hr |
 | `DATABASE_URL` | SQLAlchemy URL | empty → SQLite file `backend/trajectory.db` |
 | `BACKEND_CORS_ORIGINS` | Comma-separated allowed origins | `http://localhost:3000` |
@@ -175,18 +175,22 @@ Copy `.env.example` to `.env`. **Never commit `.env` or put real values in `.env
 | `SECRET_KEY` | Internal signing seed | set your own in prod |
 | `ENVIRONMENT` | `development` / `production` / `test` | `development` |
 
-The Anthropic key is only ever read on the backend and is **never** included in the client bundle.
+The OpenAI key is only ever read on the backend and is **never** included in the client bundle.
 The Settings page shows a masked hint (last 4 chars) — never the full key.
 
-## Anthropic setup
+## OpenAI setup
 
-1. Get an API key from the Anthropic console.
-2. Put it in `.env` as `ANTHROPIC_API_KEY=...` (and optionally set `ANTHROPIC_MODEL`).
+1. Get an API key from the OpenAI platform.
+2. Put it in `.env` as `OPENAI_API_KEY=...` (and optionally set `OPENAI_MODEL`, default `gpt-4o`).
 3. Restart the backend. `GET /api/health` will report `ai.enabled: true`.
 
-Without a key, all AI services (search parsing, three-axis assessment, diligence questions, Bull/
-Bear/Referee, memo, pitch-deck interpretation) run a **deterministic, evidence-only fallback** and
-label output `generated_by: "fallback"`. No facts are ever invented in either mode.
+**There is no fake fallback.** Without a key, the AI features (natural-language search parsing,
+three-axis assessment, diligence questions, Bull/Bear/Referee, memo, pitch-deck interpretation) are
+**unavailable** and their endpoints return HTTP 503 (`{"ai_unavailable": true}`). The frontend shows a
+clear "AI not configured" message. The seeded demo ships with static, clearly-labeled demo
+assessments/debates/memos so the app stays fully browsable without a key, and the deterministic
+engines (Founder Score, Momentum, ranking, Trust) always work. The model is only ever given stored
+evidence and is instructed never to invent facts; hallucinated evidence-ID references are rejected.
 
 ## GitHub setup
 
@@ -258,7 +262,7 @@ human decision) · `/opportunities/[id]/diligence` diligence workspace ·
 Trajectory/
 ├── backend/                 FastAPI app
 │   ├── app/
-│   │   ├── ai/              provider + services + validation (Anthropic, fallback)
+│   │   ├── ai/              provider + services + validation (OpenAI; 503 when no key)
 │   │   ├── api/             REST routers
 │   │   ├── connectors/      GitHub (live) + connector interfaces
 │   │   ├── core/            config, security (SSRF), rate limiting
@@ -286,8 +290,9 @@ Trajectory/
 - **Only the GitHub connector is live.** Hackathons, product launches, papers, patents,
   accelerator cohorts and social signals are modeled and shown as *planned / not implemented* —
   never presented as live.
-- **AI requires a key or runs in deterministic fallback.** Fallback output is honest and
-  evidence-only, but less nuanced than model output.
+- **AI features require an OpenAI key.** Without one they are unavailable (HTTP 503) — there is no
+  fake fallback. The seeded demo analysis is static, clearly-labeled demo data; deterministic
+  scoring always works.
 - **Single default fund / no authentication yet.** Users, funds and multi-tenancy are fully
   modeled, but there is no login flow in this version.
 - **In-memory rate limiter** — fine for a single process; use Redis for multi-worker deploys.

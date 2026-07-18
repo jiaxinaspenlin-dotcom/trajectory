@@ -26,9 +26,9 @@ class Settings(BaseSettings):
         case_sensitive=False,
     )
 
-    # AI provider
-    anthropic_api_key: str = Field(default="", alias="ANTHROPIC_API_KEY")
-    anthropic_model: str = Field(default="claude-opus-4-8", alias="ANTHROPIC_MODEL")
+    # AI provider (OpenAI)
+    openai_api_key: str = Field(default="", alias="OPENAI_API_KEY")
+    openai_model: str = Field(default="gpt-4o", alias="OPENAI_MODEL")
     ai_timeout_seconds: float = Field(default=60.0, alias="AI_TIMEOUT_SECONDS")
 
     # GitHub
@@ -80,7 +80,7 @@ class Settings(BaseSettings):
 
     @property
     def ai_enabled(self) -> bool:
-        return bool(self.anthropic_api_key.strip())
+        return bool(self.openai_api_key.strip())
 
     @property
     def max_upload_bytes(self) -> int:

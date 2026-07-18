@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from sqlalchemy.orm import Session
 
 from app.ai import services as ai
+from app.ai.provider import AIError
 from app.models.entities import Company
 from app.models.enums import Provenance, SourceType, VerificationStatus
 from app.models.sources import Claim, ClaimEvidenceLink, DataSource, Evidence
@@ -19,8 +20,20 @@ def interpret_and_store_deck(
 
     Records the pitch-deck page references. NEVER invents metrics — only what the
     extractor literally found (with page numbers) becomes founder-reported evidence.
+
+    AI interpretation is optional: if the AI provider is unavailable, the deck is
+    still stored and its raw text extracted; we just skip structured extraction and
+    say so honestly.
     """
-    extraction = ai.interpret_pitch_deck(page_texts)
+    try:
+        extraction = ai.interpret_pitch_deck(page_texts)
+    except AIError as exc:
+        return {
+            "ai_available": False,
+            "message": f"Deck stored and text extracted, but AI interpretation is unavailable: {exc}",
+            "metrics": [],
+            "missing": [],
+        }
     if company_id is None:
         return extraction
 

@@ -6,7 +6,7 @@ import { useFetch } from "@/lib/useFetch";
 import { Badge, ErrorState, Section, Spinner } from "@/components/ui";
 
 interface SettingsView {
-  anthropic: { connected: boolean; model: string; key_hint: string };
+  openai: { connected: boolean; model: string; key_hint: string; note: string };
   github: { connected: boolean; authenticated: boolean; token_hint: string; rate_limit: string };
   database: { connected: boolean; scheme: string };
   live_connectors: string[];
@@ -37,12 +37,12 @@ export default function SettingsPage() {
       <h1 className="text-xl font-semibold text-ink">Settings & data sources</h1>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Section title="AI provider (Anthropic)" subtitle="Server-side only — the key never reaches the browser">
-          <Row label="Status" value={data.anthropic.connected ? <Badge tone="bg-positive-wash text-positive">connected</Badge> : <Badge tone="bg-caution-wash text-caution">fallback mode</Badge>} />
-          <Row label="Model" value={data.anthropic.model} />
-          <Row label="Key" value={<span className="font-mono text-xs">{data.anthropic.key_hint || "not set"}</span>} />
-          {!data.anthropic.connected && (
-            <p className="mt-2 text-xs text-ink-muted">No API key configured — all AI runs in deterministic, evidence-only fallback mode. The app still works end-to-end.</p>
+        <Section title="AI provider (OpenAI)" subtitle="Server-side only — the key never reaches the browser">
+          <Row label="Status" value={data.openai.connected ? <Badge tone="bg-positive-wash text-positive">connected</Badge> : <Badge tone="bg-negative-wash text-negative">not configured</Badge>} />
+          <Row label="Model" value={data.openai.model} />
+          <Row label="Key" value={<span className="font-mono text-xs">{data.openai.key_hint || "not set"}</span>} />
+          {!data.openai.connected && (
+            <p className="mt-2 text-xs text-ink-muted">No API key configured — AI features (assessment, arena, memo, diligence, search) are unavailable and return 503. There is no fake fallback. Deterministic scoring (Founder Score, Momentum, ranking, Trust) still works.</p>
           )}
         </Section>
 

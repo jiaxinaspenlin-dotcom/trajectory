@@ -23,17 +23,23 @@ export default function OpportunityPage() {
   const contradictions = useFetch<{ items: any[] }>(`/api/contradictions${o?.company?.id ? `?company_id=${o.company.id}` : ""}`);
   const [busy, setBusy] = useState(false);
   const [confirmRegen, setConfirmRegen] = useState(false);
+  const [regenError, setRegenError] = useState<string | null>(null);
 
   async function regenerate() {
     setBusy(true);
+    setRegenError(null);
     try {
       await api.post(`/api/opportunities/${id}/analyze`);
       await reload();
       claims.reload();
       contradictions.reload();
+      setConfirmRegen(false);
+    } catch (e) {
+      setRegenError(
+        e instanceof Error ? e.message : "Analysis failed. Ensure OPENAI_API_KEY is configured."
+      );
     } finally {
       setBusy(false);
-      setConfirmRegen(false);
     }
   }
 
@@ -71,12 +77,19 @@ export default function OpportunityPage() {
       {confirmRegen && (
         <div className="rounded-lg border border-brand/30 bg-brand-wash p-4">
           <p className="text-sm text-brand">
-            Regenerate the assessment, diligence, Arena debate, and memo? Prior versions are preserved — nothing is overwritten.
+            Regenerate the assessment, diligence, Arena debate, and memo with OpenAI? Prior versions are preserved — nothing is overwritten.
           </p>
           <div className="mt-2 flex gap-2">
             <button className="btn-primary" onClick={regenerate} disabled={busy}>Confirm</button>
             <button className="btn-secondary" onClick={() => setConfirmRegen(false)}>Cancel</button>
           </div>
+          {regenError && (
+            <p className="mt-2 text-sm text-negative">
+              {regenError.includes("OPENAI") || regenError.toLowerCase().includes("ai provider")
+                ? "AI is not configured. Set OPENAI_API_KEY on the backend to enable analysis. Deterministic scores and the seeded demo analysis remain available."
+                : regenError}
+            </p>
+          )}
         </div>
       )}
 

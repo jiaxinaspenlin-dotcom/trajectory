@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -18,9 +19,19 @@ export default function DiligencePage() {
   const claims = useFetch<{ items: Claim[] }>(opp.data?.company?.id ? `/api/claims?company_id=${opp.data.company.id}` : null);
   const contradictions = useFetch<{ items: any[] }>(`/api/contradictions${opp.data?.company?.id ? `?company_id=${opp.data.company.id}` : ""}`);
 
+  const [genError, setGenError] = useState<string | null>(null);
   async function generate() {
-    await api.post(`/api/opportunities/${id}/diligence`);
-    diligence.reload();
+    setGenError(null);
+    try {
+      await api.post(`/api/opportunities/${id}/diligence`);
+      diligence.reload();
+    } catch (e) {
+      setGenError(
+        e instanceof Error && (e.message.toLowerCase().includes("ai provider") || e.message.includes("OPENAI"))
+          ? "AI is not configured — set OPENAI_API_KEY to generate new questions. Seeded demo questions remain available."
+          : e instanceof Error ? e.message : "Generation failed."
+      );
+    }
   }
   async function setStatus(qid: number, status: string) {
     await api.put(`/api/diligence/${qid}/status`, { status });
@@ -39,6 +50,8 @@ export default function DiligencePage() {
           <button className="btn-primary" onClick={generate}>Generate questions</button>
         </div>
       </div>
+
+      {genError && <ErrorState message={genError} />}
 
       <Section title="Diligence questions" subtitle="Track each to resolution">
         {diligence.loading ? <Spinner /> : diligence.error ? <ErrorState message={diligence.error} /> : (

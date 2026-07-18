@@ -35,7 +35,7 @@ def health(db: Session = Depends(get_db)) -> dict:
         "status": "ok",
         "environment": settings.environment,
         "database": {"connected": db_ok, "url_scheme": settings.resolved_database_url.split(":")[0]},
-        "ai": {"provider": "anthropic", "enabled": settings.ai_enabled, "model": settings.anthropic_model},
+        "ai": {"provider": "openai", "enabled": settings.ai_enabled, "model": settings.openai_model},
         "github": {"authenticated": bool(settings.github_token)},
     }
 
@@ -74,11 +74,12 @@ def get_settings_view(db: Session = Depends(get_db)) -> dict:
 
     sources = db.scalars(select(DataSource)).all()
     return {
-        "openai": {"note": "This build uses Anthropic (Claude), not OpenAI."},
-        "anthropic": {
+        "openai": {
             "connected": settings.ai_enabled,
-            "model": settings.anthropic_model,
-            "key_hint": mask(settings.anthropic_api_key),  # masked; never full key
+            "model": settings.openai_model,
+            "key_hint": mask(settings.openai_api_key),  # masked; never full key
+            "note": "Required for all AI features. Without a key, AI endpoints return 503 "
+                    "(no fake fallback). Deterministic scoring still works.",
         },
         "github": {
             "connected": True,
@@ -100,7 +101,9 @@ def get_settings_view(db: Session = Depends(get_db)) -> dict:
         "privacy_and_limitations": [
             "Only public GitHub data is collected. Restricted platforms (LinkedIn, X) are never scraped.",
             "No automatic outreach or investment is performed; humans approve consequential actions.",
-            "AI never invents facts; unconfigured AI falls back to deterministic, evidence-only output.",
+            "AI never invents facts. AI features (assessment, arena, memo, diligence, search) require "
+            "an OpenAI key; without one they are unavailable (HTTP 503) — there is no fake fallback. "
+            "Deterministic scoring (Founder Score, Momentum, ranking, Trust) always works.",
             "Demo data is clearly labeled and never silently mixed with real evidence.",
         ],
     }

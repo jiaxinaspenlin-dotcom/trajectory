@@ -30,9 +30,18 @@ def test_settings_never_leaks_full_key(client):
     assert r.status_code == 200
     body = r.json()
     # hints only, never full keys
-    assert "key_hint" in body["anthropic"]
-    assert body["anthropic"]["key_hint"] in ("", "set") or body["anthropic"]["key_hint"].startswith("…")
+    assert "key_hint" in body["openai"]
+    assert body["openai"]["key_hint"] in ("", "set") or body["openai"]["key_hint"].startswith("…")
     assert "github" in body["live_connectors"]
+
+
+def test_ai_endpoints_return_503_without_key(client, seeded):
+    # No OPENAI_API_KEY in the test env -> AI features are unavailable, not faked.
+    r = client.post("/api/opportunities/1/assessment")
+    assert r.status_code == 503
+    assert r.json()["ai_unavailable"] is True
+    r2 = client.post("/api/search/parse", json={"query": "fintech founders in Boston"})
+    assert r2.status_code == 503
 
 
 def test_thesis_crud(client):
@@ -59,9 +68,12 @@ def test_connector_status_honest(client):
     assert all(c["live"] is False for c in body["planned_unavailable"])
 
 
-def test_full_happy_path(client, seeded):
+def test_full_happy_path(client, seeded, mock_ai):
     """Thesis -> inbound -> deck -> evidence -> score -> screening -> diligence
-    -> arena -> memo -> recommendation -> human decision."""
+    -> arena -> memo -> recommendation -> human decision.
+
+    `mock_ai` stubs the OpenAI provider (no key/network) so the AI-dependent
+    analyze step runs the real parse/validation/persistence code paths."""
     # 1. thesis exists
     assert client.get("/api/thesis").json()["thesis"] is not None
 
@@ -132,7 +144,7 @@ def test_ranking_and_prestige_audit(client, seeded):
     assert "bias & sensitivity audit" in r.json()["note"]
 
 
-def test_search_parse_shows_editable_filters(client):
+def test_search_parse_shows_editable_filters(client, mock_ai):
     r = client.post("/api/search/parse", json={"query": "technical seed founders in Boston fintech"})
     assert r.status_code == 200
     assert "filters" in r.json()

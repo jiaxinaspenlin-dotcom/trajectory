@@ -1,18 +1,21 @@
-"""AI provider abstraction.
+"""AI provider abstraction (OpenAI).
 
 Designed so another provider can be added later without rewriting the app: the
 rest of the codebase depends only on `AIProvider.generate_json(...)`.
 
-The only implemented provider is Anthropic (official SDK). When no API key is
-configured, `AIProvider.enabled` is False and callers fall back to deterministic,
-evidence-only results — the app still works end-to-end and never invents facts.
+There is NO deterministic text fallback. If no API key is configured, or the
+provider fails after retries, `generate_json` raises `AIError`. Callers let it
+propagate; the API turns it into an honest HTTP 503 ("AI provider not
+configured / unavailable"). The deterministic scoring engines (Founder Score,
+Momentum, ranking, Trust) are separate pure-Python modules and do not depend on
+this provider.
 
 Rules enforced here:
 - API key is loaded from the environment; never logged, never sent to the client.
 - All calls run on the backend only.
-- Timeouts + retries + structured JSON parsing validated by callers via Pydantic.
-- Hidden chain-of-thought is never requested or returned; we ask only for
-  final structured conclusions.
+- Timeouts + retries + structured JSON parsing (OpenAI JSON mode).
+- Hidden chain-of-thought is never requested or returned; we ask only for final
+  structured conclusions.
 """
 
 from __future__ import annotations
@@ -28,23 +31,23 @@ logger = logging.getLogger("trajectory.ai")
 
 
 class AIError(Exception):
-    pass
+    """Raised when the AI provider is unavailable or returns unusable output."""
 
 
 class AIProvider:
-    """Thin wrapper over the Anthropic Messages API returning parsed JSON."""
+    """Thin wrapper over the OpenAI Chat Completions API returning parsed JSON."""
 
     def __init__(self) -> None:
         self._client: Any = None
-        self.model = settings.anthropic_model
+        self.model = settings.openai_model
         self.enabled = settings.ai_enabled
 
     def _client_lazy(self) -> Any:
         if self._client is None:
-            import anthropic  # imported lazily so tests run without network
+            from openai import OpenAI  # imported lazily so tests run without network
 
-            self._client = anthropic.Anthropic(
-                api_key=settings.anthropic_api_key,
+            self._client = OpenAI(
+                api_key=settings.openai_api_key,
                 timeout=settings.ai_timeout_seconds,
                 max_retries=0,  # we handle retries explicitly
             )
@@ -60,11 +63,11 @@ class AIProvider:
     ) -> dict[str, Any]:
         """Call the model and return parsed JSON.
 
-        Raises AIError on failure so the caller can apply its deterministic
-        fallback. Never raises the raw provider exception to callers.
+        Raises AIError if the provider is disabled (no key) or fails after
+        retries. There is no fallback — the caller must surface unavailability.
         """
         if not self.enabled:
-            raise AIError("AI provider disabled (no ANTHROPIC_API_KEY configured).")
+            raise AIError("AI provider not configured: set OPENAI_API_KEY to enable AI features.")
 
         guard = (
             "\n\nRespond with a SINGLE valid JSON object and nothing else. "
@@ -78,26 +81,30 @@ class AIProvider:
             try:
                 client = self._client_lazy()
                 t0 = time.time()
-                resp = client.messages.create(
+                resp = client.chat.completions.create(
                     model=self.model,
                     max_tokens=max_tokens,
-                    system=system + guard,
-                    messages=[{"role": "user", "content": user}],
+                    response_format={"type": "json_object"},
+                    messages=[
+                        {"role": "system", "content": system + guard},
+                        {"role": "user", "content": user},
+                    ],
                 )
                 elapsed = round(time.time() - t0, 2)
-                text = "".join(
-                    block.text for block in resp.content if getattr(block, "type", "") == "text"
-                )
+                text = resp.choices[0].message.content or ""
                 data = _extract_json(text)
+                usage = getattr(resp, "usage", None)
                 # Log metadata only — never the key, never full evidence.
                 logger.info(
                     "ai_call ok model=%s tokens_in=%s tokens_out=%s elapsed=%ss",
                     self.model,
-                    getattr(resp.usage, "input_tokens", "?"),
-                    getattr(resp.usage, "output_tokens", "?"),
+                    getattr(usage, "prompt_tokens", "?"),
+                    getattr(usage, "completion_tokens", "?"),
                     elapsed,
                 )
                 return data
+            except AIError:
+                raise
             except Exception as exc:  # noqa: BLE001
                 last_err = exc
                 logger.warning("ai_call failed attempt=%d err=%s", attempt, str(exc)[:200])

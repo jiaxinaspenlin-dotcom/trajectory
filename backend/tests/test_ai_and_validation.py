@@ -1,11 +1,13 @@
-"""AI validation layer, malformed AI handling, and fallback behavior tests."""
+"""AI validation layer, malformed-JSON handling, no-key behavior, mocked provider."""
 
 from __future__ import annotations
 
+import pytest
 from app.ai import services as ai
 from app.ai.provider import AIError, _extract_json
 from app.ai.validation import sanitize_points, validate_evidence_ids
 
+# ---- validation layer (provider-independent) ------------------------------
 
 def test_reject_nonexistent_evidence_ids():
     valid, rejected = validate_evidence_ids([1, 2, 999, "3", "bad"], {1, 2, 3})
@@ -32,80 +34,67 @@ def test_extract_json_handles_fences_and_prose():
 
 
 def test_extract_json_raises_on_garbage():
-    try:
+    with pytest.raises(AIError):
         _extract_json("no json here")
-        raise AssertionError("should have raised")
-    except AIError:
-        pass
 
 
-def test_search_parse_fallback_is_honest():
-    r = ai.parse_search(
-        "Find technical pre-seed founders in Boston building financial infrastructure "
-        "with product adoption and no prior institutional funding",
-        ["Internal indexed dataset", "GitHub"],
-    )
-    assert r["generated_by"] == "fallback"  # no API key in tests
-    assert "fintech" in r["sectors"]
-    assert "pre-seed" in r["stages"]
-    assert "Boston" in r["geographies"]
-    assert r["technical_founder"] is True
-    assert r["requires_product_adoption"] is True
-    assert "Internal indexed dataset" in r["searched_sources"]
+# ---- no-key behavior: services raise AIError (there is NO fallback) --------
+
+def test_services_raise_without_api_key():
+    # provider.enabled is False in the test env (no OPENAI_API_KEY)
+    ctx = {"evidence": [], "claims": [], "contradictions": [], "founder_score": {}, "momentum": {}}
+    with pytest.raises(AIError):
+        ai.assess_axes(ctx)
+    with pytest.raises(AIError):
+        ai.parse_search("fintech founders", ["Internal dataset"])
+    with pytest.raises(AIError):
+        ai.generate_bull(ctx)
 
 
-def test_axes_never_averaged_and_independent():
+# ---- with a mocked provider: real parsing + validation paths run ----------
+
+def test_axes_three_independent_and_ids_validated(mock_ai):
     context = {
-        "evidence": [{"id": 1, "kind": "github_repo", "confidence": 0.8}],
-        "claims": [],
+        "evidence": [{"id": 1, "kind": "github_repo", "confidence": 0.8, "provenance": "independent",
+                      "verification_status": "verified"}],
+        "claims": [], "contradictions": [],
         "founder_score": {"score": 80, "confidence": 0.7, "evidence_ids": [1], "explanation": "x", "components": []},
-        "momentum": {"trajectory": "improving", "explanation": "up"},
-        "thesis_fit_score": 70,
-        "contradictions": [],
+        "momentum": {"trajectory": "improving"}, "thesis_fit_score": 70,
     }
     r = ai.assess_axes(context)
-    axes = {a["axis"]: a for a in r["axes"]}
-    assert set(axes) == {"founder", "market", "idea_vs_market"}
-    # three distinct scores preserved (not collapsed to one average)
-    scores = [a["display_score"] for a in r["axes"]]
-    assert len(scores) == 3
+    assert r["generated_by"] == "openai"
+    axes = {a["axis"] for a in r["axes"]}
+    assert axes == {"founder", "market", "idea_vs_market"}
+    # three distinct scores preserved (not averaged)
+    assert len(r["axes"]) == 3
+    # the hallucinated evidence id 999999 from the stub must be stripped
+    founder_axis = next(a for a in r["axes"] if a["axis"] == "founder")
+    assert 999999 not in founder_axis["supporting_evidence_ids"]
+    assert 1 in founder_axis["supporting_evidence_ids"]
 
 
-def test_referee_judges_on_quality_not_prose():
-    context = {
-        "evidence": [{"id": i, "kind": "github_repo", "confidence": 0.8, "provenance": "independent"} for i in range(1, 5)],
-        "claims": [], "contradictions": [],
-        "founder_score": {"score": 80, "confidence": 0.75, "evidence_ids": [1, 2]},
-        "momentum": {"trajectory": "accelerating"}, "thesis_fit_score": 70,
-        "entry_type": "outbound",
-    }
+def test_referee_action_normalized(mock_ai):
+    context = {"evidence": [], "claims": [], "contradictions": [], "founder_score": {"score": 60, "confidence": 0.6},
+               "momentum": {}, "thesis_fit_score": 60, "entry_type": "outbound"}
     bull = ai.generate_bull(context)
     bear = ai.generate_bear(context)
     ref = ai.generate_referee(context, bull, bear)
+    # stub returns an invalid action -> normalized to a valid one
     assert ref["recommended_action"] in {
         "Invite to Apply", "Schedule Interview", "Request Information",
         "Continue Diligence", "Monitor", "Invest", "Pass",
     }
-    # contradictions present should force Continue Diligence
-    context["contradictions"] = [{"description": "conflict", "claim_a_id": 1, "claim_b_id": 2}]
-    ref2 = ai.generate_referee(context, bull, bear)
-    assert ref2["recommended_action"] == "Continue Diligence"
+    assert ref["recommended_action"] == "Continue Diligence"
 
 
-def test_referee_not_supportable_when_evidence_thin():
-    context = {
-        "evidence": [], "claims": [], "contradictions": [],
-        "founder_score": {"score": 20, "confidence": 0.2, "evidence_ids": []},
-        "momentum": {"trajectory": "insufficient_history"}, "thesis_fit_score": 10,
-        "entry_type": "inbound",
-    }
-    ref = ai.generate_referee(context, ai.generate_bull(context), ai.generate_bear(context))
-    assert ref["final_decision_supportable"] is False
+def test_bear_point_without_evidence_is_unverified(mock_ai):
+    context = {"evidence": [{"id": 1, "kind": "x", "confidence": 0.5}], "claims": [], "contradictions": [],
+               "founder_score": {}, "momentum": {}, "thesis_fit_score": 0}
+    bear = ai.generate_bear(context)
+    assert bear["points"][0]["unverified"] is True  # stub bear point has no evidence ids
 
 
-def test_pitch_fallback_invents_nothing():
-    pages = [{"page": 1, "text": "We are building a great product for teams."}]
-    r = ai.interpret_pitch_deck(pages)
-    assert r["generated_by"] == "fallback"
-    assert r["metrics"] == []  # no invented numbers
+def test_pitch_extraction_with_mock(mock_ai):
+    r = ai.interpret_pitch_deck([{"page": 1, "text": "team building product"}])
+    assert r["generated_by"] == "openai"
     assert "revenue" in r["missing"]

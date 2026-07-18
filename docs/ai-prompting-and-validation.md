@@ -5,8 +5,12 @@ Sources of truth: `backend/app/ai/provider.py`, `backend/app/ai/services.py`,
 
 Trajectory uses an LLM only to *interpret and organize stored evidence* — never
 to source facts. Every AI service is grounded in stored evidence, validated
-against real evidence IDs, tagged with its provenance, and backed by a
-deterministic fallback so the whole product runs with no API key.
+against real evidence IDs, and tagged with its provenance. There is **no AI text
+fallback**: when no key is configured or the provider fails, AI services raise
+`AIError`, which a global handler turns into an HTTP **503** response. The
+deterministic scoring engines (Founder Score, momentum, ranking, Trust) are a
+separate, pure-Python core that always works — they are not AI and were never a
+"fallback."
 
 ---
 
@@ -81,61 +85,72 @@ returns `{valid_evidence_ids, rejected_evidence_ids, all_valid}`.
 
 `AIProvider.generate_json(system, user, max_tokens, retries=2)`:
 
-- Uses the Anthropic Messages API; the client is created lazily so tests run
-  without network.
-- SDK configured with an explicit timeout (`AI_TIMEOUT_SECONDS`, default 60s)
-  and `max_retries=0` — retries are handled in-app with exponential backoff
+- Uses the OpenAI Chat Completions API in **JSON mode**
+  (`response_format={"type": "json_object"}`); the client is created lazily so
+  tests run without network. Provider and model come from config
+  (`OPENAI_API_KEY`, `OPENAI_MODEL`, default `gpt-4o`).
+- Client configured with an explicit timeout (`AI_TIMEOUT_SECONDS`, default 60s)
+  and no SDK-level retries — retries are handled in-app with exponential backoff
   (`0.6 * 2^attempt` seconds).
 - `_extract_json` tolerates code fences and surrounding prose, extracting the
   first `{ … }` object; if none parses, it raises `AIError`.
 - Only metadata is logged (model, token counts, elapsed) — never the API key,
-  never full evidence. On failure it raises `AIError` (never the raw provider
-  exception) so the caller applies its fallback.
+  never full evidence. If no `OPENAI_API_KEY` is set, or the call fails after
+  retries, it raises `AIError` (never the raw provider exception).
 
 ---
 
-## 4. Deterministic fallback for every service
+## 4. No AI fallback — `AIError` becomes HTTP 503
 
-When the provider is disabled (`ai_enabled` False — no `ANTHROPIC_API_KEY`) or
-any call fails, each service runs an evidence-only fallback that invents
-nothing:
+There is **no deterministic AI text fallback**. If `OPENAI_API_KEY` is not set,
+or the provider fails after retries, `provider.generate_json` raises `AIError`,
+and every AI service in `app/ai/services.py` lets it propagate. A global
+exception handler in `app/main.py` turns `AIError` into an HTTP **503** JSON
+response:
 
-- **Search** parses sectors/stages/geographies with keyword maps and notes it is
-  deterministic and that only connected sources are searched.
-- **Axes** derives the Founder axis from the persistent Founder Score + momentum,
-  the Market axis from market/traction claims, and Idea-vs-Market from thesis
-  fit + technical evidence — keeping the three independent and conservative when
-  evidence is thin.
-- **Bull/Bear** build points from the Founder Score, momentum, thesis fit,
-  high-confidence evidence, contradictions, and unverified claims.
-- **Referee** applies a deterministic decision policy based on **evidence
-  quality** (contradictions → Continue Diligence; thin/low-confidence evidence →
-  Invite to Apply / Request Information; strong evidence → Schedule Interview),
-  and sets `final_decision_supportable` only when the bar is met.
-- **Pitch deck** extracts nothing numeric — it only lists which fields are
-  *missing* ("No metrics were inferred to avoid inventing data").
-- **Memo / diligence / summarization** all have conservative, evidence-linked
-  fallbacks.
+```json
+{"detail": "...", "ai_unavailable": true, "hint": "Set OPENAI_API_KEY ..."}
+```
+
+So AI endpoints (`/analyze`, `/assessment`, `/diligence`, `/arena`, `/memo`,
+`/search/parse`) require a key and fail honestly with 503 rather than returning
+fabricated output.
+
+**The deterministic engines are unaffected.** The Founder Score, momentum,
+ranking, and Trust engines in `app/scoring/` are pure Python and always work
+with or without a key. These were never "AI fallback" — they are the product's
+substantive core.
+
+**Pitch-deck upload still works without AI.** The deck is validated, stored, and
+its text extracted regardless; only the AI structured interpretation is skipped.
+`interpret_pitch_deck` catches `AIError` and returns `{"ai_available": false,
+...}` rather than failing the upload.
+
+**The seed uses static demo fixtures, not AI.** `app/seed/seed.py` no longer
+calls the AI pipeline. `_seed_static_analysis` writes static, clearly-labeled
+demo fixtures (`generated_by="demo"`, `is_demo=True`) for the
+assessment/debate/referee/diligence/memo of the first three opportunities, so
+the demo is fully browsable **without an OpenAI key**. These are fixtures, not a
+disguised fallback.
 
 ---
 
 ## 5. `generated_by` keeps provenance honest
 
-Every AI result carries `generated_by: "ai" | "fallback"`, persisted on
+Real AI output always carries `generated_by: "openai"`, persisted on
 `OpportunityAssessment`, `Debate`, `InvestmentMemo`, and `DiligenceQuestion`,
 and shown in the UI (e.g. the Investment Arena header renders
-`v{version} · {generated_by}`). The user always knows whether output came from
-the model or the deterministic fallback.
+`v{version} · {generated_by}`). Seeded demo fixtures carry `generated_by:
+"demo"` so browsable demo data is never mistaken for live model output.
 
 ---
 
 ## 6. Provider abstraction
 
 The rest of the codebase depends only on `AIProvider.generate_json(...)`. The
-sole implemented provider is Anthropic, but a second provider could be added
-behind the same method without rewriting any service or route — the prompt
-construction, JSON extraction, validation, and fallback logic are all
-provider-agnostic.
+sole implemented provider is OpenAI, but a second provider could be added behind
+the same method without rewriting any service or route — the prompt
+construction, JSON extraction, and validation logic are all provider-agnostic.
 
 ---
 
@@ -145,9 +160,8 @@ provider-agnostic.
 - `sanitize_points` flags all-invalid and empty points as `unverified`.
 - `_extract_json` handles fenced JSON and prose-wrapped JSON, and raises on
   garbage.
-- Search fallback is honest (`generated_by == "fallback"`) and correctly parses
-  fintech / pre-seed / Boston / technical / product-adoption.
-- Axes are never averaged and always independent (three distinct scores).
-- Referee judges on quality: contradictions force "Continue Diligence"; thin
-  evidence yields `final_decision_supportable = False`.
-- Pitch fallback invents no metrics and reports missing fields.
+- Services **raise `AIError` when no key is configured**
+  (`test_services_raise_without_api_key`).
+- With the `mock_ai` fixture stubbing `provider.generate_json`: the three axes
+  stay independent (never averaged), hallucinated evidence IDs are stripped, an
+  invalid referee action is normalized, and pitch extraction works.

@@ -17,7 +17,7 @@ automatic outreach or investment.
 | ORM | SQLAlchemy 2 (typed `Mapped[...]` models) | `app/models/` |
 | Migrations | Alembic | Postgres uses migrations; SQLite dev auto-creates tables at startup |
 | Database | SQLite (dev, zero-config fallback) / Postgres (prod, docker-compose) | `settings.resolved_database_url` |
-| AI provider | Anthropic Claude via official SDK (`app/ai/provider.py`) | Abstracted; degrades to deterministic fallback with no key |
+| AI provider | OpenAI (Chat Completions, JSON mode) via official SDK (`app/ai/provider.py`) | Abstracted; required for AI features — raises HTTP 503 when no key (no fake fallback) |
 | Connectors | Live GitHub REST v3 (`app/connectors/github.py`) | Others declared but not implemented |
 | Frontend | Next.js 14 (App Router), React 18, TypeScript | `frontend/` |
 | Styling | Tailwind CSS 3 | custom design tokens (ink/surface/brand) |
@@ -29,8 +29,9 @@ automatic outreach or investment.
 All configuration is environment-based (`app/core/config.py`, pydantic-settings).
 No secret is hardcoded. Optional integrations degrade rather than fail:
 
-- No `ANTHROPIC_API_KEY` → `settings.ai_enabled` is False → deterministic,
-  evidence-only fallbacks run for every AI service.
+- No `OPENAI_API_KEY` → AI services raise `AIError` → AI endpoints return HTTP
+  503 (no fake fallback). The deterministic scoring engines and the static
+  seeded demo remain fully functional.
 - No `DATABASE_URL` → local SQLite file (`backend/trajectory.db`).
 - No `GITHUB_TOKEN` → anonymous GitHub API (60 requests/hour).
 
@@ -105,23 +106,31 @@ Restricted platforms (LinkedIn, X) are never scraped.
 
 ---
 
-## 4. AI provider layer with fallback
+## 4. AI provider layer (no fallback → 503)
 
 `app/ai/provider.py` exposes a single dependency: `AIProvider.generate_json()`.
 The rest of the codebase depends only on that method, so a second provider
-could be added without rewriting callers. Key properties:
+could be added without rewriting callers. The sole implemented provider is
+OpenAI (Chat Completions, JSON mode — `response_format={"type":
+"json_object"}`), with `OPENAI_API_KEY` and `OPENAI_MODEL` (default `gpt-4o`)
+read from config. Key properties:
 
 - API key loaded from env, never logged, never sent to the client. Calls run on
   the backend only.
-- Explicit timeouts (`AI_TIMEOUT_SECONDS`, default 60s) and retries (SDK
-  `max_retries=0`; retries handled in-app with exponential backoff).
+- Explicit timeouts (`AI_TIMEOUT_SECONDS`, default 60s) and retries (no
+  SDK-level retries; retries handled in-app with exponential backoff).
 - A hard guard appended to every system prompt: return a single JSON object, no
   markdown/prose, **no step-by-step reasoning** (no hidden chain-of-thought),
   never invent facts/citations/URLs/metrics/evidence IDs.
-- On any failure `AIError` is raised so the caller runs its deterministic,
-  evidence-only fallback. Every AI service (`app/ai/services.py`) has one, so
-  the product works end-to-end with no API key. Results carry a
-  `generated_by` field ("ai" or "fallback") for honest provenance.
+- **No AI fallback.** If no `OPENAI_API_KEY` is set, or a call fails after
+  retries, `generate_json` raises `AIError`; each AI service in
+  `app/ai/services.py` lets it propagate, and a global exception handler in
+  `app/main.py` turns it into an HTTP **503** JSON response (`ai_unavailable:
+  true`, plus a hint to set `OPENAI_API_KEY`). Real AI output carries
+  `generated_by: "openai"`. The deterministic scoring engines in
+  `app/scoring/` are a separate pure-Python core that is unaffected by a missing
+  key, and the seed writes static demo fixtures (`generated_by="demo"`) so the
+  demo stays browsable without AI.
 - Output is validated (`app/ai/validation.py`): evidence IDs the model cites
   are checked against the IDs actually provided; unknown IDs are rejected/flagged.
 

@@ -1,6 +1,6 @@
 # Testing
 
-Trajectory ships with **36 backend tests** and **14 frontend tests**. The suites
+Trajectory ships with **37 backend tests** and **14 frontend tests**. The suites
 are designed to run **offline** — no network, no API key, no Postgres — so
 they exercise the deterministic core and the safety guarantees directly.
 
@@ -8,16 +8,18 @@ they exercise the deterministic core and the safety guarantees directly.
 
 ## 1. Running the tests
 
-### Backend (36 tests)
+### Backend (37 tests)
 
 ```bash
 cd backend && ./.venv/bin/python -m pytest -q
 ```
 
 `tests/conftest.py` forces a throwaway SQLite database, sets
-`ANTHROPIC_API_KEY=""` (so AI runs in deterministic fallback), and raises the AI
-rate limit to 1000/min for testing. The schema is created and dropped around the
-session; endpoint tests seed demo data via the `seeded` fixture.
+`OPENAI_API_KEY=""` (so AI services raise `AIError` and AI endpoints return
+503), provides a `mock_ai` fixture that stubs `provider.generate_json` for tests
+that need model output, and raises the AI rate limit to 1000/min for testing.
+The schema is created and dropped around the session; endpoint tests seed demo
+data via the `seeded` fixture.
 
 ### Frontend (14 tests)
 
@@ -42,7 +44,7 @@ cd frontend && npm run build     # next build
 
 ---
 
-## 2. Backend test coverage (36)
+## 2. Backend test coverage (37)
 
 ### `test_scoring.py` — deterministic scoring core (10)
 - **Founder Score determinism & bounds**: same evidence → same score; `0–100`;
@@ -63,19 +65,19 @@ cd frontend && npm run build     # next build
 - **Numeric contradiction detection**: 2000 vs 800 users flagged `high`
   (>50% apart); revenue claim not falsely flagged.
 
-### `test_ai_and_validation.py` — AI safety & fallbacks (9)
+### `test_ai_and_validation.py` — AI safety & validation (9)
 - **Evidence-ID rejection**: unknown IDs rejected, valid ones kept.
 - **Point sanitization**: all-invalid / empty points flagged `unverified`.
 - **Malformed AI JSON handling**: `_extract_json` parses fenced and
   prose-wrapped JSON; raises `AIError` on garbage.
-- **Honest search fallback**: `generated_by == "fallback"`, correct parse of
-  fintech/pre-seed/Boston/technical/product-adoption.
-- **Axes never averaged**: three independent axes with distinct scores.
-- **Referee judges on quality**: valid action set; contradictions force
-  "Continue Diligence".
-- **Referee not supportable when evidence thin**:
-  `final_decision_supportable == False`.
-- **Pitch fallback invents nothing**: no metrics; missing fields reported.
+- **No key → `AIError`** (`test_services_raise_without_api_key`): with no
+  `OPENAI_API_KEY`, AI services raise rather than fabricating output.
+- Using the `mock_ai` fixture (stubs `provider.generate_json`):
+  - **Axes independent & IDs validated**: three distinct axis scores (never
+    averaged); hallucinated evidence IDs are stripped.
+  - **Invalid referee action normalized** to the allowed set.
+  - **Bear point without evidence** is flagged `unverified`.
+  - **Pitch extraction** returns structured, page-tagged facts.
 
 ### `test_pdf_github_workflow.py` — I/O safety & connector resilience (9)
 - **PDF validation**: rejects non-`.pdf` extension, bad header, empty file;
@@ -89,11 +91,15 @@ cd frontend && npm run build     # next build
   commercial traction".
 - **24h workflow math**: `_human(delta)` formats "2h…"; `TARGET == 24h`.
 
-### `test_endpoints_e2e.py` — API & full happy path (8)
+### `test_endpoints_e2e.py` — API & full happy path (9)
 - **Health** endpoint; **settings never leaks full key**; **thesis CRUD** with
   impact summary; **connector status honest** (github live, planned connectors
   `live == False`).
-- **Full happy-path E2E** (`test_full_happy_path`): thesis → inbound
+- **AI endpoints return 503 without a key**
+  (`test_ai_endpoints_return_503_without_key`): with no `OPENAI_API_KEY`, AI
+  routes respond 503 (`ai_unavailable: true`) instead of fabricating output.
+- **Full happy-path E2E** (`test_full_happy_path`, uses the `mock_ai` fixture):
+  thesis → inbound
   application (missing fields identified) → upload & parse a real 2-page PDF →
   invalid file type rejected (422) → run `/analyze` → three independent axes
   present → Arena bull/bear + referee recommendation → memo sections generated →
