@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { Badge, DemoBadge, ErrorState, Section, Spinner, Stat } from "@/components/ui";
 import { DASHBOARD_TOUR, GuidedTour } from "@/components/GuidedTour";
 import { PrestigeCompare } from "@/components/PrestigeCompare";
+import { ArenaHero } from "@/components/ArenaHero";
 import { humanStatus, trajectoryTone } from "@/lib/format";
 import { RankingEntry } from "@/lib/types";
 
@@ -37,12 +38,17 @@ export default function DashboardPage() {
   const { data, error, loading } = useFetch<Dashboard>("/api/dashboard");
   const ranking = useFetch<{ entries: RankingEntry[] }>("/api/ranking/prestige-sensitivity");
   const [tourOpen, setTourOpen] = useState(false);
+  const [tourChecked, setTourChecked] = useState(false);
 
+  // Auto-start the tour for first-time investors — but only once the dashboard
+  // (incl. the Arena hero the tour anchors to) has actually rendered.
   useEffect(() => {
+    if (!data || tourChecked) return;
+    setTourChecked(true);
     api.get<{ completed: boolean; skipped: boolean }>("/api/tour")
       .then((t) => { if (!t.completed && !t.skipped) setTourOpen(true); })
       .catch(() => {});
-  }, []);
+  }, [data, tourChecked]);
 
   if (loading) return <Spinner label="Loading dashboard…" />;
   if (error) return <ErrorState message={error} />;
@@ -57,8 +63,11 @@ export default function DashboardPage() {
             Your deal pipeline: Sourcing → Screening → Diligence → Decision. New here? Take the tour.
           </p>
         </div>
-        <button className="btn-primary" onClick={() => setTourOpen(true)}>Take the guided tour</button>
+        <button className="btn-secondary" onClick={() => setTourOpen(true)}>Take the guided tour</button>
       </div>
+
+      {/* The Investment Arena — the first thing an investor sees; anchors the tour */}
+      <ArenaHero />
 
       {/* thesis + stage counts */}
       <div className="grid gap-6 lg:grid-cols-3">
@@ -174,12 +183,6 @@ export default function DashboardPage() {
       <Section title="Standard vs prestige-free ranking" subtitle="Largest movements when prestige is masked">
         {ranking.data ? <PrestigeCompare entries={ranking.data.entries} /> : <Spinner />}
       </Section>
-
-      {/* An Arena reference is present on each founder profile; the tour points here too. */}
-      <div data-tour="arena" className="rounded-xl border border-dashed border-line bg-surface-sunken p-4 text-center text-sm text-ink-muted">
-        Open any founder to see the full <strong>Investment Arena</strong>, the evidence-backed memo, and the
-        recommended next action. <Link href="/vc/opportunities/1" className="text-brand">View a founder →</Link>
-      </div>
 
       <GuidedTour steps={DASHBOARD_TOUR} open={tourOpen} onClose={() => setTourOpen(false)} />
     </div>

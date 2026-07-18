@@ -83,17 +83,31 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
   const step = steps[i];
   const isLast = i === steps.length - 1;
 
-  // Place the card in the half of the screen OPPOSITE the highlighted element so
-  // it can never overlap it: target in the top half → card pinned to the bottom,
-  // target in the bottom half → card pinned to the top. Centered horizontally.
-  const targetInTopHalf = rect ? rect.top + rect.height / 2 < window.innerHeight / 2 : true;
-  const cardStyle: React.CSSProperties = {
+  // Anchor the card directly beside the highlighted element — centered under it
+  // (or above it when there's no room below), so it reads as pointing at the
+  // target (e.g. the Referee's speech bubble). z-[60] keeps it above the ring.
+  const gap = 14;
+  const cardW = 380;
+  const approxH = 240;
+  let cardStyle: React.CSSProperties = {
     position: "fixed",
     left: "50%",
+    bottom: 24,
     transform: "translateX(-50%)",
-    transition: prefersReducedMotion() ? "none" : "top 0.25s ease, bottom 0.25s ease",
-    ...(targetInTopHalf ? { bottom: 24 } : { top: 24 }),
   };
+  if (rect) {
+    const fitsBelow = rect.bottom + gap + approxH <= window.innerHeight;
+    const top = fitsBelow ? rect.bottom + gap : Math.max(gap, rect.top - approxH - gap);
+    let left = rect.left + rect.width / 2 - cardW / 2;
+    left = Math.min(Math.max(left, gap), window.innerWidth - cardW - gap);
+    cardStyle = {
+      position: "fixed",
+      top,
+      left,
+      transform: "none",
+      transition: prefersReducedMotion() ? "none" : "top 0.25s ease, left 0.25s ease",
+    };
+  }
 
   return (
     // z-[60] sits ABOVE the highlighted element (z-45) so the card is never covered.
@@ -152,12 +166,13 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
 }
 
 export const DASHBOARD_TOUR: TourStep[] = [
+  { target: "arena", title: "Hi — I'm your Referee 👋", body: "Welcome to your investor workspace. On every founder, a Bull argues to advance and a Bear argues for caution; I weigh the evidence — not the rhetoric — and recommend your next step. You always make the final call. Let me show you around in about a minute." },
   { target: "thesis", title: "Your investment thesis", body: "This is your fund's strategy — sectors, stages, geographies, check sizes and exclusions. Every score, ranking and recommendation you see is filtered through it. Edit it any time from the Thesis tab." },
+  { target: "action-queue", title: "Your action queue", body: "The single prioritized list of what to do next, and on whom — the deals you can act on now come first. Each row names the company and the one concrete next action: run analysis, resolve diligence, or review a recommendation and decide." },
   { target: "sourcing", title: "Sourcing feed (outbound)", body: "Prospects you've surfaced proactively from real public GitHub activity — founders you can evaluate before they ever apply. Add more from the Discovery tab." },
   { target: "inbound", title: "Inbound applications", body: "Founders who applied to you directly with a company name and pitch deck. Inbound and outbound converge into the same evaluation workflow." },
   { target: "momentum", title: "Founder Score & Momentum", body: "A persistent, evidence-based Founder Score (computed in code, not invented by AI) plus its direction and rate of change over time: accelerating, improving, stable, or declining." },
   { target: "prestige", title: "Standard vs prestige-free ranking", body: "A bias audit: it masks university, employer, accelerator and geography signals to show how much 'pedigree' is moving your ranking — without claiming the prestige-free view is automatically better." },
-  { target: "action-queue", title: "Your action queue", body: "The single prioritized list of what to do next, and on whom — the deals you can act on now come first. Each row names the company and the one concrete next action (run analysis, resolve diligence, or review a recommendation and decide)." },
   { target: "evidence", title: "Evidence & Trust Scores", body: "Every claim links to stored evidence with a per-claim Trust Score and verification status. The AI is only ever given this stored evidence and can't cite anything that doesn't exist." },
-  { target: "arena", title: "Open a founder: axes, Arena & memo", body: "Open any founder for the full assessment — three independent axes (Founder, Market, Idea-vs-Market, never averaged), the Bull/Bear/Referee Investment Arena, the evidence-backed memo, and a recommended next step that you, the human, approve or override." },
+  { target: "arena", title: "Open a founder to see me in action", body: "On any founder you'll get the full assessment — three independent axes (Founder, Market, Idea-vs-Market, never averaged), the Bull/Bear/Referee debate, an evidence-backed memo, and a recommended next step you approve or override. That's it — enjoy!" },
 ];
