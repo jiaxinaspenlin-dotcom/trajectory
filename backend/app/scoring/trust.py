@@ -93,8 +93,9 @@ def detect_numeric_contradictions(claims: list[Claim]) -> list[dict]:
                             "claim_a_id": a.id,
                             "claim_b_id": b.id,
                             "description": (
-                                f"Conflicting '{metric}' figures: {av:g} vs {bv:g} "
-                                f"(from different sources/dates)."
+                                f"The reported {metric} figures don't match: {av:g} vs {bv:g} — "
+                                f"a {round((hi - lo) / hi * 100)}% discrepancy in the same metric "
+                                "across sources. Reconcile before relying on this number."
                             ),
                             "severity": "high" if (hi - lo) / hi > 0.5 else "medium",
                         }

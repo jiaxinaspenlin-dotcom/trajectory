@@ -16,8 +16,13 @@ export default function DiligencePage() {
   const { id } = useParams<{ id: string }>();
   const opp = useFetch<Opportunity>(`/api/opportunities/${id}`);
   const diligence = useFetch<{ items: DiligenceQuestion[] }>(`/api/opportunities/${id}/diligence`);
-  const claims = useFetch<{ items: Claim[] }>(opp.data?.company?.id ? `/api/claims?company_id=${opp.data.company.id}` : null);
-  const contradictions = useFetch<{ items: any[] }>(`/api/contradictions${opp.data?.company?.id ? `?company_id=${opp.data.company.id}` : ""}`);
+  const scope = opp.data?.company?.id
+    ? `company_id=${opp.data.company.id}`
+    : opp.data?.founder?.id
+    ? `founder_id=${opp.data.founder.id}`
+    : null;
+  const claims = useFetch<{ items: Claim[] }>(scope ? `/api/claims?${scope}` : null);
+  const contradictions = useFetch<{ items: any[] }>(scope ? `/api/contradictions?${scope}` : null);
 
   const [genError, setGenError] = useState<string | null>(null);
   async function generate() {

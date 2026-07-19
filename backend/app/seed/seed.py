@@ -158,9 +158,14 @@ def _make_claims(db: Session, founder_id: int, company_id: int, idx: int, eviden
         )
         db.add(c3)
         db.flush()
+        gap_pct = round((users - conflicting) / users * 100)
         db.add(ClaimContradiction(
             claim_a_id=c2.id, claim_b_id=c3.id,
-            description=f"Conflicting MAU figures: {users} (application) vs {conflicting} (deck slide 7).",
+            description=(
+                f"The founder reported {users:,} monthly active users on the application but "
+                f"{conflicting:,} on pitch-deck slide 7 — a {gap_pct}% discrepancy in the same "
+                "metric. Reconcile before relying on the traction number."
+            ),
             severity="high", detected_by="rule", is_demo=True,
         ))
         c2.verification_status = VerificationStatus.CONTRADICTED

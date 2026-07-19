@@ -9,7 +9,14 @@ export function useFetch<T>(path: string | null) {
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
-    if (!path) return;
+    if (!path) {
+      // no endpoint to hit (e.g. a founder with no company) -> resolve to empty,
+      // never leave the caller stuck on a loading spinner.
+      setData(null);
+      setError(null);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {

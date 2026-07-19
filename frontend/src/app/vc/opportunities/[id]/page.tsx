@@ -18,8 +18,13 @@ import { humanStatus, verificationTone } from "@/lib/format";
 export default function OpportunityPage() {
   const { id } = useParams<{ id: string }>();
   const { data: o, loading, error, reload } = useFetch<Opportunity>(`/api/opportunities/${id}`);
-  const claims = useFetch<{ items: Claim[] }>(o?.company?.id ? `/api/claims?company_id=${o.company.id}` : null);
-  const contradictions = useFetch<{ items: any[] }>(`/api/contradictions${o?.company?.id ? `?company_id=${o.company.id}` : ""}`);
+  const scope = o?.company?.id
+    ? `company_id=${o.company.id}`
+    : o?.founder?.id
+    ? `founder_id=${o.founder.id}`
+    : null;
+  const claims = useFetch<{ items: Claim[] }>(scope ? `/api/claims?${scope}` : null);
+  const contradictions = useFetch<{ items: any[] }>(scope ? `/api/contradictions?${scope}` : null);
   const [busy, setBusy] = useState(false);
   const [confirmRegen, setConfirmRegen] = useState(false);
   const [regenError, setRegenError] = useState<string | null>(null);

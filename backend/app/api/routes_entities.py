@@ -146,14 +146,21 @@ def get_claim(claim_id: int, db: Session = Depends(get_db)) -> dict:
 
 @router.get("/contradictions")
 def list_contradictions(
-    company_id: int | None = None, db: Session = Depends(get_db)
+    company_id: int | None = None, founder_id: int | None = None,
+    db: Session = Depends(get_db),
 ) -> dict:
-    q = select(ClaimContradiction)
-    items = db.scalars(q).all()
+    """List contradictions, scoped to a company or founder.
+
+    Scoping matters: a founder with no company must not see other founders'
+    contradictions. When neither scope is given, returns all (admin/global).
+    """
+    items = db.scalars(select(ClaimContradiction)).all()
     result = []
     for con in items:
         ca = db.get(Claim, con.claim_a_id)
         if company_id is not None and (not ca or ca.company_id != company_id):
+            continue
+        if founder_id is not None and (not ca or ca.founder_id != founder_id):
             continue
         result.append({
             "id": con.id, "claim_a_id": con.claim_a_id, "claim_b_id": con.claim_b_id,
