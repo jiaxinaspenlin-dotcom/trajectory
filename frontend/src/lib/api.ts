@@ -41,6 +41,8 @@ export const api = {
     request<T>(path, { method: "POST", body: body ? JSON.stringify(body) : undefined }),
   put: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "PUT", body: body ? JSON.stringify(body) : undefined }),
+  patch: <T>(path: string, body?: unknown) =>
+    request<T>(path, { method: "PATCH", body: body ? JSON.stringify(body) : undefined }),
   // multipart upload (no JSON content-type)
   upload: async <T>(path: string, form: FormData): Promise<T> => {
     const res = await fetch(`${API_BASE}${path}`, { method: "POST", body: form });

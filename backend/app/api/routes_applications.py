@@ -10,7 +10,13 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import active_thesis, default_fund, get_db
 from app.models.assessment import Opportunity
-from app.models.entities import Application, Company, UploadedDocument
+from app.models.entities import (
+    Application,
+    Company,
+    Founder,
+    FounderCompanyRelationship,
+    UploadedDocument,
+)
 from app.models.enums import (
     EntryType,
     OpportunityStatus,
@@ -21,9 +27,10 @@ from app.models.enums import (
 )
 from app.models.sources import Evidence
 from app.models.workflow import WorkflowEvent
-from app.schemas.requests import ApplicationIn
+from app.schemas.requests import ApplicationIn, ApplicationUpdateIn
 from app.services import pdf as pdfsvc
 from app.services.ai_helpers import interpret_and_store_deck
+from app.services.github_sync import sync_github_user
 from app.services.thesis import compute_thesis_fit
 
 router = APIRouter(tags=["applications"], prefix="/api/applications")
@@ -122,23 +129,111 @@ async def upload_deck(
     }
 
 
-@router.get("/{application_id}")
-def get_application(application_id: int, db: Session = Depends(get_db)) -> dict:
-    app = db.get(Application, application_id)
-    if not app:
-        raise HTTPException(404, "Application not found.")
+def _application_out(db, app: Application) -> dict:
     doc = db.get(UploadedDocument, app.document_id) if app.document_id else None
     return {
         "id": app.id, "company_id": app.company_id, "company_name": app.company_name,
         "founder_names": app.founder_names, "sector": app.sector, "geography": app.geography,
-        "missing_fields": app.missing_fields, "screen_summary": app.screen_summary,
-        "current_revenue": app.current_revenue, "num_users": app.num_users,
-        "funding_requested": app.funding_requested,
+        "website": app.website, "product_link": app.product_link, "github_profile": app.github_profile,
+        "team_info": app.team_info, "missing_fields": app.missing_fields,
+        "screen_summary": app.screen_summary, "current_revenue": app.current_revenue,
+        "num_users": app.num_users, "funding_requested": app.funding_requested,
         "document": {
             "id": doc.id, "num_pages": doc.num_pages, "status": doc.extraction_status,
             "page_count": doc.num_pages,
         } if doc else None,
     }
+
+
+@router.get("/{application_id}")
+def get_application(application_id: int, db: Session = Depends(get_db)) -> dict:
+    app = db.get(Application, application_id)
+    if not app:
+        raise HTTPException(404, "Application not found.")
+    return _application_out(db, app)
+
+
+@router.patch("/{application_id}")
+async def update_application(
+    application_id: int, body: ApplicationUpdateIn, db: Session = Depends(get_db)
+) -> dict:
+    """Founder provides the additional info the fund requested. Re-screens the
+    application, and if a GitHub profile is supplied, syncs real public evidence
+    and attaches a founder — so the investor sees the new info immediately."""
+    app = db.get(Application, application_id)
+    if not app:
+        raise HTTPException(404, "Application not found.")
+    fund = default_fund(db)
+    thesis = active_thesis(db, fund.id)
+
+    # apply the non-empty provided fields to the application
+    for field in (
+        "website", "product_link", "demo_link", "github_profile", "github_org", "sector",
+        "geography", "funding_requested", "use_of_funds", "current_revenue", "num_users",
+        "customer_info", "prior_funding", "accelerator_history", "team_info", "founder_notes",
+    ):
+        val = getattr(body, field)
+        if val is not None and val != "":
+            setattr(app, field, val)
+
+    company = db.get(Company, app.company_id) if app.company_id else None
+    if company:
+        if body.website:
+            company.website = body.website
+        if body.sector:
+            company.sector = body.sector
+        if body.geography:
+            company.geography = body.geography
+        if body.github_org:
+            company.github_org = body.github_org
+
+    # store/refresh founder-reported traction evidence (idempotent)
+    if app.company_id:
+        _store_reported_evidence(db, app.company_id, app)
+
+    opp = db.scalar(select(Opportunity).where(Opportunity.application_id == app.id))
+
+    # if a GitHub profile was provided, attach a founder + sync real evidence
+    if body.github_profile and app.company_id:
+        login = body.github_profile.strip().lstrip("@")
+        founder = db.scalar(select(Founder).where(Founder.github_username == login))
+        if not founder:
+            founder = Founder(
+                full_name=(app.founder_names[0] if app.founder_names else login),
+                normalized_name=(app.founder_names[0].lower() if app.founder_names else login.lower()),
+                github_username=login, headline=f"GitHub @{login}", is_demo=False,
+            )
+            db.add(founder)
+            db.flush()
+        exists_rel = db.scalar(select(FounderCompanyRelationship).where(
+            FounderCompanyRelationship.founder_id == founder.id,
+            FounderCompanyRelationship.company_id == app.company_id,
+        ))
+        if not exists_rel:
+            db.add(FounderCompanyRelationship(
+                founder_id=founder.id, company_id=app.company_id, role="Founder", is_current=True,
+            ))
+        if opp and not opp.founder_id:
+            opp.founder_id = founder.id
+        try:
+            await sync_github_user(db, founder.id, login, thesis, light=True)
+        except Exception:  # noqa: BLE001 — provision must not fail on a GitHub hiccup
+            pass
+
+    # re-screen and refresh thesis fit now that we know more
+    app.missing_fields = _missing_fields(app)
+    app.screen_summary = _first_pass_screen(app, app.missing_fields)
+    if opp and company:
+        fit, _ = compute_thesis_fit(thesis, company) if thesis else (0.0, [])
+        opp.thesis_fit_score = fit
+        db.add(WorkflowEvent(
+            opportunity_id=opp.id, event_type="application_updated",
+            detail="Founder provided additional info.", actor="founder",
+            occurred_at=datetime.now(UTC),
+        ))
+    db.commit()
+    db.refresh(app)
+    return _application_out(db, app)
 
 
 @router.get("")
@@ -165,7 +260,7 @@ def _get_or_create_company(db, name, website, sector, geography, github_org) -> 
     return c
 
 
-def _missing_fields(body: ApplicationIn) -> list[str]:
+def _missing_fields(body: ApplicationIn | Application) -> list[str]:
     """Identify genuinely useful missing info — not everything the system can collect."""
     missing = []
     if not body.website and not body.product_link:
@@ -179,7 +274,7 @@ def _missing_fields(body: ApplicationIn) -> list[str]:
     return missing
 
 
-def _first_pass_screen(body: ApplicationIn, missing: list[str]) -> str:
+def _first_pass_screen(body: ApplicationIn | Application, missing: list[str]) -> str:
     have = []
     if body.github_profile or body.github_org:
         have.append("GitHub available for independent verification")
@@ -192,17 +287,25 @@ def _first_pass_screen(body: ApplicationIn, missing: list[str]) -> str:
     return base
 
 
-def _store_reported_evidence(db, company_id: int, body: ApplicationIn) -> None:
+def _store_reported_evidence(db, company_id: int, body) -> None:
     now = datetime.now(UTC)
 
     def add(kind, title, value, structured):
+        dedup = f"app_{company_id}_{kind}"
+        existing = db.scalar(select(Evidence).where(Evidence.dedup_key == dedup))
+        if existing:  # idempotent: update the founder-reported value in place
+            existing.title = title
+            existing.raw_value = str(value)
+            existing.structured_value = structured
+            existing.collected_at = now
+            return
         db.add(Evidence(
             company_id=company_id, source_name="Founder application",
             source_type=SourceType.FOUNDER_SUBMITTED, source_url=None, kind=kind,
             title=title, raw_value=str(value), structured_value=structured,
             event_date=now, collected_at=now, provenance=Provenance.FOUNDER_REPORTED,
             verification_status=VerificationStatus.FOUNDER_REPORTED, confidence=0.4,
-            dedup_key=f"app_{company_id}_{kind}",
+            dedup_key=dedup,
         ))
 
     if body.current_revenue is not None:

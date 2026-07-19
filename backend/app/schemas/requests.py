@@ -46,6 +46,27 @@ class ApplicationIn(BaseModel):
     founder_notes: str | None = None
 
 
+class ApplicationUpdateIn(BaseModel):
+    """Founder provides additional info the fund requested (all optional)."""
+
+    website: str | None = None
+    product_link: str | None = None
+    demo_link: str | None = None
+    github_profile: str | None = None
+    github_org: str | None = None
+    sector: str | None = None
+    geography: str | None = None
+    funding_requested: float | None = None
+    use_of_funds: str | None = None
+    current_revenue: float | None = None
+    num_users: int | None = None
+    customer_info: str | None = None
+    prior_funding: str | None = None
+    accelerator_history: str | None = None
+    team_info: str | None = None
+    founder_notes: str | None = None
+
+
 class GitHubSyncIn(BaseModel):
     founder_id: int | None = None
     username: str | None = None
