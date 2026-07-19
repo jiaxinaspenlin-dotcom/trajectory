@@ -83,12 +83,6 @@ export default function Landing() {
             </span>
           </Link>
         </div>
-
-        <p className="mt-8 text-xs text-ink-muted">
-          This is a demonstration product. No real fund currently uses Trajectory; demo data is
-          fictional and clearly labeled. AI features use OpenAI on the backend; the deterministic
-          scores work with or without an API key.
-        </p>
       </div>
     </div>
   );
