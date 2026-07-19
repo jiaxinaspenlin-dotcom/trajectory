@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { useFetch } from "@/lib/useFetch";
@@ -48,12 +48,38 @@ export default function DiscoveryPage() {
   );
 }
 
+const DISCOVERY_CACHE = "trajectory_last_discovery";
+
 function AiDiscovery() {
   const [brief, setBrief] = useState("");
   const [result, setResult] = useState<DiscoveryResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPlan, setShowPlan] = useState(false);
+
+  // Restore the last shortlist so navigating to a founder and back doesn't wipe
+  // it (real cached result in sessionStorage — you don't have to re-run).
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(DISCOVERY_CACHE);
+      if (raw) {
+        const cached = JSON.parse(raw) as { brief: string; result: DiscoveryResult };
+        setBrief(cached.brief || "");
+        setResult(cached.result);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  function clearResults() {
+    setResult(null);
+    try {
+      sessionStorage.removeItem(DISCOVERY_CACHE);
+    } catch {
+      /* ignore */
+    }
+  }
 
   async function run() {
     setLoading(true);
@@ -62,6 +88,11 @@ function AiDiscovery() {
     try {
       const r = await api.post<DiscoveryResult>("/api/sourcing/discover", { brief, limit: 8 });
       setResult(r);
+      try {
+        sessionStorage.setItem(DISCOVERY_CACHE, JSON.stringify({ brief, result: r }));
+      } catch {
+        /* ignore */
+      }
     } catch (e) {
       setError(
         e instanceof Error && (e.message.toLowerCase().includes("ai provider") || e.message.includes("OPENAI"))
@@ -99,6 +130,7 @@ function AiDiscovery() {
             <button className="btn-ghost text-xs" onClick={() => setShowPlan((v) => !v)}>
               {showPlan ? "Hide" : "Show"} search plan
             </button>
+            <button className="btn-ghost text-xs" onClick={clearResults}>Clear results</button>
           </div>
 
           {showPlan && (
