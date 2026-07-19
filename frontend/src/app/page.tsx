@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { BullCharacter, BearCharacter, RefereeCharacter } from "@/components/arena/Characters";
-import { ArenaBackdrop } from "@/components/arena/stage";
+import { LandingBackdrop } from "@/components/arena/LandingBackdrop";
 
 export default function Landing() {
   return (
     <div className="relative min-h-screen">
       {/* The Investment Arena stadium behind everything (no characters) */}
-      <div className="pointer-events-none fixed inset-0 -z-10 opacity-90">
-        <ArenaBackdrop />
+      <div className="pointer-events-none fixed inset-0 -z-10">
+        <LandingBackdrop />
       </div>
 
       <div className="mx-auto max-w-5xl px-4 py-10">
