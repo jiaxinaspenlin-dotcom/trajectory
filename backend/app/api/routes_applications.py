@@ -131,12 +131,14 @@ async def upload_deck(
 
 def _application_out(db, app: Application) -> dict:
     doc = db.get(UploadedDocument, app.document_id) if app.document_id else None
+    # recompute for display so wording/requests always reflect the current state
+    missing = _missing_fields(app)
     return {
         "id": app.id, "company_id": app.company_id, "company_name": app.company_name,
         "founder_names": app.founder_names, "sector": app.sector, "geography": app.geography,
         "website": app.website, "product_link": app.product_link, "github_profile": app.github_profile,
-        "team_info": app.team_info, "missing_fields": app.missing_fields,
-        "screen_summary": app.screen_summary, "current_revenue": app.current_revenue,
+        "team_info": app.team_info, "missing_fields": missing,
+        "screen_summary": _first_pass_screen(app, missing), "current_revenue": app.current_revenue,
         "num_users": app.num_users, "funding_requested": app.funding_requested,
         "document": {
             "id": doc.id, "num_pages": doc.num_pages, "status": doc.extraction_status,
@@ -274,17 +276,45 @@ def _missing_fields(body: ApplicationIn | Application) -> list[str]:
     return missing
 
 
+# founder-facing phrasing for each requested item (no internal field names)
+_FRIENDLY_REQUEST = {
+    "website_or_product_link": "a website or product link",
+    "github (for independent technical evidence)": "your GitHub username (so we can verify your work with public activity)",
+    "traction_signal (revenue or users)": "an early traction signal (revenue or active users)",
+    "team_info": "a short introduction to your team",
+}
+
+
+def _join_phrases(items: list[str]) -> str:
+    if not items:
+        return ""
+    if len(items) == 1:
+        return items[0]
+    return ", ".join(items[:-1]) + " and " + items[-1]
+
+
 def _first_pass_screen(body: ApplicationIn | Application, missing: list[str]) -> str:
-    have = []
+    """Professional, founder-facing summary shown on the application status page."""
+    name = body.company_name
+    strengths = []
     if body.github_profile or body.github_org:
-        have.append("GitHub available for independent verification")
+        strengths.append("a public GitHub profile we can verify independently")
     if body.current_revenue or body.num_users:
-        have.append("founder-reported traction present (requires verification)")
-    base = f"First-pass screen for {body.company_name}. "
-    base += ("Signals: " + "; ".join(have) + ". ") if have else "Limited signals so far. "
+        strengths.append("early traction figures")
+    if getattr(body, "website", None) or getattr(body, "product_link", None):
+        strengths.append("a live product link")
+
+    if strengths:
+        text = f"We've completed an automated first-pass review of {name}. So far we can see {_join_phrases(strengths)}."
+    else:
+        text = f"We've completed an automated first-pass review of {name}."
+
     if missing:
-        base += "Requesting only what's needed for a confident decision: " + ", ".join(missing) + "."
-    return base
+        friendly = [_FRIENDLY_REQUEST.get(m, m) for m in missing]
+        text += f" To help us reach a confident decision, please add {_join_phrases(friendly)} below."
+    else:
+        text += " We have what we need to begin a closer review — thank you."
+    return text
 
 
 def _store_reported_evidence(db, company_id: int, body) -> None:
