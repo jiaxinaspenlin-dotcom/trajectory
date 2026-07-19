@@ -92,6 +92,9 @@ export default function OpportunityPage() {
         </div>
       )}
 
+      {/* Investment Arena — full-width illustrated stage for this founder */}
+      <InvestmentArena debate={o.debate || null} />
+
       <div className="grid gap-6 lg:grid-cols-3">
         {/* main column */}
         <div className="space-y-6 lg:col-span-2">
@@ -158,9 +161,8 @@ export default function OpportunityPage() {
           </Section>
         </div>
 
-        {/* right column — Arena + decision */}
+        {/* right column — decision */}
         <div className="space-y-6">
-          <InvestmentArena debate={o.debate || null} />
           <Section title="Recommendation & Human Decision" subtitle="System recommends; a human decides">
             <HumanDecisionPanel opportunityId={o.id} recommendation={o.current_recommendation || null} onDecision={reload} />
           </Section>
