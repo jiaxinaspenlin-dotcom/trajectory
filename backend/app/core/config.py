@@ -77,7 +77,8 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins(self) -> list[str]:
-        return [o.strip() for o in self.backend_cors_origins.split(",") if o.strip()]
+        # rstrip("/") so a trailing slash in the env var doesn't break exact-match CORS
+        return [o.strip().rstrip("/") for o in self.backend_cors_origins.split(",") if o.strip()]
 
     @property
     def upload_path(self) -> Path:
