@@ -31,29 +31,29 @@ export function LandingBackdrop() {
     >
       <defs>
         <linearGradient id="lbSky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#f7fbff" />
-          <stop offset="1" stopColor="#e8eef7" />
+          <stop offset="0" stopColor="#eaf1fb" />
+          <stop offset="1" stopColor="#d5e0f0" />
         </linearGradient>
-        <radialGradient id="lbGlow" cx="50%" cy="14%" r="62%">
+        <radialGradient id="lbGlow" cx="50%" cy="12%" r="62%">
           <stop offset="0" stopColor="#ffffff" stopOpacity="0.95" />
           <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
         </radialGradient>
-        <radialGradient id="lbField" cx="50%" cy="45%" r="70%">
-          <stop offset="0" stopColor="#eef8f1" />
-          <stop offset="1" stopColor="#e3eee7" />
+        <radialGradient id="lbField" cx="50%" cy="42%" r="72%">
+          <stop offset="0" stopColor="#e8f6ec" />
+          <stop offset="1" stopColor="#d6e8dc" />
         </radialGradient>
       </defs>
 
       <rect width="1600" height="1000" fill="url(#lbSky)" />
 
       {/* light rays fanning from the top center */}
-      <g opacity="0.55">
+      <g opacity="0.7">
         {Array.from({ length: 13 }).map((_, k) => {
           const a = (-90 + (k - 6) * 11) * (Math.PI / 180);
           const x = 800 + Math.cos(a) * 1400;
           const y = 60 + Math.sin(a) * 1400;
           return (
-            <polygon key={k} points={`800,60 ${x - 30},${y} ${x + 30},${y}`} fill="#d6e1f0" opacity={k % 2 ? 0.4 : 0.6} />
+            <polygon key={k} points={`800,60 ${x - 30},${y} ${x + 30},${y}`} fill="#c7d5ea" opacity={k % 2 ? 0.5 : 0.75} />
           );
         })}
       </g>
@@ -89,23 +89,23 @@ export function LandingBackdrop() {
           rx={t.rx}
           ry={t.ry}
           fill="none"
-          stroke={i % 2 ? "#cbd7e8" : "#dae4f1"}
-          strokeWidth="30"
-          opacity="0.7"
+          stroke={i % 2 ? "#aebdd6" : "#c0cee2"}
+          strokeWidth="34"
+          opacity="0.85"
         />
       ))}
 
       {/* crowd along each tier */}
       {tiers.map((t, i) =>
-        ring(cx, cy, t.rx, t.ry, 70 - i * 10, i * 0.22).map((p, k) => (
-          <circle key={`c${i}-${k}`} cx={p.x} cy={p.y} r="5" fill={i % 2 ? "#aeb9cf" : "#bcc8dc"} opacity="0.8" />
+        ring(cx, cy, t.rx, t.ry, 74 - i * 10, i * 0.22).map((p, k) => (
+          <circle key={`c${i}-${k}`} cx={p.x} cy={p.y} r="6.5" fill={i % 2 ? "#8b9cba" : "#9caed1"} opacity="0.92" />
         ))
       )}
 
       {/* arena field */}
-      <ellipse cx={cx} cy={cy + 16} rx="425" ry="158" fill="url(#lbField)" stroke="#d6e2ee" strokeWidth="3" />
-      <ellipse cx={cx} cy={cy + 16} rx="128" ry="48" fill="none" stroke="#cfe0d6" strokeWidth="3" />
-      <line x1={cx} y1={cy - 138} x2={cx} y2={cy + 170} stroke="#cfe0d6" strokeWidth="3" opacity="0.7" />
+      <ellipse cx={cx} cy={cy + 16} rx="430" ry="162" fill="url(#lbField)" stroke="#bcd6c4" strokeWidth="4" />
+      <ellipse cx={cx} cy={cy + 16} rx="130" ry="50" fill="none" stroke="#b7d3c0" strokeWidth="4" />
+      <line x1={cx} y1={cy - 146} x2={cx} y2={cy + 178} stroke="#b7d3c0" strokeWidth="4" opacity="0.8" />
     </svg>
   );
 }
