@@ -266,22 +266,22 @@ def _missing_fields(body: ApplicationIn | Application) -> list[str]:
     """Identify genuinely useful missing info — not everything the system can collect."""
     missing = []
     if not body.website and not body.product_link:
-        missing.append("website_or_product_link")
+        missing.append("Website or Product Link")
     if not body.github_profile and not body.github_org:
-        missing.append("github (for independent technical evidence)")
+        missing.append("GitHub Profile")
     if body.current_revenue is None and body.num_users is None:
-        missing.append("traction_signal (revenue or users)")
+        missing.append("Traction Signal (Revenue or Users)")
     if not body.team_info:
-        missing.append("team_info")
+        missing.append("Team Introduction")
     return missing
 
 
 # founder-facing phrasing for each requested item (no internal field names)
 _FRIENDLY_REQUEST = {
-    "website_or_product_link": "a website or product link",
-    "github (for independent technical evidence)": "your GitHub username (so we can verify your work with public activity)",
-    "traction_signal (revenue or users)": "an early traction signal (revenue or active users)",
-    "team_info": "a short introduction to your team",
+    "Website or Product Link": "a website or product link",
+    "GitHub Profile": "your GitHub username (so we can verify your work with public activity)",
+    "Traction Signal (Revenue or Users)": "an early traction signal (revenue or active users)",
+    "Team Introduction": "a short introduction to your team",
 }
 
 

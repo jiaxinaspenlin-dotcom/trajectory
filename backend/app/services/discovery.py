@@ -5,7 +5,7 @@ queries, runs the LIVE GitHub Search API to find real candidate builders, then
 syncs + scores each against the thesis and returns a ranked shortlist — so the
 investor reviews a curated list instead of searching founder-by-founder.
 
-Honest about scope: it searches the connected source (GitHub), surfaces a top-N
+Scope: it searches the connected source (GitHub), surfaces a top-N
 batch per run (GitHub Search rate limits), and never claims to scan the whole
 internet. Nothing is auto-contacted.
 """

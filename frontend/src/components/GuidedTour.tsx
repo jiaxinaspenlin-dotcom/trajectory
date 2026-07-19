@@ -83,8 +83,7 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
   // Position the card using its ACTUAL measured height, then clamp so the whole
   // card — including the pinned footer with Next/Back — is always inside the
   // viewport. The card's max-height is capped at (viewport - 2*margin) and its
-  // body scrolls, so clamping can never push the footer off-screen. This makes
-  // the "Next button off the bottom" bug structurally impossible on any step.
+  // body scrolls, so clamping can never push the footer off-screen.
   const measure = useCallback(() => {
     const el = cardRef.current;
     if (!el) return;
@@ -192,13 +191,12 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
 }
 
 export const DASHBOARD_TOUR: TourStep[] = [
-  { target: "arena", title: "Hi — I'm your Referee 👋", body: "Welcome to your investor workspace. On every founder, a Bull argues to advance and a Bear argues for caution; I weigh the evidence — not the rhetoric — and recommend your next step. You always make the final call. Let me show you around in about a minute." },
+  { target: "arena", title: "I'm your Referee", body: "Welcome to your investor workspace. On every founder, a Bull argues to advance and a Bear argues for caution; I weigh the evidence, not the rhetoric, and recommend your next step. You always make the final call. Here's a quick tour." },
   { target: "thesis", title: "Your investment thesis", body: "This is your fund's strategy — sectors, stages, geographies, check sizes and exclusions. Every score, ranking and recommendation you see is filtered through it. Edit it any time from the Thesis tab." },
   { target: "action-queue", title: "Your action queue", body: "The single prioritized list of what to do next, and on whom — the deals you can act on now come first. Each row names the company and the one concrete next action: run analysis, resolve diligence, or review a recommendation and decide." },
   { target: "sourcing", title: "Sourcing feed (outbound)", body: "Prospects you've surfaced proactively from real public GitHub activity — founders you can evaluate before they ever apply. Add more from the Discovery tab." },
   { target: "inbound", title: "Inbound applications", body: "Founders who applied to you directly with a company name and pitch deck. Inbound and outbound converge into the same evaluation workflow." },
   { target: "momentum", title: "Founder Score & Momentum", body: "A persistent, evidence-based Founder Score (computed in code, not invented by AI) plus its direction and rate of change over time: accelerating, improving, stable, or declining." },
-  { target: "prestige", title: "Standard vs prestige-free ranking", body: "A bias audit: it masks university, employer, accelerator and geography signals to show how much 'pedigree' is moving your ranking — without claiming the prestige-free view is automatically better." },
   { target: "evidence", title: "Evidence & Trust Scores", body: "Every claim links to stored evidence with a per-claim Trust Score and verification status. The AI is only ever given this stored evidence and can't cite anything that doesn't exist." },
-  { target: "arena", title: "Open a founder to see me in action", body: "On any founder you'll get the full assessment — three independent axes (Founder, Market, Idea-vs-Market, never averaged), the Bull/Bear/Referee debate, an evidence-backed memo, and a recommended next step you approve or override. That's it — enjoy!" },
+  { target: "arena", title: "Open a founder to see me in action", body: "On any founder you'll get the full assessment — three independent axes (Founder, Market, Idea-vs-Market, never averaged), the Bull/Bear/Referee debate, an evidence-backed memo, and a recommended next step you approve or override." },
 ];

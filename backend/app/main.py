@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from app.ai.provider import AIError
 from app.api import (
     routes_applications,
+    routes_auth,
     routes_entities,
     routes_meta,
     routes_opportunities,
@@ -42,7 +43,7 @@ app.add_middleware(
 
 @app.exception_handler(AIError)
 async def _ai_error_handler(request: Request, exc: AIError) -> JSONResponse:
-    """AI unavailable/failed -> honest 503. No fake fallback is ever returned."""
+    """AI unavailable/failed -> 503. No fake fallback."""
     return JSONResponse(
         status_code=503,
         content={
@@ -70,6 +71,7 @@ def root() -> dict:
     }
 
 
+app.include_router(routes_auth.router)
 app.include_router(routes_meta.router)
 app.include_router(routes_thesis.router)
 app.include_router(routes_entities.router)

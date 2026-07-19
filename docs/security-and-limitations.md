@@ -1,8 +1,8 @@
 # Security & Limitations
 
-This document describes the security measures actually implemented in the
-codebase, followed by an honest accounting of current limitations. Accuracy over
-marketing: where something is a dev-only convenience or not yet built, it says so.
+This document describes the security measures implemented in the codebase,
+followed by the current limitations. Where something is a dev-only convenience or
+not yet built, it says so.
 
 ---
 
@@ -21,6 +21,21 @@ marketing: where something is a dev-only convenience or not yet built, it says s
 ### No keys in the client bundle
 All AI and connector calls run server-side. The Next.js frontend talks only to
 the backend API; no provider keys are embedded in client code.
+
+### Authentication (`app/core/passwords.py`, `app/api/routes_auth.py`)
+- **Password hashing**: passwords are salted (per-account, 16 random bytes) and
+  stretched with **PBKDF2-HMAC-SHA256** (200k rounds). Plaintext passwords are
+  never stored or logged; verification is constant-time (`hmac.compare_digest`).
+- **Session tokens**: on signup/login a random opaque token (`secrets.token_urlsafe`)
+  is issued to the client and stored server-side **only as its SHA-256 hash**
+  (`AuthSession`), with a 30-day expiry. The database never holds a usable token.
+- **Per-role accounts**: an account is scoped to a role (`investor` | `founder`);
+  a single email may hold at most one account per role. An `AuthGate` component
+  can gate each frontend persona (`/vc`, `/founder`) on a valid session for the
+  matching role — **but login is currently disabled**, so the layouts render
+  without gating and the endpoints below are exercised only by the tests.
+- **No new hardcoded secret**: because sessions are DB-backed opaque tokens, no
+  token-signing secret is introduced; nothing here depends on a hardcoded key.
 
 ### CORS
 `CORSMiddleware` is restricted to configured origins
@@ -74,7 +89,7 @@ provider internals.
 
 ---
 
-## 2. Limitations (honest)
+## 2. Limitations
 
 These are real constraints of the current build. None are hidden in the code —
 several are surfaced through API responses and status endpoints.
@@ -93,12 +108,19 @@ several are surfaced through API responses and status endpoints.
   patents, accelerator cohorts, and social signals are declared in the source
   type enum and connector interface but **not implemented**. They are served by
   `UnavailableConnector`, which reports `status: "not_implemented"`.
-  `GET /api/connectors/status` lists them honestly as `planned_unavailable`.
+  `GET /api/connectors/status` lists them as `planned_unavailable`.
 
-- **No authentication / multi-tenant login yet.** There is no login or auth
-  layer. The API operates on a single default fund (`default_fund` creates a
-  "Demo Fund" if none exists). Multi-fund is fully *modeled* (Fund → Thesis →
-  Opportunity) but not gated by user identity or access control.
+- **Login is currently disabled; the API is not auth-protected.** The account
+  system (see *Authentication* above) is implemented, persisted, and tested, but
+  the login screens are turned off — both personas open directly. No endpoint
+  enforces a token in normal use (only the `/api/auth/*` routes check one, and
+  they're currently exercised only by tests). The API operates on a single
+  default fund (`default_fund` creates a "Demo Fund" if none exists); multi-fund
+  is fully *modeled* but not access-controlled per user. An investor's
+  saved-prospect pipeline and recorded decisions are scoped **per browser**
+  (localStorage), not per account server-side — though each human decision is
+  also written to the DB (`human_decisions`) as a durable audit record. Login can
+  be re-enabled by wrapping the `/vc` and `/founder` layouts in `AuthGate`.
 
 - **AI features require an OpenAI key.** With no `OPENAI_API_KEY`, AI services
   raise `AIError` and AI endpoints return HTTP **503** (there is no fake

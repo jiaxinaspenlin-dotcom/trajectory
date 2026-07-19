@@ -100,9 +100,13 @@ substantial_change = (|rank_delta| >= 2) OR (sensitivity >= 0.12)
   prestige. Since prestige is 30% of the standard score, sensitivity is bounded
   by ~0.30.
 - **`substantial_change`** — flags candidates whose position is materially
-  driven by prestige (2+ rank positions, or ≥12% score sensitivity). The
-  frontend warns when any candidate changes substantially once prestige is
-  masked.
+  driven by prestige (2+ rank positions, or ≥12% score sensitivity).
+
+> **UI note:** the side-by-side "Standard vs Prestige-Free Ranking" comparison was
+> removed from the investor dashboard. The scoring engine and the
+> `/api/ranking/*` endpoints below are unchanged and still return the full audit
+> (including `substantial_change`); the `PrestigeCompare` component and its unit
+> tests also remain. Only the dashboard section was taken out.
 
 ---
 

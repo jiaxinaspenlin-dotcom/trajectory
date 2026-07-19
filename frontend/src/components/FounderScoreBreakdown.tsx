@@ -2,6 +2,30 @@
 
 import { useState } from "react";
 import { ScoreComponent } from "@/lib/types";
+import { InfoTip } from "./InfoTip";
+
+// Plain-language explanations of each deterministic Founder Score component,
+// keyed by the backend component key (app/scoring/founder_score.py).
+const COMPONENT_INFO: Record<string, string> = {
+  execution_consistency:
+    "How steadily the founder ships over time — sustained commit activity, maintained repositories, and following through on launches and hackathons rather than starting and abandoning.",
+  technical_evidence:
+    "Concrete proof of technical ability from public work — repositories, the languages used, tagged releases, and technical write-ups.",
+  product_progress:
+    "Signs of a real product moving forward — launches, iterations on earlier versions, working demos, and releases.",
+  external_validation:
+    "Recognition from outside the founder themselves — outside contributors to their repos, press mentions, accelerators, and awards.",
+  traction:
+    "Evidence of market pull — user growth, revenue, pilots, and named customers.",
+  leadership_collaboration:
+    "Working well with and attracting others — outside contributors, team growth, resolving issues, and visible collaboration.",
+  learning_velocity:
+    "How quickly the founder learns and adapts — product iterations, releases, moving into new domains, and demonstrable skill growth.",
+  domain_experience:
+    "Relevant background in the space — prior domain experience, work history, and past startups.",
+  evidence_reliability:
+    "How trustworthy the underlying evidence is — the mix of independent sources and verified versus unverified items feeding the score.",
+};
 
 export function FounderScoreBreakdown({ components }: { components: ScoreComponent[] }) {
   const [open, setOpen] = useState(false);
@@ -28,7 +52,12 @@ export function FounderScoreBreakdown({ components }: { components: ScoreCompone
             <tbody>
               {sorted.map((c) => (
                 <tr key={c.key} className="border-t border-line">
-                  <td className="py-1.5 font-medium text-ink-soft">{c.name}</td>
+                  <td className="py-1.5 font-medium text-ink-soft">
+                    <span className="inline-flex items-center whitespace-nowrap">
+                      {c.name}
+                      {COMPONENT_INFO[c.key] && <InfoTip text={COMPONENT_INFO[c.key]} />}
+                    </span>
+                  </td>
                   <td>{Math.round(c.weight * 100)}%</td>
                   <td>{Math.round(c.value)}</td>
                   <td>{c.evidence_count}</td>

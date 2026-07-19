@@ -23,7 +23,7 @@ def interpret_and_store_deck(
 
     AI interpretation is optional: if the AI provider is unavailable, the deck is
     still stored and its raw text extracted; we just skip structured extraction and
-    say so honestly.
+    say so.
     """
     try:
         extraction = ai.interpret_pitch_deck(page_texts)

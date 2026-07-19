@@ -3,13 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useFetch } from "@/lib/useFetch";
-import { api } from "@/lib/api";
 import { Badge, DemoBadge, ErrorState, Section, Spinner, Stat } from "@/components/ui";
 import { DASHBOARD_TOUR, GuidedTour } from "@/components/GuidedTour";
-import { PrestigeCompare } from "@/components/PrestigeCompare";
 import { ArenaHero } from "@/components/ArenaHero";
 import { humanStatus, trajectoryTone } from "@/lib/format";
-import { RankingEntry } from "@/lib/types";
+import { accountScope } from "@/lib/auth";
+import { getMyDecisions, getPipeline, LocalDecision, PipelineStatus } from "@/lib/myWorkspace";
 
 interface ActionItem {
   opportunity_id: number;
@@ -28,7 +27,6 @@ interface Dashboard {
   top_outbound_prospects: any[];
   recent_inbound_applications: any[];
   highest_momentum: { opportunity_id: number; founder_name: string; company_name: string; trajectory: string; change_30d: number | null; current_score: number }[];
-  largest_prestige_changes: RankingEntry[];
   action_queue: ActionItem[];
   recent_evidence: { id: number; kind: string; title: string; source_name: string; collected_at: string }[];
   connectors: { live: string[]; planned: string[] };
@@ -36,23 +34,54 @@ interface Dashboard {
 
 export default function DashboardPage() {
   const { data, error, loading } = useFetch<Dashboard>("/api/dashboard");
-  const ranking = useFetch<{ entries: RankingEntry[] }>("/api/ranking/prestige-sensitivity");
   const [tourOpen, setTourOpen] = useState(false);
   const [tourChecked, setTourChecked] = useState(false);
+  // per-browser workspace overlay (saved / monitoring / dismissed + decisions)
+  const [pipeline, setPipeline] = useState<Record<number, PipelineStatus>>({});
+  const [decisions, setDecisions] = useState<Record<number, LocalDecision>>({});
+  useEffect(() => {
+    setPipeline(getPipeline());
+    setDecisions(getMyDecisions());
+  }, []);
 
-  // Auto-start the tour for first-time investors — but only once the dashboard
-  // (incl. the Arena hero the tour anchors to) has actually rendered.
+  // Auto-start the tour the first time THIS signed-in investor reaches the
+  // dashboard — tracked per account so a new sign-in gets it, and only once the
+  // dashboard (incl. the Arena hero the tour anchors to) has actually rendered.
+  const tourSeenKey = `trajectory_tour_seen_${accountScope("investor")}`;
   useEffect(() => {
     if (!data || tourChecked) return;
     setTourChecked(true);
-    api.get<{ completed: boolean; skipped: boolean }>("/api/tour")
-      .then((t) => { if (!t.completed && !t.skipped) setTourOpen(true); })
-      .catch(() => {});
-  }, [data, tourChecked]);
+    try {
+      if (!localStorage.getItem(tourSeenKey)) setTourOpen(true);
+    } catch {
+      /* localStorage unavailable — skip auto-start */
+    }
+  }, [data, tourChecked, tourSeenKey]);
+
+  function closeTour() {
+    setTourOpen(false);
+    try { localStorage.setItem(tourSeenKey, "1"); } catch { /* ignore */ }
+  }
 
   if (loading) return <Spinner label="Loading dashboard…" />;
   if (error) return <ErrorState message={error} />;
   if (!data) return null;
+
+  // Apply this browser's pipeline overlay: hide prospects it dismissed, pin the
+  // ones it saved / is monitoring to the top, then trim to the display count.
+  const rank = (s: PipelineStatus | null) => (s === "saved" || s === "monitoring" ? 0 : 1);
+  const outboundProspects = (data.top_outbound_prospects || [])
+    .map((o: any) => ({ o, status: pipeline[o.id] ?? null }))
+    .filter((x) => x.status !== "dismissed")
+    .sort((a, b) => rank(a.status) - rank(b.status))
+    .slice(0, 8);
+
+  // The Action Queue is built server-side from shared state, so it doesn't know
+  // this browser already acted. Drop items for opportunities you've decided or
+  // dismissed — using your per-browser workspace, not any hardcoded list.
+  const actionQueue = (data.action_queue || []).filter(
+    (a) => !decisions[a.opportunity_id] && pipeline[a.opportunity_id] !== "dismissed"
+  );
 
   return (
     <div className="space-y-6">
@@ -107,8 +136,8 @@ export default function DashboardPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Section title="Top Outbound Prospects" subtitle="Surfaced before they formally apply">
           <div data-tour="sourcing" className="space-y-2">
-            {data.top_outbound_prospects.length ? data.top_outbound_prospects.map((o) => (
-              <OppRow key={o.id} o={o} />
+            {outboundProspects.length ? outboundProspects.map(({ o, status }) => (
+              <OppRow key={o.id} o={o} status={status} />
             )) : <p className="text-sm text-ink-muted">No prospects yet. Sync a GitHub profile from Discovery.</p>}
           </div>
         </Section>
@@ -125,7 +154,7 @@ export default function DashboardPage() {
       {/* Action queue — the primary "what should I do next, and on whom?" list */}
       <Section title="Action Queue" subtitle="Your prioritized next steps — the deals you can act on now come first">
         <div data-tour="action-queue" className="space-y-2">
-          {data.action_queue.length ? data.action_queue.map((a) => (
+          {actionQueue.length ? actionQueue.map((a) => (
             <Link
               key={a.opportunity_id}
               href={`/vc/opportunities/${a.opportunity_id}`}
@@ -143,7 +172,7 @@ export default function DashboardPage() {
                 <span className="w-14 text-right text-xs text-ink-muted">{a.age_days === 0 ? "today" : `${a.age_days}d open`}</span>
               </div>
             </Link>
-          )) : <p className="text-sm text-ink-muted">Nothing needs your action right now. 🎉</p>}
+          )) : <p className="text-sm text-ink-muted">Nothing needs your action right now.</p>}
         </div>
       </Section>
 
@@ -179,16 +208,12 @@ export default function DashboardPage() {
         </Section>
       </div>
 
-      <Section title="Standard vs Prestige-Free Ranking" subtitle="Largest movements when prestige is masked">
-        {ranking.data ? <PrestigeCompare entries={ranking.data.entries} /> : <Spinner />}
-      </Section>
-
-      <GuidedTour steps={DASHBOARD_TOUR} open={tourOpen} onClose={() => setTourOpen(false)} />
+      <GuidedTour steps={DASHBOARD_TOUR} open={tourOpen} onClose={closeTour} />
     </div>
   );
 }
 
-function OppRow({ o }: { o: any }) {
+function OppRow({ o, status }: { o: any; status?: PipelineStatus | null }) {
   return (
     <Link href={`/vc/opportunities/${o.id}`} className="flex items-center justify-between rounded-lg bg-surface-sunken px-3 py-2 hover:bg-line/40">
       <div className="min-w-0">
@@ -196,6 +221,9 @@ function OppRow({ o }: { o: any }) {
         <p className="truncate text-xs text-ink-muted">{o.company?.one_liner || o.surfaced_reason}</p>
       </div>
       <div className="ml-2 flex shrink-0 items-center gap-2">
+        {(status === "saved" || status === "monitoring") && (
+          <Badge tone="bg-positive-wash text-positive">{humanStatus(status)}</Badge>
+        )}
         {o.founder_score && <span className="text-sm font-semibold text-ink">{Math.round(o.founder_score.score)}</span>}
         <Badge tone="bg-brand-wash text-brand">fit {Math.round(o.thesis_fit_score)}</Badge>
       </div>

@@ -13,7 +13,7 @@ from app.ai.validation import validate_evidence_ids
 from app.api.deps import default_fund, get_db
 from app.core.rate_limit import ai_rate_limit
 from app.models.assessment import Opportunity, OpportunityAssessment
-from app.models.enums import DiligenceStatus, OpportunityStatus, WorkflowStage
+from app.models.enums import DiligenceStatus, WorkflowStage
 from app.models.sources import Evidence
 from app.models.workflow import (
     Debate,
@@ -195,7 +195,7 @@ def get_memo(opp_id: int, db: Session = Depends(get_db)) -> dict:
 
 @router.post("/opportunities/{opp_id}/decision")
 def record_decision(opp_id: int, body: HumanDecisionIn, db: Session = Depends(get_db)) -> dict:
-    o = _get_opp(db, opp_id)
+    _get_opp(db, opp_id)  # validate existence (404 if missing)
     valid_dec = {"approved", "rejected", "deferred", "overridden"}
     if body.decision not in valid_dec:
         raise HTTPException(422, f"Invalid decision. Must be one of {sorted(valid_dec)}.")
@@ -213,8 +213,11 @@ def record_decision(opp_id: int, body: HumanDecisionIn, db: Session = Depends(ge
         notes=body.notes, decided_at=datetime.now(UTC),
     )
     db.add(hd)
-    o.status = OpportunityStatus.DECIDED
-    o.stage = WorkflowStage.DECISION
+    # The HumanDecision row above is the durable, auditable record (real data,
+    # not demo-only). We intentionally do NOT flip the shared opportunity
+    # status/stage here: a decision is scoped to the investor who made it
+    # (tracked per-browser on the client), so it must not change what every
+    # other investor sees on the shared pipeline.
     db.add(WorkflowEvent(
         opportunity_id=opp_id, event_type="human_decision",
         detail=f"{body.decision}: {body.chosen_action} (system rec: {hd.system_recommended_action})",

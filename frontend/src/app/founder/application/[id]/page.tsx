@@ -139,7 +139,7 @@ function ProvideInfo({ app, onSaved }: { app: ApplicationDetail; onSaved: () => 
       subtitle="Only what genuinely helps a confident decision — fill in what you can and submit"
     >
       {done && (
-        <p className="mb-3 text-sm text-positive">You&rsquo;ve provided everything the fund asked for. 🎉 You can still update details below.</p>
+        <p className="mb-3 text-sm text-positive">You&rsquo;ve provided everything the fund asked for. You can still update details below.</p>
       )}
 
       <div className="grid gap-3 sm:grid-cols-2">

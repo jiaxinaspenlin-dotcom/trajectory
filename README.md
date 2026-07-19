@@ -42,8 +42,8 @@ while **a human approves every consequential action**.
   from multiple sources. Each evidence item stores source, type, URL, collection + event dates,
   provenance (founder-reported vs independent), verification status and confidence.
 - **Live GitHub connector** — the official GitHub REST API, with caching, rate-limit handling,
-  retries, and graceful handling of missing/deleted/incomplete data. Other connectors
-  (hackathons, papers, patents, …) are *declared but honestly reported as not implemented*.
+  retries, and handling of missing/deleted/incomplete data. Other connectors
+  (hackathons, papers, patents, …) are *declared but reported as not implemented*.
 - **Deterministic Founder Score** — a persistent, per-person score computed in **pure Python**
   (the LLM never invents it), fully explained by component, weight, value, evidence count,
   confidence, missingness and contribution. Versioned — never silently reset.
@@ -54,9 +54,19 @@ while **a human approves every consequential action**.
 - **Diligence & contradiction checking** — rule-based numeric contradiction detection plus
   generated, trackable diligence questions. A validation layer **rejects AI references to
   nonexistent evidence IDs**.
-- **Evidence-backed memo** — structured investment memo that labels anything *Not disclosed /
-  Not verified / Insufficient evidence* rather than inventing content.
-- **24-hour recommendation tracker** — time from first signal to an actionable recommendation.
+- **Evidence-backed memo** — a structured investment memo that always renders the full standard
+  section set (Company Snapshot, Investment Hypotheses, SWOT, Team & History, Problem & Product,
+  Technology & Defensibility, Market Sizing, Competition, Traction & KPIs, Financials & Round
+  Structure, Cap Table, Due Diligence Log, Exit Perspective), labeling anything *Not disclosed /
+  Not verified / Insufficient evidence* rather than inventing content. It drops down inline inside
+  the Investment Arena on a prospect's profile.
+- **Prioritized Action Queue** — a single ranked "what to do next, and on whom" list for the
+  investor (replacing per-deal countdown timers). First-signal → decision timestamps are retained
+  on each opportunity.
+- **Two personas** — a landing chooser routes to a `/vc` investor workspace or a `/founder`
+  portal. A full account system (signup/login, hashed passwords, DB-persisted sessions) is
+  implemented and available at `/api/auth/*`, but the **login screens are currently disabled**, so
+  both workspaces open directly. Re-enable by wrapping the layouts in `AuthGate`.
 - **Human oversight** — the system recommends; the human records a separate decision. No automatic
   outreach or investment ever happens.
 
@@ -70,6 +80,8 @@ while **a human approves every consequential action**.
   accelerator, investor-network and geography-as-proxy signals while retaining substantive evidence
   (what was built, real traction, technical contributions, repeated execution). It shows how much
   prestige moves your ranking — without claiming the prestige-free view is automatically superior.
+  *(The engine and `/api/ranking/*` endpoints are live; the side-by-side comparison was removed from
+  the investor dashboard UI — it remains available via the API.)*
 - **Investment Arena** — original illustrated **Bull**, **Bear**, and a neutral human **Referee**.
   The Bull makes the strongest evidence-backed case to advance, the Bear the strongest case for
   caution, and the Referee judges **evidence quality and independence** (not persuasive writing) to
@@ -135,8 +147,9 @@ make backend
 make frontend
 ```
 
-Open **http://localhost:3000** and click **Enter the platform**. The guided tour starts on the
-first dashboard visit.
+Open **http://localhost:3000** and choose **I'm a VC** or **I'm a Founder** — both workspaces open
+directly (login is currently disabled). The guided tour auto-starts the first time an investor
+reaches the dashboard.
 
 > Without `make`, run the equivalent commands shown in the Makefile — e.g.
 > `cd backend && python3 -m venv .venv && ./.venv/bin/pip install -r requirements.txt`,
@@ -176,7 +189,7 @@ Copy `.env.example` to `.env`. **Never commit `.env` or put real values in `.env
 | `ENVIRONMENT` | `development` / `production` / `test` | `development` |
 
 The OpenAI key is only ever read on the backend and is **never** included in the client bundle.
-The Settings page shows a masked hint (last 4 chars) — never the full key.
+The `GET /api/settings` endpoint returns only a masked hint (last 4 chars) — never the full key.
 
 ## OpenAI setup
 
@@ -200,7 +213,7 @@ evidence and is instructed never to invent facts; hallucinated evidence-ID refer
 
 Only public data is collected, attributed to its source URL. Restricted platforms (LinkedIn, X)
 are never scraped. Rate limits, missing profiles, deleted repos, and incomplete responses are
-handled gracefully and reported on the Settings page.
+handled and reported by `GET /api/connectors/status`.
 
 ## Database, migrations, seed
 
@@ -215,13 +228,13 @@ handled gracefully and reported on the Settings page.
 ## Running tests, lint, type-checks, builds
 
 ```bash
-# Backend — 36 pytest tests, ruff, mypy
+# Backend — 42 pytest tests, ruff, mypy
 cd backend
 ./.venv/bin/python -m pytest -q          # tests
 ./.venv/bin/ruff check app tests         # lint
 ./.venv/bin/mypy app                     # type-check
 
-# Frontend — 14 Vitest tests + production build
+# Frontend — 13 Vitest tests + production build
 cd frontend
 npm run test                             # tests (vitest)
 npx next build                           # production build (also type-checks)
@@ -229,13 +242,14 @@ npx next build                           # production build (also type-checks)
 
 Or simply `make test`, `make lint`, `make build`.
 
-**Current status:** backend 36/36 tests pass, ruff clean, mypy clean (53 files);
-frontend 14/14 tests pass, `next build` succeeds (9 routes).
+**Current status:** backend 42/42 tests pass, ruff clean, mypy clean (58 files);
+frontend 13/13 tests pass.
 
 ## API overview
 
-Interactive OpenAPI docs at **`/docs`** (schema at `/openapi.json`). 46 documented endpoints, incl.:
+Interactive OpenAPI docs at **`/docs`** (schema at `/openapi.json`). 50+ documented endpoints, incl.:
 
+- `POST /api/auth/signup`, `POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/logout`
 - `GET /api/health`, `GET /api/settings`, `GET /api/connectors/status`
 - `GET/POST/PUT /api/thesis…`
 - `GET /api/founders`, `/founders/{id}`, `/founders/{id}/score[/history]`, `/founders/{id}/momentum`
@@ -250,11 +264,20 @@ Interactive OpenAPI docs at **`/docs`** (schema at `/openapi.json`). 46 document
 
 ## Product pages
 
-`/` landing · `/thesis` onboarding & thesis · `/dashboard` main dashboard (+ guided tour) ·
-`/discovery` NL search + GitHub sourcing · `/apply` inbound application + PDF upload ·
-`/opportunities/[id]` founder profile (score, momentum, three axes, claims/trust, Arena, timer,
-human decision) · `/opportunities/[id]/diligence` diligence workspace ·
-`/opportunities/[id]/memo` investment memo (print/PDF) · `/settings` data sources & status.
+Two personas behind a landing chooser (login is currently disabled, so both open directly).
+
+- `/` landing (choose **I'm a VC** / **I'm a Founder**)
+- **Investor workspace** (`/vc/*`): `/vc` dashboard (Arena hero + Action Queue + guided tour) ·
+  `/vc/discovery` AI-driven outbound sourcing (NL brief → GitHub search → ranked shortlist) ·
+  `/vc/thesis` thesis editor · `/vc/opportunities/[id]` founder profile (Founder Score, momentum,
+  three axes with per-axis trend, claims/trust, the Investment Arena with an inline memo drawer and
+  a full-screen debate player, pipeline Save/Monitor/Dismiss, human decision) ·
+  `/vc/opportunities/[id]/diligence` diligence workspace · `/vc/opportunities/[id]/memo` print/PDF memo.
+- **Founder portal** (`/founder/*`): `/founder` apply (company name + PDF deck) ·
+  `/founder/applications` my applications · `/founder/application/[id]` status, first-pass screen,
+  and the "what the fund still needs" form.
+
+(The old single-interface `/dashboard`, `/apply`, `/settings` routes were replaced by the persona split.)
 
 ## Project layout
 
@@ -265,9 +288,9 @@ Trajectory/
 │   │   ├── ai/              provider + services + validation (OpenAI; 503 when no key)
 │   │   ├── api/             REST routers
 │   │   ├── connectors/      GitHub (live) + connector interfaces
-│   │   ├── core/            config, security (SSRF), rate limiting
+│   │   ├── core/            config, security (SSRF), passwords (auth hashing), rate limiting
 │   │   ├── db/              SQLAlchemy 2 engine + base
-│   │   ├── models/          30 ORM entities
+│   │   ├── models/          32 ORM entities (incl. AuthAccount, AuthSession)
 │   │   ├── scoring/         deterministic score / momentum / ranking / trust
 │   │   ├── seed/            fictional demo data
 │   │   └── services/        orchestration (evidence, founder, analysis, workflow…)
@@ -293,8 +316,13 @@ Trajectory/
 - **AI features require an OpenAI key.** Without one they are unavailable (HTTP 503) — there is no
   fake fallback. The seeded demo analysis is static, clearly-labeled demo data; deterministic
   scoring always works.
-- **Single default fund / no authentication yet.** Users, funds and multi-tenancy are fully
-  modeled, but there is no login flow in this version.
+- **Login is currently disabled; the API isn't auth-protected.** A full account system
+  (signup/login, PBKDF2-hashed passwords, DB-persisted sessions) is implemented and available at
+  `/api/auth/*` with passing tests, but the login screens are turned off — both interfaces open
+  directly. No data/AI endpoint enforces a token, and the app operates on a single default fund.
+  An investor's saved-prospect pipeline and recorded decisions are scoped **per browser**
+  (localStorage); decisions are also written to the DB as a durable audit record. Re-enable login
+  by wrapping the `/vc` and `/founder` layouts in `AuthGate`.
 - **In-memory rate limiter** — fine for a single process; use Redis for multi-worker deploys.
 - **Anonymous GitHub is limited to 60 requests/hour** — add `GITHUB_TOKEN` for 5000/hr.
 

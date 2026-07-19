@@ -28,7 +28,7 @@ structured JSON with a `generated_by` field.
 | Bull | `generate_bull` | Strongest evidence-backed case FOR advancing |
 | Bear | `generate_bear` | Strongest evidence-backed case AGAINST advancing |
 | Referee | `generate_referee` | Judges evidence QUALITY (not prose); recommends one action from a fixed set |
-| Investment memo | `generate_memo` | Evidence-backed memo sections, each with evidence IDs and explicit "unavailable" labels |
+| Investment memo | `generate_memo` | Evidence-backed memo. Enforces the **full canonical section set** (`MEMO_SECTIONS`: Company Snapshot, Investment Hypotheses, SWOT, Team & History, Problem & Product, Technology & Defensibility, Market Sizing, Competition, Traction & KPIs, Financials & Round Structure, Cap Table, Due Diligence Log, Exit Perspective) in a fixed order — any section the model omits is added back as a labeled placeholder, so every memo always shows all sections. Each carries evidence IDs and an explicit "unavailable" label where data is missing |
 | Pitch-deck interpretation | `interpret_pitch_deck` | Structured facts from page-tagged deck text; each metric tagged with its page; nothing invented |
 | Evidence summarization | `summarize_evidence` | Factual summary citing evidence IDs |
 | Contradiction interpretation | (surfaced via context + diligence/bear) | Explains detected numeric contradictions |
@@ -113,7 +113,7 @@ response:
 ```
 
 So AI endpoints (`/analyze`, `/assessment`, `/diligence`, `/arena`, `/memo`,
-`/search/parse`) require a key and fail honestly with 503 rather than returning
+`/search/parse`) require a key and fail with 503 rather than returning
 fabricated output.
 
 **The deterministic engines are unaffected.** The Founder Score, momentum,
@@ -135,7 +135,7 @@ disguised fallback.
 
 ---
 
-## 5. `generated_by` keeps provenance honest
+## 5. `generated_by` tracks provenance
 
 Real AI output always carries `generated_by: "openai"`, persisted on
 `OpportunityAssessment`, `Debate`, `InvestmentMemo`, and `DiligenceQuestion`,

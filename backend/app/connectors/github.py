@@ -6,7 +6,7 @@ and otherwise the anonymous public API (60 req/hr). Handles:
 - rate limiting (403 + X-RateLimit-Remaining: 0) -> RATE_LIMITED
 - transient failures -> retries with backoff
 - incomplete responses -> partial results
-- deleted repos -> skipped gracefully
+- deleted repos -> skipped
 
 Never scrapes restricted platforms. GitHub stars are captured but explicitly
 labeled as external interest, NOT commercial traction.
@@ -229,7 +229,7 @@ class GitHubConnector(Connector):
         user logins. Returns (status, logins, rate_limit_remaining).
 
         The Search API has its own rate limit (~30/min authenticated); a 403 with
-        remaining 0 returns status='rate_limited' so callers can stop gracefully.
+        remaining 0 returns status='rate_limited' so callers can stop.
         """
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:

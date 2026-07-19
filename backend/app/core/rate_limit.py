@@ -1,7 +1,7 @@
 """Minimal in-memory sliding-window rate limiter for expensive AI endpoints.
 
 For production behind multiple workers this should move to Redis; documented as
-a known limitation. Sufficient and honest for a single-process deployment.
+a known limitation. Fine for a single-process deployment.
 """
 
 from __future__ import annotations

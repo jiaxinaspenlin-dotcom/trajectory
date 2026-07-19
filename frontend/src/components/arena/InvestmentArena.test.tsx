@@ -37,7 +37,7 @@ describe("InvestmentArena", () => {
     expect(screen.getByText("unverified")).toBeInTheDocument();
   });
 
-  it("handles a missing debate gracefully", () => {
+  it("renders the empty state when the debate is missing", () => {
     render(<InvestmentArena debate={null} />);
     expect(screen.getByTestId("arena-empty")).toBeInTheDocument();
   });

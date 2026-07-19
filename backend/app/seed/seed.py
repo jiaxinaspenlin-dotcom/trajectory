@@ -435,7 +435,7 @@ def run_seed() -> dict:
                     num_users=500 + idx * 350,
                     screen_summary=f"First-pass screen for {company.name}: GitHub available for "
                                    "independent verification; founder-reported traction requires verification.",
-                    missing_fields=["traction_signal (revenue or users)"], is_demo=True,
+                    missing_fields=["Traction Signal (Revenue or Users)"], is_demo=True,
                 ))
 
         db.commit()

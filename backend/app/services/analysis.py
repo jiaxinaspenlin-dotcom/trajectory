@@ -2,7 +2,7 @@
 
 Regeneration NEVER overwrites prior assessments, debates, or memos; each run
 creates a new version. This module ties the deterministic engines and AI
-services together and persists honest, evidence-linked results.
+services together and persists evidence-linked results.
 """
 
 from __future__ import annotations

@@ -57,7 +57,7 @@ class Connector:
 
 
 class UnavailableConnector(Connector):
-    """Declared-but-not-implemented connector. Honestly reports itself unavailable."""
+    """Declared-but-not-implemented connector; reports itself unavailable."""
 
     def __init__(self, name: str):
         self.name = name

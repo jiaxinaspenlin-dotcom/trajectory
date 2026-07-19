@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { useFetch } from "@/lib/useFetch";
 import { Badge, EmptyState, ErrorState, Section, Spinner } from "@/components/ui";
 import { InvestmentArena } from "@/components/arena/InvestmentArena";
+import { MemoView } from "@/components/MemoView";
 import { Memo, Opportunity } from "@/lib/types";
 
 export default function MemoPage() {
@@ -61,25 +62,7 @@ export default function MemoPage() {
         <EmptyState title="No memo yet" hint="Generate the evidence-backed memo." action={<button className="btn-primary" onClick={generate}>Generate Memo</button>} />
       ) : memo.data ? (
         <>
-          {memo.data.recommended_action && (
-            <div className="rounded-xl bg-brand-wash p-4">
-              <span className="label text-brand">Final recommendation</span>
-              <p className="text-lg font-semibold text-brand">{memo.data.recommended_action}</p>
-              <p className="text-xs text-ink-muted">Confidence {Math.round(memo.data.confidence * 100)}%</p>
-            </div>
-          )}
-          <div className="space-y-4">
-            {memo.data.sections.map((s) => (
-              <Section key={s.key} title={s.title} right={s.unavailable_label ? <Badge tone="bg-neutral-wash text-neutral">{s.unavailable_label}</Badge> : undefined}>
-                <p className="whitespace-pre-line text-sm text-ink-soft">{s.body}</p>
-                {s.evidence_ids.length > 0 && (
-                  <p className="mt-2 text-[11px] text-ink-muted">
-                    Evidence: {s.evidence_ids.map((e) => <span key={e} className="mr-1 rounded bg-surface-sunken px-1 font-mono">E{e}</span>)}
-                  </p>
-                )}
-              </Section>
-            ))}
-          </div>
+          <MemoView memo={memo.data} />
           <Section title="Bull, Bear & Referee">
             <InvestmentArena debate={opp.data?.debate || null} expandable={false} />
           </Section>

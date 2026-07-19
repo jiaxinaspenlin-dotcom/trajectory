@@ -19,12 +19,12 @@ automatic outreach or investment.
 | Database | SQLite (dev, zero-config fallback) / Postgres (prod, docker-compose) | `settings.resolved_database_url` |
 | AI provider | OpenAI (Chat Completions, JSON mode) via official SDK (`app/ai/provider.py`) | Abstracted; required for AI features — raises HTTP 503 when no key (no fake fallback) |
 | Connectors | Live GitHub REST v3 (`app/connectors/github.py`) | Others declared but not implemented |
-| Frontend | Next.js 14 (App Router), React 18, TypeScript | `frontend/` |
+| Frontend | Next.js 14 (App Router), React 18, TypeScript | `frontend/` — two personas (`/vc`, `/founder`) behind a landing chooser. An `AuthGate` component + `/api/auth/*` backend exist, but login is currently disabled (the layouts render without gating) |
 | Styling | Tailwind CSS 3 | custom design tokens (ink/surface/brand) |
 | Charts | Recharts 2 | momentum trajectory chart |
 | Frontend tests | Vitest 2 + Testing Library + jsdom | `npm run test` |
 
-### Configuration & graceful degradation
+### Configuration & degradation behavior
 
 All configuration is environment-based (`app/core/config.py`, pydantic-settings).
 No secret is hardcoded. Optional integrations degrade rather than fail:
@@ -71,6 +71,7 @@ a **new version**, never overwritten.
 
 | Module | Prefix | Representative endpoints |
 |--------|--------|--------------------------|
+| `routes_auth` | `/api/auth` | `POST /signup`, `POST /login`, `GET /me`, `POST /logout` (DB-persisted accounts + opaque session tokens; backs the — currently disabled — login for the two frontend personas) |
 | `routes_meta` | `/api` | `GET /health`, `GET /connectors/status`, `GET /settings`, `GET/PUT /tour` |
 | `routes_thesis` | `/api/thesis` | `GET`, `GET /list`, `POST`, `PUT /{id}` (creating a new active thesis deactivates the prior one — history kept) |
 | `routes_entities` | `/api` | `GET /founders`, `/founders/{id}`, `/founders/{id}/score`, `POST /founders/{id}/score/recompute`, `GET /founders/{id}/score/history`, `/founders/{id}/momentum`, `/companies`, `/evidence`, `/claims`, `/contradictions` |
@@ -98,7 +99,7 @@ without rewriting the app.
   explicitly labeled "external interest, NOT commercial traction".
 - **Planned but unavailable** — hackathons, product launches, papers, patents,
   accelerator cohorts, social signals. Each is served by
-  `UnavailableConnector`, which honestly reports
+  `UnavailableConnector`, which reports
   `status: "not_implemented"`. The app never claims an unimplemented connector
   is live.
 
@@ -136,10 +137,17 @@ read from config. Key properties:
 
 ---
 
-## 5. Data model overview — the 30 tables
+## 5. Data model overview — the 32 tables
 
 Grouped by domain (`app/models/__init__.py` aggregates all so
 `Base.metadata` sees every table).
+
+### Auth (2)
+`AuthAccount` (email + role + display name; salted PBKDF2 password hash — never
+plaintext), `AuthSession` (opaque session token stored only as a SHA-256 hash,
+with an expiry). Separate from the domain `User`/`Fund` models; a single email
+may hold at most one account per role, so one person can be both an investor and
+a founder.
 
 ### Core / account (3)
 `User`, `Fund`, `InvestmentThesis` — the thesis is fully configurable per fund
@@ -164,7 +172,8 @@ public static dir with a sanitized, random name).
 
 ### Opportunity & assessment (4)
 `Opportunity` (the convergence point; carries `entry_type`, `stage`, `status`,
-`first_signal_at`/`recommendation_at` for the 24h timer, `thesis_fit_score`),
+`first_signal_at`/`recommendation_at` for first-signal→recommendation timing,
+`thesis_fit_score`),
 `OpportunityAssessment` (versioned screening pass), `AxisAssessment` (one of the
 three independent axes — never averaged), `PrestigeAudit`.
 

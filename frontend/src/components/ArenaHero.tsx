@@ -33,7 +33,7 @@ function Column({
 
 export function ArenaHero() {
   return (
-    <section className="card overflow-hidden" data-testid="arena-hero" aria-label="Investment Arena">
+    <section className="card mx-auto w-full max-w-[1100px] overflow-hidden" data-testid="arena-hero" aria-label="Investment Arena">
       <div className="relative">
         <ArenaBackdrop />
         <div className="relative z-10 px-4 pb-6 pt-6">
@@ -73,7 +73,7 @@ export function ArenaHero() {
         <p className="mx-auto max-w-3xl text-center text-sm leading-relaxed text-ink-soft">
           On every founder, a <strong className="text-bull">Bull</strong> makes the strongest
           evidence-backed case to advance, a neutral <strong className="text-referee">Referee</strong>{" "}
-          weighs the evidence and its independence — not the rhetoric — and a{" "}
+          weighs the evidence and its independence, not the rhetoric, and a{" "}
           <strong className="text-bear">Bear</strong> makes the strongest case for caution. Trajectory
           surfaces all three and recommends your next step. You always make the final call.
         </p>

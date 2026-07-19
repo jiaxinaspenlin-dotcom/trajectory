@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Debate } from "@/lib/types";
+import { Debate, Memo } from "@/lib/types";
 import { pct } from "@/lib/format";
+import { MemoView } from "@/components/MemoView";
 import { BullCharacter, BearCharacter, RefereeCharacter, CharState } from "./Characters";
+import { DebatePlayer } from "./DebatePlayer";
 import { ArenaBackdrop, Emblem, Flourish, Pedestal, RefereeBadge } from "./stage";
 
 type Role = "bull" | "bear" | "referee";
@@ -25,14 +27,29 @@ function EvidenceRefs({ ids }: { ids: number[] }) {
   );
 }
 
-export function InvestmentArena({ debate, expandable = true }: { debate: Debate | null; expandable?: boolean }) {
+export function InvestmentArena({
+  debate,
+  expandable = true,
+  memo,
+  onGenerateMemo,
+  memoBusy = false,
+}: {
+  debate: Debate | null;
+  expandable?: boolean;
+  memo?: Memo | null;
+  onGenerateMemo?: () => void;
+  memoBusy?: boolean;
+}) {
   const [pinned, setPinned] = useState<Role | null>(null);
   const [hovered, setHovered] = useState<Role | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [memoOpen, setMemoOpen] = useState(false);
+  // whether this instance should render the inline memo drawer at all
+  const showMemoDrawer = memo !== undefined;
 
   if (!debate) {
     return (
-      <div className="card overflow-hidden" data-testid="arena-empty">
+      <div className="card mx-auto w-full max-w-[1100px] overflow-hidden" data-testid="arena-empty">
         <div className="relative">
           <ArenaBackdrop />
           <div className="relative z-10 px-4 py-6 text-center">
@@ -108,7 +125,7 @@ export function InvestmentArena({ debate, expandable = true }: { debate: Debate 
   };
 
   return (
-    <div className="card overflow-hidden" data-testid="arena">
+    <div className="card mx-auto w-full max-w-[1100px] overflow-hidden" data-testid="arena">
       {/* illustrated stage with interactive characters */}
       <div className="relative">
         <ArenaBackdrop />
@@ -165,28 +182,51 @@ export function InvestmentArena({ debate, expandable = true }: { debate: Debate 
         )}
       </div>
 
-      {/* expand modal */}
-      {expanded && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Investment Arena full debate"
-          onClick={() => setExpanded(false)}
-        >
-          <div className="max-h-[90vh] w-full max-w-3xl overflow-auto rounded-xl bg-white p-6 shadow-raised" onClick={(e) => e.stopPropagation()}>
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-ink">Investment Arena — Full Debate</h3>
-              <button className="btn-secondary" onClick={() => setExpanded(false)}>Close</button>
+      {/* inline investment memo drawer */}
+      {showMemoDrawer && (
+        <div className="border-t border-line" data-testid="arena-memo">
+          <button
+            type="button"
+            className="flex w-full items-center justify-between px-5 py-3 text-left transition-colors hover:bg-surface-sunken"
+            aria-expanded={memoOpen}
+            onClick={() => setMemoOpen((v) => !v)}
+          >
+            <span>
+              <span className="text-sm font-semibold text-ink">Investment Memo</span>
+              <span className="ml-2 text-xs text-ink-muted">
+                Full evidence-backed write-up — every standard section, missing data labeled, never invented.
+              </span>
+            </span>
+            <span className={`text-ink-muted transition-transform ${memoOpen ? "rotate-180" : ""}`}>▾</span>
+          </button>
+
+          {memoOpen && (
+            <div className="border-t border-line bg-surface-sunken/40 px-5 py-4">
+              {memo ? (
+                <MemoView memo={memo} />
+              ) : (
+                <div className="rounded-lg border border-line bg-white p-4 text-sm text-ink-muted">
+                  No memo generated yet.{" "}
+                  {onGenerateMemo ? (
+                    <button
+                      className="btn-primary ml-1"
+                      onClick={onGenerateMemo}
+                      disabled={memoBusy}
+                    >
+                      {memoBusy ? "Generating…" : "Generate memo"}
+                    </button>
+                  ) : (
+                    <span>Run analysis to generate the full memo.</span>
+                  )}
+                </div>
+              )}
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              {bull && <SideDetail title="Bull — Case to Advance" tone="text-bull" argument={bull} />}
-              {bear && <SideDetail title="Bear — Case for Caution" tone="text-bear" argument={bear} />}
-            </div>
-            {referee && <div className="mt-4"><RefereeDetail referee={referee} /></div>}
-          </div>
+          )}
         </div>
       )}
+
+      {/* full-screen debate player: VS intro, then turn-taking chat */}
+      {expanded && <DebatePlayer debate={debate} onClose={() => setExpanded(false)} />}
     </div>
   );
 }

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { api } from "@/lib/api";
+import { humanStatus } from "@/lib/format";
+import { LocalDecision } from "@/lib/myWorkspace";
 import { Badge } from "./ui";
 
 const ACTIONS = [
@@ -13,29 +15,39 @@ export function HumanDecisionPanel({
   opportunityId,
   recommendation,
   onDecision,
+  savedLocal = null,
+  onSavedLocal,
 }: {
   opportunityId: number;
   recommendation: { action: string; confidence: number; rationale: string } | null;
   onDecision: () => void;
+  // the decision this browser previously recorded for this opportunity, if any
+  savedLocal?: LocalDecision | null;
+  onSavedLocal?: (d: LocalDecision) => void;
 }) {
   const [decision, setDecision] = useState("approved");
   const [action, setAction] = useState(recommendation?.action || "Continue Diligence");
   const [decidedBy, setDecidedBy] = useState("Demo Investor");
   const [notes, setNotes] = useState("");
-  const [saved, setSaved] = useState<any | null>(null);
+  const [saved, setSaved] = useState<LocalDecision | null>(savedLocal);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function submit() {
     setBusy(true); setError(null);
     try {
-      const r = await api.post<any>(`/api/opportunities/${opportunityId}/decision`, {
+      const r = await api.post<{ human_decision: LocalDecision }>(`/api/opportunities/${opportunityId}/decision`, {
         decided_by: decidedBy, decision, chosen_action: action, notes,
       });
       setSaved(r.human_decision);
+      onSavedLocal?.(r.human_decision);
       onDecision();
     } catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
     finally { setBusy(false); }
+  }
+
+  function amend() {
+    setSaved(null);
   }
 
   return (
@@ -54,9 +66,11 @@ export function HumanDecisionPanel({
         <div className="mt-3 rounded-lg border border-positive/30 bg-positive-wash p-3 text-sm">
           <Badge tone="bg-white text-positive">Recorded</Badge>
           <p className="mt-1 text-ink-soft">
-            <strong>{saved.decided_by}</strong> chose <strong>{saved.chosen_action}</strong> ({saved.decision}).
+            <strong>{saved.decided_by}</strong> chose <strong>{saved.chosen_action}</strong> ({humanStatus(saved.decision)}).
           </p>
           <p className="text-xs text-ink-muted">System had recommended: {saved.system_recommended_action || "—"}. Recorded separately.</p>
+          {saved.notes && <p className="mt-1 text-xs text-ink-soft">Notes: {saved.notes}</p>}
+          <button className="btn-ghost mt-2 text-xs" onClick={amend}>Amend decision</button>
         </div>
       ) : (
         <div className="mt-3 space-y-2">
@@ -64,7 +78,9 @@ export function HumanDecisionPanel({
           <label className="block">
             <span className="label">Decision</span>
             <select className="mt-1 w-full rounded-lg border border-line px-2 py-1.5 text-sm" value={decision} onChange={(e) => setDecision(e.target.value)}>
-              {["approved", "rejected", "deferred", "overridden"].map((d) => <option key={d} value={d}>{d}</option>)}
+              {["approved", "rejected", "deferred", "overridden"].map((d) => (
+                <option key={d} value={d}>{humanStatus(d)}</option>
+              ))}
             </select>
           </label>
           <label className="block">

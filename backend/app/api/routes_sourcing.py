@@ -235,16 +235,14 @@ def dashboard(db: Session = Depends(get_db)) -> dict:
         )
     ][:6]
 
-    # Outbound prospects: pin Saved/Monitoring first, then newest-sourced —
-    # so freshly discovered prospects actually surface. Dismissed drop off.
-    outbound_opps = [
-        o for o in opps
-        if str(o.entry_type) == "outbound" and str(o.status) != "dismissed"
-    ]
-    outbound_opps.sort(
-        key=lambda o: (0 if str(o.status) in ("saved", "monitoring") else 1, -o.id)
-    )
-    outbound = [opportunity_out(db, o) for o in outbound_opps[:8]]
+    # Outbound prospects: return the newest-sourced. Pipeline state (Saved /
+    # Monitoring / Dismissed) is per-browser (client-side workspace), so the
+    # dashboard does NOT pin or hide by the shared status here — the client
+    # applies its own overlay. We return a generous slice so the client can
+    # pin its saved prospects to the top before trimming to the display count.
+    outbound_opps = [o for o in opps if str(o.entry_type) == "outbound"]
+    outbound_opps.sort(key=lambda o: -o.id)
+    outbound = [opportunity_out(db, o) for o in outbound_opps[:24]]
 
     # prioritized action queue (replaces the old per-deal 24h timers)
     action_queue = build_action_queue(db, fund.id, limit=8)

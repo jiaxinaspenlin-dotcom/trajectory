@@ -1,4 +1,4 @@
-"""ORM -> dict serializers for API responses (kept explicit and honest)."""
+"""ORM -> dict serializers for API responses."""
 
 from __future__ import annotations
 

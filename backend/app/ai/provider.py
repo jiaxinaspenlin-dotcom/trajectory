@@ -5,7 +5,7 @@ rest of the codebase depends only on `AIProvider.generate_json(...)`.
 
 There is NO deterministic text fallback. If no API key is configured, or the
 provider fails after retries, `generate_json` raises `AIError`. Callers let it
-propagate; the API turns it into an honest HTTP 503 ("AI provider not
+propagate; the API turns it into an HTTP 503 ("AI provider not
 configured / unavailable"). The deterministic scoring engines (Founder Score,
 Momentum, ranking, Trust) are separate pure-Python modules and do not depend on
 this provider.

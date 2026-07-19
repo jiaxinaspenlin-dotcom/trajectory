@@ -17,7 +17,7 @@ from app.schemas.requests import TourProgressIn
 
 router = APIRouter(tags=["meta"])
 
-# connectors declared but NOT implemented (honest status)
+# connectors declared but not implemented
 _PLANNED_CONNECTORS = [
     "hackathons", "product_launches", "papers", "patents",
     "accelerator_cohorts", "social_signals",

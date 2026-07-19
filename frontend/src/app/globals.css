@@ -13,6 +13,26 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* The layout is capped at a comfortable max width (~1900px) and centered. On
+   larger displays we scale the ROOT font size up so text AND rem-based spacing
+   grow together — nothing looks tiny on a wide monitor, and everything stays in
+   proportion. Narrower windows (incl. the editor preview) keep the 16px base. */
+@media (min-width: 1280px) {
+  html {
+    font-size: 17px;
+  }
+}
+@media (min-width: 1600px) {
+  html {
+    font-size: 18px;
+  }
+}
+@media (min-width: 2000px) {
+  html {
+    font-size: 19px;
+  }
+}
+
 /* Respect reduced-motion everywhere. Components also check this in JS. */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -47,6 +67,36 @@ body {
   .label {
     @apply text-xs font-medium uppercase tracking-wide text-ink-muted;
   }
+}
+
+/* Investment Arena — full-debate intro + chat animations */
+@keyframes arenaFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes vsBullIn {
+  0% { opacity: 0; transform: translateX(-130%) scale(0.8); }
+  60% { opacity: 1; }
+  100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes vsBearIn {
+  0% { opacity: 0; transform: translateX(130%) scale(0.8); }
+  60% { opacity: 1; }
+  100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes vsPop {
+  0% { opacity: 0; transform: scale(2.6) rotate(-10deg); }
+  55% { opacity: 1; transform: scale(1) rotate(0deg); }
+  70% { transform: scale(1.14); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes vsZoomOut {
+  0% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.18); }
+}
+@keyframes debateReveal {
+  from { opacity: 0; transform: scale(1.06); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 /* Guided-tour spotlight — subtle ring + light page dim.

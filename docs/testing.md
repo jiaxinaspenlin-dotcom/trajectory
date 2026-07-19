@@ -1,6 +1,6 @@
 # Testing
 
-Trajectory ships with **37 backend tests** and **14 frontend tests**. The suites
+Trajectory ships with **42 backend tests** and **13 frontend tests**. The suites
 are designed to run **offline** — no network, no API key, no Postgres — so
 they exercise the deterministic core and the safety guarantees directly.
 
@@ -8,7 +8,7 @@ they exercise the deterministic core and the safety guarantees directly.
 
 ## 1. Running the tests
 
-### Backend (37 tests)
+### Backend (42 tests)
 
 ```bash
 cd backend && ./.venv/bin/python -m pytest -q
@@ -21,7 +21,7 @@ that need model output, and raises the AI rate limit to 1000/min for testing.
 The schema is created and dropped around the session; endpoint tests seed demo
 data via the `seeded` fixture.
 
-### Frontend (14 tests)
+### Frontend (13 tests)
 
 ```bash
 cd frontend && npm run test      # vitest run
@@ -44,7 +44,7 @@ cd frontend && npm run build     # next build
 
 ---
 
-## 2. Backend test coverage (37)
+## 2. Backend test coverage (42)
 
 ### `test_scoring.py` — deterministic scoring core (10)
 - **Founder Score determinism & bounds**: same evidence → same score; `0–100`;
@@ -79,7 +79,7 @@ cd frontend && npm run build     # next build
   - **Bear point without evidence** is flagged `unverified`.
   - **Pitch extraction** returns structured, page-tagged facts.
 
-### `test_pdf_github_workflow.py` — I/O safety & connector resilience (9)
+### `test_pdf_github_workflow.py` — I/O safety & connector resilience (8)
 - **PDF validation**: rejects non-`.pdf` extension, bad header, empty file;
   accepts a valid `%PDF-` header.
 - **Filename sanitization** blocks path traversal (`../../etc/passwd` →
@@ -89,11 +89,20 @@ cd frontend && npm run build     # next build
   `X-RateLimit-Remaining: 0` → `RATE_LIMITED`; success path normalizes
   `github_profile` + `github_repo` evidence and confirms stars are labeled "not
   commercial traction".
-- **24h workflow math**: `_human(delta)` formats "2h…"; `TARGET == 24h`.
 
-### `test_endpoints_e2e.py` — API & full happy path (9)
+### `test_auth.py` — authentication (4)
+- **Signup persists a real account** and returns a session token; the token
+  authenticates `GET /api/auth/me`; a duplicate email+role signup is rejected
+  (409); login with the right password succeeds and issues a new token; a wrong
+  password is rejected (401).
+- **`/me` requires a valid token** — no header and a bogus token both return 401.
+- **Same email, different roles** — an investor and a founder account may share
+  an email and are distinct records.
+- **Login is role-scoped** — correct credentials with the wrong role are rejected.
+
+### `test_endpoints_e2e.py` — API & full happy path (11)
 - **Health** endpoint; **settings never leaks full key**; **thesis CRUD** with
-  impact summary; **connector status honest** (github live, planned connectors
+  impact summary; **connector status** (github live, planned connectors
   `live == False`).
 - **AI endpoints return 503 without a key**
   (`test_ai_endpoints_return_503_without_key`): with no `OPENAI_API_KEY`, AI
@@ -103,8 +112,7 @@ cd frontend && npm run build     # next build
   application (missing fields identified) → upload & parse a real 2-page PDF →
   invalid file type rejected (422) → run `/analyze` → three independent axes
   present → Arena bull/bear + referee recommendation → memo sections generated →
-  workflow `target_hours == 24` → record a **separate** human decision keeping
-  `system_recommended_action`.
+  record a **separate** human decision keeping `system_recommended_action`.
 - **Evidence-ref validation endpoint** rejects nonexistent IDs
   (`all_valid == False`).
 - **Ranking & prestige audit** returns both ranks per entry and the "bias &
@@ -114,20 +122,19 @@ cd frontend && npm run build     # next build
 
 ---
 
-## 3. Frontend test coverage (14)
+## 3. Frontend test coverage (13)
 
-### `components/components.test.tsx` (8)
+### `components/components.test.tsx` (7)
 - **ThreeAxes** (1): renders Founder / Market / Idea vs Market with three
   distinct scores (72, 40, 65) and a "not averaged" note.
 - **PrestigeCompare** (2): shows both rankings, toggles to the delta (Δ) view
   with "Influential prestige"; warns when rankings "change substantially once
-  prestige signals are masked".
+  prestige signals are masked". *(The component and this test remain even though
+  the dashboard section that used it was removed.)*
 - **MomentumChart** (1): shows current score (45), 30-day change (+15),
   trajectory "Accelerating", and "release frequency increased".
-- **WorkflowTimer** (1): elapsed (2h 0m) / remaining (22h 0m) and
-  "recommendation ready" state.
-- **GuidedTour** (3): Next → Back with a "Step N of 12" counter; `onClose`
-  called on skip; renders nothing when closed.
+- **GuidedTour** (3): Next → Back with a step counter (`Step N of {DASHBOARD_TOUR.length}`,
+  computed dynamically); `onClose` called on skip; renders nothing when closed.
 
 ### `components/arena/InvestmentArena.test.tsx` (6)
 - Renders **bull, bear, referee** and the recommendation ("Continue Diligence").
@@ -137,5 +144,4 @@ cd frontend && npm run build     # next build
 - **Click** pins the detailed Referee assessment (evidence-that-would-change
   text visible).
 - **Unverified** points (no evidence IDs) are marked "unverified".
-- **Empty** state: a null debate renders the `arena-empty` placeholder
-  gracefully.
+- **Empty** state: a null debate renders the `arena-empty` placeholder.

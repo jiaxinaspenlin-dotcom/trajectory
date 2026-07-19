@@ -1,5 +1,4 @@
-// Original, hand-authored vector characters for the Investment Arena.
-// Not from any icon library and not derived from any copyrighted character.
+// Vector characters for the Investment Arena, drawn with inline SVG.
 // Each accepts a `state` that subtly changes pose/expression.
 
 export type CharState = "idle" | "speaking" | "selected" | "pointing" | "decision";

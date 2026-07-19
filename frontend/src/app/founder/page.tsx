@@ -111,7 +111,7 @@ export default function ApplyFlow() {
             <div className="mt-2">
               <span className="label">Information that would help</span>
               <div className="mt-1 flex flex-wrap gap-1">
-                {appResult.missing_fields.map((m: string) => <Badge key={m} tone="bg-caution-wash text-caution">{m}</Badge>)}
+                {appResult.missing_fields.map((m: string) => <Badge key={m} tone="bg-caution-wash text-caution">{m.replace(/_/g, " ")}</Badge>)}
               </div>
             </div>
           )}
@@ -131,7 +131,7 @@ export default function ApplyFlow() {
 
       {/* Step 3: submitted */}
       {uploadResult && (
-        <Section title="Application Submitted 🎉" subtitle="Thank you — the fund will review it">
+        <Section title="Application Submitted" subtitle="The fund will review it">
           <p className="text-sm text-ink-soft">
             We read <strong>{uploadResult.num_pages}</strong> page(s) of your deck ({uploadResult.extraction_status}).
             {uploadResult.extracted_fields?.missing?.length > 0 && (

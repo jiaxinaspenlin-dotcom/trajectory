@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
@@ -14,6 +14,10 @@ import { FounderScoreBreakdown } from "@/components/FounderScoreBreakdown";
 import { HumanDecisionPanel } from "@/components/HumanDecisionPanel";
 import { Claim, Evidence, Opportunity } from "@/lib/types";
 import { humanStatus, verificationTone } from "@/lib/format";
+import {
+  getMyDecision, getPipelineStatus, LocalDecision, PipelineStatus,
+  saveMyDecision, setPipelineStatus,
+} from "@/lib/myWorkspace";
 
 export default function OpportunityPage() {
   const { id } = useParams<{ id: string }>();
@@ -28,10 +32,42 @@ export default function OpportunityPage() {
   const [busy, setBusy] = useState(false);
   const [confirmRegen, setConfirmRegen] = useState(false);
   const [regenError, setRegenError] = useState<string | null>(null);
+  const [memoBusy, setMemoBusy] = useState(false);
+  // per-browser workspace overlay for this opportunity
+  const [myStatus, setMyStatus] = useState<PipelineStatus | null>(null);
+  const [myDecision, setMyDecision] = useState<LocalDecision | null>(null);
+  useEffect(() => {
+    const n = Number(id);
+    setMyStatus(getPipelineStatus(n));
+    setMyDecision(getMyDecision(n));
+  }, [id]);
 
   async function prospectAction(action: string) {
+    // Save / Monitor / Dismiss are the investor's personal pipeline — scoped to
+    // this browser (like founder applications), never shared with other investors.
+    const pipelineMap: Record<string, PipelineStatus> = {
+      save: "saved", monitor: "monitoring", dismiss: "dismissed",
+    };
+    if (pipelineMap[action]) {
+      setPipelineStatus(Number(id), pipelineMap[action]);
+      setMyStatus(pipelineMap[action]);
+      return;
+    }
+    // Recommend outreach / invite to apply are real, shared workflow steps.
     await api.post(`/api/sourcing/prospects/${id}/action`, { action });
     await reload();
+  }
+
+  async function generateMemo() {
+    setMemoBusy(true);
+    try {
+      await api.post(`/api/opportunities/${id}/memo`);
+      await reload();
+    } catch {
+      /* surfaced via the drawer staying empty; full errors live on the print view */
+    } finally {
+      setMemoBusy(false);
+    }
   }
 
   async function regenerate() {
@@ -69,9 +105,15 @@ export default function OpportunityPage() {
             {o.is_demo && <DemoBadge />}
             <Badge tone="bg-neutral-wash text-neutral">{humanStatus(o.entry_type)}</Badge>
             <Badge tone="bg-brand-wash text-brand">{humanStatus(o.stage)}</Badge>
-            <Badge tone={o.status === "saved" || o.status === "monitoring" ? "bg-positive-wash text-positive" : o.status === "dismissed" ? "bg-negative-wash text-negative" : "bg-neutral-wash text-neutral"}>
-              {humanStatus(o.status)}
-            </Badge>
+            {(() => {
+              const shown = myStatus ?? o.status;
+              const tone = shown === "saved" || shown === "monitoring"
+                ? "bg-positive-wash text-positive"
+                : shown === "dismissed"
+                ? "bg-negative-wash text-negative"
+                : "bg-neutral-wash text-neutral";
+              return <Badge tone={tone}>{humanStatus(shown)}</Badge>;
+            })()}
           </div>
           <p className="mt-1 text-sm text-ink-soft">{o.company?.one_liner}</p>
           <p className="mt-1 text-xs text-ink-muted">
@@ -80,7 +122,6 @@ export default function OpportunityPage() {
         </div>
         <div className="flex gap-2">
           <Link href={`/vc/opportunities/${id}/diligence`} className="btn-secondary">Diligence Workspace</Link>
-          <Link href={`/vc/opportunities/${id}/memo`} className="btn-secondary">Investment Memo</Link>
           <button className="btn-primary" onClick={() => setConfirmRegen(true)} disabled={busy}>
             {busy ? "Regenerating…" : "Regenerate analysis"}
           </button>
@@ -91,12 +132,16 @@ export default function OpportunityPage() {
       {o.entry_type === "outbound" && (
         <div className="flex flex-wrap items-center gap-2 rounded-lg border border-line bg-surface-sunken px-4 py-3">
           <span className="text-sm text-ink-soft">Pipeline:</span>
-          <button className="btn-secondary text-xs" onClick={() => prospectAction("save")}>Save to pipeline</button>
-          <button className="btn-secondary text-xs" onClick={() => prospectAction("monitor")}>Monitor</button>
-          <button className="btn-ghost text-xs" onClick={() => prospectAction("dismiss")}>Dismiss</button>
+          <button className={`text-xs ${myStatus === "saved" ? "btn-primary" : "btn-secondary"}`} onClick={() => prospectAction("save")}>Save to pipeline</button>
+          <button className={`text-xs ${myStatus === "monitoring" ? "btn-primary" : "btn-secondary"}`} onClick={() => prospectAction("monitor")}>Monitor</button>
+          <button className={`text-xs ${myStatus === "dismissed" ? "btn-primary" : "btn-ghost"}`} onClick={() => prospectAction("dismiss")}>Dismiss</button>
           <button className="btn-ghost text-xs" onClick={() => prospectAction("recommend_outreach")}>Recommend outreach</button>
           <span className="ml-auto text-xs text-ink-muted">
-            Saved &amp; monitored prospects are pinned to the top of your dashboard.
+            {myStatus === "saved" || myStatus === "monitoring"
+              ? "Pinned to the top of your dashboard (this browser only)."
+              : myStatus === "dismissed"
+              ? "Hidden from your dashboard (this browser only)."
+              : "Your pipeline is saved in this browser — other investors don't see it."}
           </span>
         </div>
       )}
@@ -132,8 +177,13 @@ export default function OpportunityPage() {
         </div>
       )}
 
-      {/* Investment Arena — full-width illustrated stage for this founder */}
-      <InvestmentArena debate={o.debate || null} />
+      {/* Investment Arena — full-width illustrated stage; the full memo drops down inline */}
+      <InvestmentArena
+        debate={o.debate || null}
+        memo={o.memo ?? null}
+        onGenerateMemo={generateMemo}
+        memoBusy={memoBusy}
+      />
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* main column */}
@@ -204,7 +254,13 @@ export default function OpportunityPage() {
         {/* right column — decision */}
         <div className="space-y-6">
           <Section title="Recommendation & Human Decision" subtitle="System recommends; a human decides">
-            <HumanDecisionPanel opportunityId={o.id} recommendation={o.current_recommendation || null} onDecision={reload} />
+            <HumanDecisionPanel
+              opportunityId={o.id}
+              recommendation={o.current_recommendation || null}
+              onDecision={reload}
+              savedLocal={myDecision}
+              onSavedLocal={(d) => { saveMyDecision(o.id, d); setMyDecision(d); }}
+            />
           </Section>
           <Section title="Thesis Fit" subtitle="Evaluated through the active thesis">
             <div className="text-3xl font-semibold text-ink">{Math.round(o.thesis_fit_score)}<span className="text-base text-ink-muted"> / 100</span></div>

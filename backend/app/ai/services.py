@@ -4,7 +4,7 @@ Each function takes a plain context dict (assembled by the service layer from
 STORED evidence only) and returns a validated structured result. There is NO
 deterministic fallback: if the provider is not configured or fails, the
 underlying `provider.generate_json` raises `AIError`, which propagates to the
-API and becomes an honest HTTP 503. The model is only ever given stored
+API and becomes an HTTP 503. The model is only ever given stored
 evidence, is instructed never to invent facts, and every referenced evidence ID
 is validated against the real evidence set (hallucinated IDs are rejected).
 
@@ -227,22 +227,77 @@ def generate_referee(
 # 5. Investment memo
 # --------------------------------------------------------------------------
 
+# The canonical, always-present memo sections (key, title, what it should cover).
+MEMO_SECTIONS: list[tuple[str, str, str]] = [
+    ("snapshot", "Company Snapshot",
+     "One-paragraph nutshell: market size, the structural problem, why it's urgent, and how the product solves it."),
+    ("hypotheses", "Investment Hypotheses",
+     "The explicit 'why we want to invest' bullets: team quality, market wedge, stickiness/retention, traction signal, defensibility, expansion path."),
+    ("swot", "SWOT",
+     "Strengths, weaknesses, opportunities, risks — each as short, evidence-backed bullets."),
+    ("team", "Team & History",
+     "Founder background, exec pedigree, why the fund is comfortable with any red flags, company timeline from founding to today."),
+    ("problem_product", "Problem & Product",
+     "The core problem(s) in plain language, then the step-by-step product/process solving it."),
+    ("technology", "Technology & Defensibility",
+     "What's proprietary vs commoditizable, the data moat, model/architecture choices, why the advantage compounds over time."),
+    ("market", "Market Sizing",
+     "Top-down and/or bottom-up TAM/SAM/SOM, with the assumptions stated explicitly."),
+    ("competition", "Competition",
+     "Named competitor clusters, how each differs from the company, and who could become a threat later."),
+    ("traction", "Traction & KPIs",
+     "Customer count, ARR/revenue, growth trajectory, unit economics (CAC, sales cycle, churn), usage metrics."),
+    ("financials", "Financials & Round Structure",
+     "Historical + projected P&L (revenue, EBITDA, opex, COGS), round size, runway, next-round timing."),
+    ("cap_table", "Cap Table",
+     "Pre- and post-round ownership by party, dilution assumptions, VSOP allocation."),
+    ("diligence_log", "Due Diligence Log",
+     "What was checked (commercial, people, financial, legal, technical) and what's still open."),
+    ("exit", "Exit Perspective",
+     "Plausible exit paths (strategic acquirers, PE roll-up, category comparables) and why they'd pay a premium."),
+]
+
+
 def generate_memo(context: dict[str, Any]) -> dict[str, Any]:
+    section_spec = "\n".join(f"- {k} | {t}: {g}" for k, t, g in MEMO_SECTIONS)
     system = (
-        "You write an evidence-backed VC investment memo. Every factual claim must "
-        "reference evidence_ids. Label unavailable info as 'Not disclosed', 'Not verified', "
-        "'Insufficient evidence', or 'Unavailable at this stage'. Never invent content."
+        "You write an evidence-backed VC investment memo. You MUST produce EVERY section "
+        "listed, in the given order, using the exact keys. Fill each section only from the "
+        "provided stored evidence. Every factual claim must reference evidence_ids. When a "
+        "section has no supporting evidence, still include it with a short note and set "
+        "unavailable_label to one of 'Not disclosed', 'Not verified', 'Insufficient evidence', "
+        "or 'Unavailable at this stage'. NEVER invent numbers, customers, financials, cap "
+        "tables, or projections."
     )
     user = _context_prompt(context) + (
+        "\n\nProduce these sections (key | title: guidance):\n" + section_spec +
         "\n\nReturn JSON: {\"sections\":[{\"key\":str,\"title\":str,\"body\":str,"
         "\"evidence_ids\":[int],\"unavailable_label\":str|null}],"
         "\"recommended_action\":str,\"confidence\":0-1}"
     )
-    data = provider.generate_json(system, user, max_tokens=3000)
+    data = provider.generate_json(system, user, max_tokens=3500)
     allowed = {e["id"] for e in context.get("evidence", [])}
+    by_key = {}
     for s in data.get("sections", []):
         valid, _ = validate_evidence_ids(s.get("evidence_ids", []), allowed)
         s["evidence_ids"] = valid
+        if s.get("key"):
+            by_key[s["key"]] = s
+
+    # guarantee every canonical section is present, in order
+    ordered: list[dict[str, Any]] = []
+    for key, title, _guide in MEMO_SECTIONS:
+        s = by_key.get(key)
+        if s:
+            s["title"] = title  # normalize the title
+            ordered.append(s)
+        else:
+            ordered.append({
+                "key": key, "title": title,
+                "body": "Not disclosed — insufficient evidence at this stage.",
+                "evidence_ids": [], "unavailable_label": "Insufficient evidence",
+            })
+    data["sections"] = ordered
     data["recommended_action"] = _normalize_action(data.get("recommended_action"))
     data["generated_by"] = "openai"
     return data

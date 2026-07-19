@@ -2,7 +2,7 @@
 
 No secret is ever hardcoded. Every value comes from the environment (or a
 local `.env` file). When optional integrations are unconfigured the app
-degrades gracefully rather than failing or inventing data.
+degrades rather than failing or returning fabricated data.
 """
 
 from __future__ import annotations

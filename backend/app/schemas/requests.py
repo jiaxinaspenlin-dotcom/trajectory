@@ -2,7 +2,39 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+import re
+from typing import Literal
+
+from pydantic import BaseModel, Field, field_validator
+
+# Lightweight email check — avoids pulling in the email-validator dependency.
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+class SignupIn(BaseModel):
+    email: str = Field(min_length=3, max_length=255)
+    password: str = Field(min_length=8, max_length=200)
+    display_name: str = Field(min_length=1, max_length=255)
+    role: Literal["investor", "founder"]
+
+    @field_validator("email")
+    @classmethod
+    def _valid_email(cls, v: str) -> str:
+        v = v.strip().lower()
+        if not _EMAIL_RE.match(v):
+            raise ValueError("Enter a valid email address.")
+        return v
+
+
+class LoginIn(BaseModel):
+    email: str = Field(min_length=3, max_length=255)
+    password: str = Field(min_length=1, max_length=200)
+    role: Literal["investor", "founder"]
+
+    @field_validator("email")
+    @classmethod
+    def _normalize_email(cls, v: str) -> str:
+        return v.strip().lower()
 
 
 class ThesisIn(BaseModel):
