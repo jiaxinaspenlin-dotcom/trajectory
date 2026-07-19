@@ -160,7 +160,6 @@ function AiDiscovery() {
                         {p.name}
                       </Link>
                       <a href={p.github_url} target="_blank" rel="noreferrer" className="text-xs text-brand hover:underline">@{p.login} ↗</a>
-                      {p.already_in_pipeline && <Badge tone="bg-neutral-wash text-neutral">already sourced</Badge>}
                     </div>
                     <p className="text-xs text-ink-muted">{p.evidence_added} public evidence items collected</p>
                   </div>

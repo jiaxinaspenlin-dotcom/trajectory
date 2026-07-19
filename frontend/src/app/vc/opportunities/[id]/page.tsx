@@ -29,6 +29,11 @@ export default function OpportunityPage() {
   const [confirmRegen, setConfirmRegen] = useState(false);
   const [regenError, setRegenError] = useState<string | null>(null);
 
+  async function prospectAction(action: string) {
+    await api.post(`/api/sourcing/prospects/${id}/action`, { action });
+    await reload();
+  }
+
   async function regenerate() {
     setBusy(true);
     setRegenError(null);
@@ -64,6 +69,9 @@ export default function OpportunityPage() {
             {o.is_demo && <DemoBadge />}
             <Badge tone="bg-neutral-wash text-neutral">{humanStatus(o.entry_type)}</Badge>
             <Badge tone="bg-brand-wash text-brand">{humanStatus(o.stage)}</Badge>
+            <Badge tone={o.status === "saved" || o.status === "monitoring" ? "bg-positive-wash text-positive" : o.status === "dismissed" ? "bg-negative-wash text-negative" : "bg-neutral-wash text-neutral"}>
+              {humanStatus(o.status)}
+            </Badge>
           </div>
           <p className="mt-1 text-sm text-ink-soft">{o.company?.one_liner}</p>
           <p className="mt-1 text-xs text-ink-muted">
@@ -78,6 +86,20 @@ export default function OpportunityPage() {
           </button>
         </div>
       </div>
+
+      {/* clip an outbound prospect to your pipeline */}
+      {o.entry_type === "outbound" && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-line bg-surface-sunken px-4 py-3">
+          <span className="text-sm text-ink-soft">Pipeline:</span>
+          <button className="btn-secondary text-xs" onClick={() => prospectAction("save")}>Save to pipeline</button>
+          <button className="btn-secondary text-xs" onClick={() => prospectAction("monitor")}>Monitor</button>
+          <button className="btn-ghost text-xs" onClick={() => prospectAction("dismiss")}>Dismiss</button>
+          <button className="btn-ghost text-xs" onClick={() => prospectAction("recommend_outreach")}>Recommend outreach</button>
+          <span className="ml-auto text-xs text-ink-muted">
+            Saved &amp; monitored prospects are pinned to the top of your dashboard.
+          </span>
+        </div>
+      )}
 
       {confirmRegen && (
         <div className="rounded-lg border border-brand/30 bg-brand-wash p-4">

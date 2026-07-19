@@ -229,8 +229,22 @@ def dashboard(db: Session = Depends(get_db)) -> dict:
                                     "current_score": m["current_score"]})
     momentum_ranked.sort(key=lambda x: (x["change_30d"] or -999), reverse=True)
 
-    inbound = [opportunity_out(db, o) for o in opps if str(o.entry_type) == "inbound"][:6]
-    outbound = [opportunity_out(db, o) for o in opps if str(o.entry_type) == "outbound"][:6]
+    inbound = [
+        opportunity_out(db, o) for o in sorted(
+            (o for o in opps if str(o.entry_type) == "inbound"), key=lambda o: -o.id
+        )
+    ][:6]
+
+    # Outbound prospects: pin Saved/Monitoring first, then newest-sourced —
+    # so freshly discovered prospects actually surface. Dismissed drop off.
+    outbound_opps = [
+        o for o in opps
+        if str(o.entry_type) == "outbound" and str(o.status) != "dismissed"
+    ]
+    outbound_opps.sort(
+        key=lambda o: (0 if str(o.status) in ("saved", "monitoring") else 1, -o.id)
+    )
+    outbound = [opportunity_out(db, o) for o in outbound_opps[:8]]
 
     # prioritized action queue (replaces the old per-deal 24h timers)
     action_queue = build_action_queue(db, fund.id, limit=8)
