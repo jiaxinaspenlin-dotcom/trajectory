@@ -17,6 +17,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 from datetime import UTC, datetime
+from urllib.parse import quote
 
 import httpx
 
@@ -113,8 +114,14 @@ class GitHubConnector(Connector):
                 "message": str(exc)[:200],
             }
 
-    async def fetch_user(self, username: str, max_repos: int = 20) -> ConnectorResult:
-        """Fetch a public user profile + top repos and normalize into evidence."""
+    async def fetch_user(
+        self, username: str, max_repos: int = 20, include_releases: bool = True
+    ) -> ConnectorResult:
+        """Fetch a public user profile + top repos and normalize into evidence.
+
+        include_releases=False skips per-repo release lookups — used by batch
+        discovery to stay fast and light on the API.
+        """
         username = username.strip().lstrip("@")
         evidence: list[NormalizedEvidence] = []
         try:
@@ -183,6 +190,8 @@ class GitHubConnector(Connector):
                         if not isinstance(repo, dict) or repo.get("fork"):
                             continue
                         evidence.extend(self._repo_evidence(repo, username))
+                        if not include_releases:
+                            continue
                         # releases (best-effort; ignore failures -> partial)
                         try:
                             rel_status, releases, _ = await self._get(
@@ -209,6 +218,47 @@ class GitHubConnector(Connector):
                 status=SyncStatus.ERROR, connector="github", target=username,
                 evidence=evidence, message=f"GitHub sync failed: {str(exc)[:200]}",
             )
+
+    async def search_logins(
+        self, query: str, kind: str = "repositories", per_page: int = 15
+    ) -> tuple[str, list[str], int | None]:
+        """Search public GitHub for candidate builder-founders.
+
+        kind='repositories' -> returns the LOGINS of the owners of matching repos
+        (the builders behind relevant public projects). kind='users' -> matching
+        user logins. Returns (status, logins, rate_limit_remaining).
+
+        The Search API has its own rate limit (~30/min authenticated); a 403 with
+        remaining 0 returns status='rate_limited' so callers can stop gracefully.
+        """
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                status, data, headers = await self._get(
+                    client, f"/search/{kind}?q={quote(query)}&per_page={per_page}&sort=updated"
+                )
+                remaining, _ = self._rate_from_headers(headers)
+                if status == 403 and remaining == 0:
+                    return "rate_limited", [], remaining
+                if status != 200 or not isinstance(data, dict):
+                    return "error", [], remaining
+                items = data.get("items", []) or []
+                logins: list[str] = []
+                for it in items:
+                    if not isinstance(it, dict):
+                        continue
+                    if kind == "users":
+                        login = it.get("login")
+                    else:
+                        owner = it.get("owner") or {}
+                        # skip organizations — we want individual builders
+                        if owner.get("type") == "Organization":
+                            continue
+                        login = owner.get("login")
+                    if login:
+                        logins.append(login)
+                return "ok", logins, remaining
+        except Exception as exc:  # noqa: BLE001
+            return f"error:{str(exc)[:80]}", [], None
 
     async def fetch_org(self, org: str, max_repos: int = 20) -> ConnectorResult:
         org = org.strip().lstrip("@")

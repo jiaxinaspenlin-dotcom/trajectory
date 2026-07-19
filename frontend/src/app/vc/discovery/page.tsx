@@ -8,140 +8,184 @@ import { Badge, ErrorState, Section, Spinner } from "@/components/ui";
 import { Opportunity } from "@/lib/types";
 import { humanStatus, trajectoryTone } from "@/lib/format";
 
+interface Prospect {
+  opportunity_id: number;
+  founder_id: number;
+  login: string;
+  name: string;
+  github_url: string;
+  founder_score: number;
+  confidence: number;
+  evidence_added: number;
+  already_in_pipeline: boolean;
+}
+interface DiscoveryResult {
+  planned_by: string;
+  interpretation: string;
+  queries_run: string[];
+  candidates_found: number;
+  prospects: Prospect[];
+  searched_sources: string[];
+  rate_limit_remaining: number | null;
+  notes: string[];
+  disclaimer: string;
+}
+
 export default function DiscoveryPage() {
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold text-ink">Founder Discovery</h1>
         <p className="text-sm text-ink-muted">
-          Natural-language search over your indexed dataset, plus live outbound sourcing from public GitHub.
+          AI-driven outbound sourcing — describe what you want (or use your thesis) and Trajectory finds
+          real builders on public GitHub, scores them, and hands you a ranked shortlist. No searching founder by founder.
         </p>
       </div>
-      <NlSearch />
-      <GithubSync />
+      <AiDiscovery />
+      <ManualAdd />
       <Prospects />
     </div>
   );
 }
 
-function NlSearch() {
-  const [q, setQ] = useState("Find technical pre-seed founders in Boston building financial infrastructure, with strong recent execution, no prior institutional funding, and evidence of product adoption.");
-  const [filters, setFilters] = useState<any | null>(null);
-  const [results, setResults] = useState<Opportunity[] | null>(null);
+function AiDiscovery() {
+  const [brief, setBrief] = useState("");
+  const [result, setResult] = useState<DiscoveryResult | null>(null);
   const [loading, setLoading] = useState(false);
-  const [sources, setSources] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [showPlan, setShowPlan] = useState(false);
 
-  async function parse() {
-    setLoading(true); setError(null); setResults(null);
+  async function run() {
+    setLoading(true);
+    setError(null);
+    setResult(null);
     try {
-      const r = await api.post<{ filters: any; searched_sources: string[] }>("/api/search/parse", { query: q });
-      setFilters(r.filters);
-      setSources(r.searched_sources);
-    } catch (e) { setError(e instanceof Error ? e.message : "Parse failed"); }
-    finally { setLoading(false); }
-  }
-
-  async function apply() {
-    setLoading(true); setError(null);
-    try {
-      const r = await api.post<{ results: Opportunity[] }>("/api/search/apply", { filters });
-      setResults(r.results);
-    } catch (e) { setError(e instanceof Error ? e.message : "Search failed"); }
-    finally { setLoading(false); }
+      const r = await api.post<DiscoveryResult>("/api/sourcing/discover", { brief, limit: 8 });
+      setResult(r);
+    } catch (e) {
+      setError(
+        e instanceof Error && (e.message.toLowerCase().includes("ai provider") || e.message.includes("OPENAI"))
+          ? "AI is not configured — set OPENAI_API_KEY to run AI Discovery."
+          : e instanceof Error ? e.message : "Discovery failed."
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <Section title="Natural-Language Search" subtitle="We show the interpreted filters for you to edit before searching">
+    <Section title="Run AI Discovery" subtitle="Trajectory plans the search from your thesis, then finds & ranks real founders on GitHub">
       <textarea
         className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-brand focus:outline-none"
-        rows={2} value={q} onChange={(e) => setQ(e.target.value)}
+        rows={2}
+        placeholder="Optional: refine the search (e.g. 'technical pre-seed founders building payments infrastructure, strong recent execution'). Leave blank to use your fund thesis."
+        value={brief}
+        onChange={(e) => setBrief(e.target.value)}
       />
-      <div className="mt-2 flex items-center gap-2">
-        <button className="btn-primary" onClick={parse} disabled={loading}>Interpret Query</button>
-        {loading && <Spinner />}
+      <div className="mt-2 flex items-center gap-3">
+        <button className="btn-primary" onClick={run} disabled={loading}>
+          {loading ? "Discovering…" : "Run AI Discovery"}
+        </button>
+        {loading && <Spinner label="Planning the search, querying GitHub, scoring candidates…" />}
       </div>
       {error && <div className="mt-2"><ErrorState message={error} /></div>}
 
-      {filters && (
-        <div className="mt-4 rounded-lg border border-line bg-surface-sunken p-3">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="label">Interpreted filters (editable)</span>
-            <Badge tone="bg-neutral-wash text-neutral">via {filters.generated_by}</Badge>
+      {result && (
+        <div className="mt-4 space-y-3">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
+            <Badge tone="bg-brand-wash text-brand">planned by {result.planned_by}</Badge>
+            <span>{result.candidates_found} candidates found · searched {result.searched_sources.join(", ")}</span>
+            {result.rate_limit_remaining !== null && <span>· GitHub search budget: {result.rate_limit_remaining}</span>}
+            <button className="btn-ghost text-xs" onClick={() => setShowPlan((v) => !v)}>
+              {showPlan ? "Hide" : "Show"} search plan
+            </button>
           </div>
-          <div className="grid gap-2 sm:grid-cols-3">
-            <EditFilter label="Sectors" value={(filters.sectors || []).join(", ")} onChange={(v) => setFilters({ ...filters, sectors: v.split(",").map((x: string) => x.trim()).filter(Boolean) })} />
-            <EditFilter label="Stages" value={(filters.stages || []).join(", ")} onChange={(v) => setFilters({ ...filters, stages: v.split(",").map((x: string) => x.trim()).filter(Boolean) })} />
-            <EditFilter label="Geographies" value={(filters.geographies || []).join(", ")} onChange={(v) => setFilters({ ...filters, geographies: v.split(",").map((x: string) => x.trim()).filter(Boolean) })} />
-          </div>
-          <p className="mt-2 text-xs text-ink-muted">
-            Searching: {sources.join(", ")}. Only connected sources are searched — never the entire internet.
-          </p>
-          <button className="btn-secondary mt-2" onClick={apply} disabled={loading}>Apply Search</button>
-        </div>
-      )}
 
-      {results && (
-        <div className="mt-4">
-          <p className="mb-2 text-sm text-ink-muted">{results.length} match(es) in the indexed dataset.</p>
-          <div className="space-y-2">
-            {results.map((o) => <CandidateCard key={o.id} o={o} />)}
-          </div>
+          {showPlan && (
+            <div className="rounded-lg border border-line bg-surface-sunken p-3 text-xs">
+              <p className="text-ink-soft">{result.interpretation}</p>
+              <ul className="mt-2 space-y-1 font-mono text-ink-muted">
+                {result.queries_run.map((q, i) => <li key={i}>• {q}</li>)}
+              </ul>
+            </div>
+          )}
+
+          {result.notes.length > 0 && (
+            <div className="rounded-lg border border-caution/30 bg-caution-wash p-2 text-xs text-caution">
+              {result.notes.join(" ")}
+            </div>
+          )}
+
+          <p className="text-sm font-medium text-ink">Ranked shortlist</p>
+          {result.prospects.length ? (
+            <div className="space-y-2">
+              {result.prospects.map((p, idx) => (
+                <div key={p.opportunity_id} className="flex items-center justify-between gap-3 rounded-lg border border-line bg-surface p-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-ink-muted">#{idx + 1}</span>
+                      <Link href={`/vc/opportunities/${p.opportunity_id}`} className="truncate text-sm font-semibold text-ink hover:text-brand">
+                        {p.name}
+                      </Link>
+                      <a href={p.github_url} target="_blank" rel="noreferrer" className="text-xs text-brand hover:underline">@{p.login} ↗</a>
+                      {p.already_in_pipeline && <Badge tone="bg-neutral-wash text-neutral">already sourced</Badge>}
+                    </div>
+                    <p className="text-xs text-ink-muted">{p.evidence_added} public evidence items collected</p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Badge tone="bg-brand-wash text-brand">Score {Math.round(p.founder_score)}</Badge>
+                    <Link href={`/vc/opportunities/${p.opportunity_id}`} className="btn-secondary text-xs">Review</Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-ink-muted">No candidates surfaced this run — try refining the brief or your thesis.</p>
+          )}
+          <p className="text-xs text-ink-muted">{result.disclaimer}</p>
         </div>
       )}
     </Section>
   );
 }
 
-function EditFilter({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  return (
-    <label className="block">
-      <span className="label">{label}</span>
-      <input className="mt-1 w-full rounded border border-line px-2 py-1 text-sm" value={value} onChange={(e) => onChange(e.target.value)} />
-    </label>
-  );
-}
-
-function GithubSync() {
+function ManualAdd() {
   const [username, setUsername] = useState("");
-  const [name, setName] = useState("");
-  const [result, setResult] = useState<any | null>(null);
+  const [result, setResult] = useState<{ sync?: { status: string; message: string }; opportunity_id?: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function sync() {
-    setLoading(true); setError(null); setResult(null);
+    setLoading(true);
+    setError(null);
+    setResult(null);
     try {
-      const r = await api.post<any>("/api/sourcing/github/sync", {
-        username: username.trim(), create_founder_name: name.trim() || undefined,
-      });
+      const r = await api.post<{ sync?: { status: string; message: string }; opportunity_id?: number }>(
+        "/api/sourcing/github/sync",
+        { username: username.trim() }
+      );
       setResult(r);
-    } catch (e) { setError(e instanceof Error ? e.message : "Sync failed"); }
-    finally { setLoading(false); }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Sync failed");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <Section title="Add a Real Public GitHub Profile" subtitle="Live connector — collects only public data, with source attribution">
+    <Section title="Add a Specific GitHub Profile" subtitle="Know someone already? Pull one profile directly (live public data)">
       <div className="flex flex-wrap items-end gap-2">
         <label className="block">
-          <span className="label">GitHub username</span>
+          <span className="label">GitHub Username</span>
           <input className="mt-1 w-48 rounded-lg border border-line px-3 py-2 text-sm" placeholder="e.g. torvalds" value={username} onChange={(e) => setUsername(e.target.value)} />
         </label>
-        <label className="block">
-          <span className="label">Display name (optional)</span>
-          <input className="mt-1 w-48 rounded-lg border border-line px-3 py-2 text-sm" value={name} onChange={(e) => setName(e.target.value)} />
-        </label>
-        <button className="btn-primary" onClick={sync} disabled={loading || !username.trim()}>Sync From GitHub</button>
+        <button className="btn-secondary" onClick={sync} disabled={loading || !username.trim()}>Sync from GitHub</button>
         {loading && <Spinner label="Syncing…" />}
       </div>
-      <p className="mt-2 text-xs text-ink-muted">
-        Without a GITHUB_TOKEN the public API allows ~60 requests/hour. Real evidence is stored separately from demo data.
-      </p>
       {error && <div className="mt-2"><ErrorState message={error} /></div>}
       {result && (
         <div className="mt-3 rounded-lg border border-line bg-surface-sunken p-3 text-sm">
           <p className="font-medium text-ink">Sync {result.sync?.status}: {result.sync?.message}</p>
-          <p className="text-ink-muted">Evidence added: {result.sync?.evidence_added} · Founder score: {result.founder_score ?? "—"}</p>
           {result.opportunity_id && <Link href={`/vc/opportunities/${result.opportunity_id}`} className="btn-secondary mt-2">Open Founder Profile →</Link>}
         </div>
       )}
@@ -155,10 +199,10 @@ function Prospects() {
     await api.post(`/api/sourcing/prospects/${id}/action`, { action });
     reload();
   }
-  if (loading) return <Section title="Prospects"><Spinner /></Section>;
-  if (error) return <Section title="Prospects"><ErrorState message={error} /></Section>;
+  if (loading) return <Section title="Sourced Prospects"><Spinner /></Section>;
+  if (error) return <Section title="Sourced Prospects"><ErrorState message={error} /></Section>;
   return (
-    <Section title="Sourced Prospects" subtitle="Save, dismiss, monitor, recommend outreach, or invite to apply">
+    <Section title="Sourced Prospects" subtitle="Save, monitor, dismiss, recommend outreach, or invite to apply">
       <div className="space-y-2">
         {data?.items.length ? data.items.map((o) => (
           <div key={o.id} className="rounded-lg border border-line bg-surface p-3">
@@ -169,7 +213,7 @@ function Prospects() {
                 </Link>
                 <p className="text-xs text-ink-muted">{o.surfaced_reason}</p>
                 <div className="mt-1 flex items-center gap-2">
-                  {o.founder_score && <Badge tone="bg-brand-wash text-brand">score {Math.round(o.founder_score.score)}</Badge>}
+                  {o.founder_score && <Badge tone="bg-brand-wash text-brand">Score {Math.round(o.founder_score.score)}</Badge>}
                   {o.momentum && <Badge tone={trajectoryTone(o.momentum.trajectory)}>{humanStatus(o.momentum.trajectory)}</Badge>}
                   <Badge tone="bg-neutral-wash text-neutral">{humanStatus(o.status)}</Badge>
                 </div>
@@ -181,21 +225,9 @@ function Prospects() {
               </div>
             </div>
           </div>
-        )) : <p className="text-sm text-ink-muted">No prospects yet.</p>}
+        )) : <p className="text-sm text-ink-muted">No prospects yet. Run AI Discovery above.</p>}
       </div>
       <p className="mt-3 text-xs text-ink-muted">No automated outreach is sent — the investor approves all consequential actions.</p>
     </Section>
-  );
-}
-
-function CandidateCard({ o }: { o: Opportunity }) {
-  return (
-    <Link href={`/vc/opportunities/${o.id}`} className="block rounded-lg border border-line bg-surface p-3 hover:border-brand/40">
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-ink">{o.company?.name || o.founder?.full_name}</span>
-        <Badge tone="bg-brand-wash text-brand">fit {Math.round(o.thesis_fit_score)}</Badge>
-      </div>
-      <p className="text-xs text-ink-muted">{o.company?.one_liner}</p>
-    </Link>
   );
 }

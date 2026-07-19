@@ -54,6 +54,40 @@ def parse_search(query: str, connected_sources: list[str]) -> dict[str, Any]:
 
 
 # --------------------------------------------------------------------------
+# 1b. AI-driven sourcing: plan GitHub search queries from the thesis/brief
+# --------------------------------------------------------------------------
+
+def plan_github_search(thesis: dict[str, Any], brief: str) -> dict[str, Any]:
+    """Turn a fund thesis + optional brief into concrete GitHub search queries.
+
+    Returns repo_queries and user_queries using GitHub search qualifiers
+    (language:, location:, topic keywords, pushed:>YYYY-MM-DD). Raises AIError
+    when the provider is unavailable — the caller falls back to a deterministic
+    thesis-derived query builder (that is search-query construction, not invented
+    facts).
+    """
+    system = (
+        "You help a VC find builder-founders on GitHub. Convert the fund thesis and brief "
+        "into GitHub SEARCH queries that surface active individual builders (not orgs). "
+        "Use real GitHub qualifiers: language:, location:, pushed:>YYYY-MM-DD, and topic/"
+        "keyword terms for the sectors. Prefer repository searches (their owners are the "
+        "builders) plus a couple of user searches by location+language. Keep queries concise."
+    )
+    user = (
+        f"Thesis: {thesis}\nInvestor brief (optional): {brief or '(none — use the thesis)'}\n\n"
+        "Return JSON: {\"repo_queries\":[str], \"user_queries\":[str], \"interpretation\":str}. "
+        "2-4 repo_queries and 1-3 user_queries."
+    )
+    data = provider.generate_json(system, user, max_tokens=700)
+    return {
+        "repo_queries": [str(q) for q in data.get("repo_queries", [])][:4],
+        "user_queries": [str(q) for q in data.get("user_queries", [])][:3],
+        "interpretation": str(data.get("interpretation", "")),
+        "planned_by": "openai",
+    }
+
+
+# --------------------------------------------------------------------------
 # 2. Three independent screening axes
 # --------------------------------------------------------------------------
 

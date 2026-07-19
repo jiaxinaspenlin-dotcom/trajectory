@@ -17,7 +17,8 @@ from app.models.entities import Company, Founder
 from app.models.enums import EntryType, OpportunityStatus, WorkflowStage
 from app.models.sources import Evidence
 from app.models.workflow import RecommendedAction, WorkflowEvent
-from app.schemas.requests import GitHubSyncIn, ProspectActionIn, SearchIn
+from app.schemas.requests import DiscoverIn, GitHubSyncIn, ProspectActionIn, SearchIn
+from app.services.discovery import run_ai_discovery
 from app.services.github_sync import sync_github_user
 from app.services.serializers import opportunity_out
 
@@ -104,6 +105,15 @@ async def github_sync(body: GitHubSyncIn, db: Session = Depends(get_db)) -> dict
         "founder_score": fs.score if fs else None,
         "note": "Live GitHub public-data sync. No cold outreach sent — humans approve outreach.",
     }
+
+
+@router.post("/sourcing/discover", dependencies=[Depends(ai_rate_limit)])
+async def ai_discover(body: DiscoverIn, db: Session = Depends(get_db)) -> dict:
+    """AI-driven outbound discovery: plan a GitHub search from the thesis/brief,
+    run the live GitHub Search API, then sync + score a ranked shortlist of real
+    candidate founders. No manual founder-by-founder searching required."""
+    fund = default_fund(db)
+    return await run_ai_discovery(db, fund.id, brief=body.brief, limit=body.limit)
 
 
 @router.post("/search/parse", dependencies=[Depends(ai_rate_limit)])

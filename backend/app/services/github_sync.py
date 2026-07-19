@@ -17,10 +17,12 @@ from app.services.founder import compute_and_store_founder_score
 
 
 async def sync_github_user(
-    db: Session, founder_id: int, username: str, thesis=None
+    db: Session, founder_id: int, username: str, thesis=None, light: bool = False
 ) -> dict:
     connector = GitHubConnector()
-    result = await connector.fetch_user(username)
+    result = await connector.fetch_user(
+        username, max_repos=10 if light else 20, include_releases=not light
+    )
 
     ds = _get_or_create_source(db, f"GitHub @{username}", SourceType.GITHUB_PROFILE,
                                result.profile.get("html_url") if result.profile else None)
