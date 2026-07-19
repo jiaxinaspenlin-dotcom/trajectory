@@ -1,0 +1,53 @@
+# Render Blueprint — deploys the Trajectory FastAPI backend + a Postgres database.
+# Deploy: push to GitHub, then in Render: New > Blueprint, pick this repo.
+# The Docker entrypoint waits for Postgres, runs Alembic migrations, seeds demo
+# data if the DB is empty, then starts uvicorn on $PORT.
+#
+# After the first deploy, set these in the Render dashboard (marked sync:false):
+#   OPENAI_API_KEY        your OpenAI key (AI features need it; otherwise 503)
+#   GITHUB_TOKEN          optional, raises the GitHub rate limit to 5000/hr
+#   BACKEND_CORS_ORIGINS  your deployed frontend origin, e.g. https://<app>.vercel.app
+#
+# NOTE: the free plan has no persistent disk, so uploaded pitch-deck PDFs are
+# ephemeral (their extracted evidence is still saved in Postgres). For durable
+# raw-file storage, move the service to a paid plan and add a `disk:` block
+# mounted at /app/uploads.
+
+databases:
+  - name: trajectory-db
+    databaseName: trajectory
+    user: trajectory
+    plan: free
+
+services:
+  - type: web
+    name: trajectory-backend
+    runtime: docker
+    plan: free
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: trajectory-db
+          property: connectionString
+      - key: ENVIRONMENT
+        value: production
+      - key: OPENAI_MODEL
+        value: gpt-4o
+      - key: UPLOAD_DIR
+        value: /app/uploads
+      - key: MAX_UPLOAD_SIZE_MB
+        value: "15"
+      - key: AI_RATE_LIMIT_PER_MINUTE
+        value: "20"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: BACKEND_CORS_ORIGINS
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false

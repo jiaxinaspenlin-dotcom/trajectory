@@ -61,10 +61,19 @@ class Settings(BaseSettings):
         SQLite is a documented zero-config fallback so the whole app (and its
         test suite) runs without a Postgres container. docker-compose provides
         Postgres for a production-shaped setup.
+
+        Managed hosts (Render, Heroku, etc.) hand out `postgres://` /
+        `postgresql://` URLs with no SQLAlchemy driver, which would default to
+        psycopg2. We normalize them to the psycopg (v3) driver the image ships.
         """
-        if self.database_url:
-            return self.database_url
-        return f"sqlite+pysqlite:///{BACKEND_DIR / 'trajectory.db'}"
+        url = self.database_url
+        if not url:
+            return f"sqlite+pysqlite:///{BACKEND_DIR / 'trajectory.db'}"
+        if url.startswith("postgres://"):
+            url = "postgresql://" + url[len("postgres://"):]
+        if url.startswith("postgresql://"):
+            url = "postgresql+psycopg://" + url[len("postgresql://"):]
+        return url
 
     @property
     def cors_origins(self) -> list[str]:
