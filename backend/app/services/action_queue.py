@@ -66,18 +66,23 @@ def build_action_queue(db: Session, fund_id: int, limit: int = 8) -> list[dict]:
         )
 
         # Determine the single next action + priority (1 = act now).
+        is_inbound = str(o.entry_type) == "inbound"
         if rec and not decided:
             action = f"Review recommendation ({rec.action}) & decide"
             priority = 1
-        elif not assessment:
-            action = "Run analysis"
+        elif is_inbound and not assessment:
+            # a founder just applied and is waiting — surface it prominently.
+            action = "Review new application"
             priority = 2
         elif open_diligence > 0:
             action = f"Resolve {open_diligence} diligence item{'s' if open_diligence != 1 else ''}"
             priority = 3
+        elif not assessment:
+            action = "Run analysis"
+            priority = 4
         else:
             action = "Generate Arena & memo"
-            priority = 4
+            priority = 5
 
         start = _aware(o.first_signal_at) or now
         age_days = max(0, (now - start).days)
