@@ -30,3 +30,8 @@ npm-debug.log*
 .idea/
 .vscode/
 *.log
+
+# Environment variables
+.env
+.env.*
+!.env.example
