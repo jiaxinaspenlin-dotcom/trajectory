@@ -101,7 +101,6 @@ export default function DashboardPage() {
             {data.connectors.live.map((c) => <Badge key={c} tone="bg-positive-wash text-positive">{c} · Live</Badge>)}
             {data.connectors.planned.map((c) => <Badge key={c} tone="bg-neutral-wash text-neutral">{c} · Planned</Badge>)}
           </div>
-          <Link href="/vc/settings" className="btn-ghost mt-3 text-xs">Data Sources &amp; Status →</Link>
         </Section>
       </div>
 

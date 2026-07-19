@@ -4,7 +4,6 @@ const VC_LINKS = [
   { href: "/vc", label: "Dashboard" },
   { href: "/vc/discovery", label: "Discovery" },
   { href: "/vc/thesis", label: "Thesis" },
-  { href: "/vc/settings", label: "Settings" },
 ];
 
 export default function VcLayout({ children }: { children: React.ReactNode }) {
