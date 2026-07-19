@@ -138,14 +138,8 @@ function ProvideInfo({ app, onSaved }: { app: ApplicationDetail; onSaved: () => 
       title="What the Fund Still Needs From You"
       subtitle="Only what genuinely helps a confident decision — fill in what you can and submit"
     >
-      {done ? (
+      {done && (
         <p className="mb-3 text-sm text-positive">You&rsquo;ve provided everything the fund asked for. 🎉 You can still update details below.</p>
-      ) : (
-        <div className="mb-3 flex flex-wrap gap-2">
-          {app.missing_fields.map((m) => (
-            <Badge key={m} tone="bg-caution-wash text-caution">Requested: {m}</Badge>
-          ))}
-        </div>
       )}
 
       <div className="grid gap-3 sm:grid-cols-2">
