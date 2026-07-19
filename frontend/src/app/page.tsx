@@ -31,10 +31,10 @@ export default function Landing() {
           {/* VC door */}
           <Link
             href="/vc"
-            className="group card flex flex-col p-6 transition-shadow hover:shadow-raised focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            className="group card flex flex-col border-[#e7c6c6] bg-[#fbeeee] p-6 transition-shadow hover:shadow-raised focus:outline-none focus-visible:ring-2 focus-visible:ring-[#cf9a9a]"
           >
             <div className="flex items-center justify-between">
-              <span className="chip bg-brand-wash text-brand">For Investors</span>
+              <span className="chip bg-white/70 text-[#a95a57]">For Investors</span>
               <div className="flex -space-x-2">
                 <BullCharacter size={40} />
                 <RefereeCharacter size={40} />
@@ -53,7 +53,7 @@ export default function Landing() {
               <li>• Discovery: outbound sourcing from public GitHub</li>
               <li>• Founder profiles, Trust Scores, diligence &amp; memos</li>
             </ul>
-            <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-brand">
+            <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[#a95a57]">
               Enter investor workspace <span className="transition-transform group-hover:translate-x-0.5">→</span>
             </span>
           </Link>
@@ -61,10 +61,10 @@ export default function Landing() {
           {/* Founder door */}
           <Link
             href="/founder"
-            className="group card flex flex-col p-6 transition-shadow hover:shadow-raised focus:outline-none focus-visible:ring-2 focus-visible:ring-positive"
+            className="group card flex flex-col border-[#ecdcab] bg-[#fdf6e3] p-6 transition-shadow hover:shadow-raised focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d8bf6f]"
           >
             <div className="flex items-center justify-between">
-              <span className="chip bg-positive-wash text-positive">For Founders</span>
+              <span className="chip bg-white/70 text-[#96771d]">For Founders</span>
               <BullCharacter size={40} />
             </div>
             <h2 className="mt-4 text-xl font-semibold text-ink">I&rsquo;m a Founder</h2>
@@ -78,7 +78,7 @@ export default function Landing() {
               <li>• See your extraction &amp; first-pass screen</li>
               <li>• Track what the fund still needs from you</li>
             </ul>
-            <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-positive">
+            <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[#96771d]">
               Enter founder portal <span className="transition-transform group-hover:translate-x-0.5">→</span>
             </span>
           </Link>
