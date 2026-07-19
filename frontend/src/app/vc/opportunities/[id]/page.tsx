@@ -46,7 +46,8 @@ export default function OpportunityPage() {
   if (error) return <ErrorState message={error} />;
   if (!o) return null;
 
-  const founderEvidence: Evidence[] = o.founder?.evidence || [];
+  const founderEvidence: Evidence[] = o.evidence || o.founder?.evidence || [];
+  const notAnalyzed = !o.assessment && !o.debate;
 
   return (
     <div className="space-y-6">
@@ -89,6 +90,18 @@ export default function OpportunityPage() {
                 : regenError}
             </p>
           )}
+        </div>
+      )}
+
+      {notAnalyzed && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-brand/30 bg-brand-wash px-4 py-3">
+          <p className="text-sm text-brand">
+            This founder was just sourced. Their GitHub evidence and Founder Score are ready below —
+            run analysis to generate the three-axis assessment, the Investment Arena, and the memo.
+          </p>
+          <button className="btn-primary shrink-0" onClick={() => setConfirmRegen(true)} disabled={busy}>
+            {busy ? "Analyzing…" : "Run analysis"}
+          </button>
         </div>
       )}
 

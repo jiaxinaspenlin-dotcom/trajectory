@@ -31,6 +31,7 @@ from app.services.serializers import (
     assessment_out,
     debate_out,
     diligence_out,
+    evidence_out,
     memo_out,
     opportunity_out,
 )
@@ -71,6 +72,18 @@ def get_opportunity(opp_id: int, db: Session = Depends(get_db)) -> dict:
     base["diligence"] = [diligence_out(q) for q in db.scalars(
         select(DiligenceQuestion).where(DiligenceQuestion.opportunity_id == opp_id)
     ).all()]
+
+    # Surface the collected evidence (founder + company) so the profile's
+    # Evidence Timeline shows the real GitHub/pitch-deck data.
+    ev: dict[int, Evidence] = {}
+    if o.founder_id:
+        for e in db.scalars(select(Evidence).where(Evidence.founder_id == o.founder_id)).all():
+            ev[e.id] = e
+    if o.company_id:
+        for e in db.scalars(select(Evidence).where(Evidence.company_id == o.company_id)).all():
+            ev[e.id] = e
+    ordered = sorted(ev.values(), key=lambda e: (e.event_date or e.collected_at), reverse=True)
+    base["evidence"] = [evidence_out(e) for e in ordered]
     return base
 
 

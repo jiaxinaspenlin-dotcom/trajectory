@@ -246,6 +246,7 @@ export interface Opportunity {
   debate?: Debate | null;
   memo?: Memo | null;
   diligence?: DiligenceQuestion[];
+  evidence?: Evidence[];
 }
 
 export interface RankingEntry {
