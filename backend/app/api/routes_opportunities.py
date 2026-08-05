@@ -1,5 +1,5 @@
-"""Opportunity workflow: detail, assessment, diligence, arena, memo, ranking,
-prestige audit, 24h timer, human decisions, contradiction validation."""
+"""Opportunity workflow: detail, assessment, diligence, arena, memo,
+human decisions, contradiction validation."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.ai.validation import validate_evidence_ids
-from app.api.deps import default_fund, get_db
+from app.api.deps import get_db
 from app.core.rate_limit import ai_rate_limit
 from app.models.assessment import Opportunity, OpportunityAssessment
 from app.models.enums import DiligenceStatus, WorkflowStage
@@ -26,7 +26,6 @@ from app.models.workflow import (
 )
 from app.schemas.requests import DiligenceResponseIn, DiligenceStatusIn, HumanDecisionIn
 from app.services import analysis
-from app.services.ranking_service import compute_rankings
 from app.services.serializers import (
     assessment_out,
     debate_out,
@@ -248,43 +247,6 @@ def list_decisions(opp_id: int, db: Session = Depends(get_db)) -> dict:
          "decided_at": h.decided_at.isoformat(), "notes": h.notes}
         for h in items
     ]}
-
-
-# ---- ranking + prestige audit --------------------------------------------
-
-@router.get("/ranking")
-def ranking(db: Session = Depends(get_db)) -> dict:
-    fund = default_fund(db)
-    return compute_rankings(db, fund.id, persist=False)
-
-
-@router.get("/ranking/prestige-audit")
-def prestige_audit(db: Session = Depends(get_db)) -> dict:
-    fund = default_fund(db)
-    result = compute_rankings(db, fund.id, persist=True)
-    db.commit()
-    return result
-
-
-@router.get("/ranking/prestige-sensitivity")
-def prestige_sensitivity(db: Session = Depends(get_db)) -> dict:
-    fund = default_fund(db)
-    result = compute_rankings(db, fund.id, persist=False)
-    entries = result["entries"]
-    return {
-        "entries": [
-            {
-                "candidate_id": e["candidate_id"], "name": e["name"],
-                "standard_rank": e["standard_rank"], "prestige_free_rank": e["prestige_free_rank"],
-                "rank_delta": e["rank_delta"], "sensitivity": e["sensitivity"],
-                "substantial_change": e["substantial_change"],
-                "influential_prestige_variables": e["influential_prestige_variables"],
-            }
-            for e in entries
-        ],
-        "most_sensitive": sorted(entries, key=lambda e: e["sensitivity"], reverse=True)[:3],
-        "note": result["note"],
-    }
 
 
 # ---- contradiction validation (reject nonexistent evidence IDs) -----------

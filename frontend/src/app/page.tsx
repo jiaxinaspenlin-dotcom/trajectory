@@ -48,8 +48,8 @@ export default function Landing() {
             <p className="mt-2 flex-1 text-sm text-ink-soft">
               Define your fund&rsquo;s thesis, discover founders before they fundraise, review
               inbound applications, and run the full <strong>Sourcing → Screening → Diligence →
-              Decision</strong> workflow — with Founder Momentum, a prestige-free ranking audit, and
-              the Investment Arena. You approve every consequential action.
+              Decision</strong> workflow — with Founder Momentum and the Investment Arena. You
+              approve every consequential action.
             </p>
             <ul className="mt-3 space-y-1 text-xs text-ink-muted">
               <li>• Investment thesis &amp; pipeline dashboard</li>

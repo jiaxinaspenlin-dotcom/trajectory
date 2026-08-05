@@ -103,7 +103,7 @@ def get_settings_view(db: Session = Depends(get_db)) -> dict:
             "No automatic outreach or investment is performed; humans approve consequential actions.",
             "AI never invents facts. AI features (assessment, arena, memo, diligence, search) require "
             "an OpenAI key; without one they are unavailable (HTTP 503) — there is no fake fallback. "
-            "Deterministic scoring (Founder Score, Momentum, ranking, Trust) always works.",
+            "Deterministic scoring (Founder Score, Momentum, Trust) always works.",
             "Demo data is clearly labeled and never silently mixed with real evidence.",
         ],
     }

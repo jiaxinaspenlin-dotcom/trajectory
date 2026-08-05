@@ -4,7 +4,6 @@ from app.models.assessment import (
     AxisAssessment,
     Opportunity,
     OpportunityAssessment,
-    PrestigeAudit,
 )
 from app.models.auth import AuthAccount, AuthSession
 from app.models.core import Fund, InvestmentThesis, User
@@ -43,7 +42,7 @@ __all__ = [
     "Founder", "Company", "FounderCompanyRelationship", "Application", "UploadedDocument",
     "DataSource", "ConnectorSync", "Evidence", "Claim", "ClaimEvidenceLink", "ClaimContradiction",
     "FounderScore", "FounderMomentumSnapshot",
-    "Opportunity", "OpportunityAssessment", "AxisAssessment", "PrestigeAudit",
+    "Opportunity", "OpportunityAssessment", "AxisAssessment",
     "DiligenceQuestion", "DiligenceResponse", "Debate", "DebateArgument", "RefereeDecision",
     "InvestmentMemo", "RecommendedAction", "HumanDecision", "WorkflowEvent", "TourProgress",
 ]

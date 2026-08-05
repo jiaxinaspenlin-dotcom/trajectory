@@ -41,7 +41,7 @@ No secret is hardcoded. Optional integrations degrade rather than fail:
 
 ```
                  ┌──────────────────── Investment Thesis (per-fund, configurable) ────────────────────┐
-                 │  Every sourcing result, score, ranking & recommendation is evaluated through it.    │
+                 │  Every sourcing result, score & recommendation is evaluated through it.             │
                  └────────────────────────────────────────────────────────────────────────────────────┘
 
   OUTBOUND                                     INBOUND
@@ -76,7 +76,7 @@ a **new version**, never overwritten.
 | `routes_thesis` | `/api/thesis` | `GET`, `GET /list`, `POST`, `PUT /{id}` (creating a new active thesis deactivates the prior one — history kept) |
 | `routes_entities` | `/api` | `GET /founders`, `/founders/{id}`, `/founders/{id}/score`, `POST /founders/{id}/score/recompute`, `GET /founders/{id}/score/history`, `/founders/{id}/momentum`, `/companies`, `/evidence`, `/claims`, `/contradictions` |
 | `routes_applications` | `/api/applications` | `POST` (create inbound), `POST /{id}/upload-deck`, `GET /{id}`, `GET` |
-| `routes_opportunities` | `/api` | `GET /opportunities`, `/opportunities/{id}`, `POST .../analyze`, `.../assessment`, `.../diligence`, `.../arena`, `.../memo`, `POST .../decision`, `GET /ranking`, `/ranking/prestige-audit`, `/ranking/prestige-sensitivity`, `POST .../validate-evidence-refs` |
+| `routes_opportunities` | `/api` | `GET /opportunities`, `/opportunities/{id}`, `POST .../analyze`, `.../assessment`, `.../diligence`, `.../arena`, `.../memo`, `POST .../decision`, `POST .../validate-evidence-refs` |
 | `routes_sourcing` | `/api` | `POST /sourcing/github/sync`, `POST /search/parse`, `POST /search/apply`, `GET /sourcing/prospects`, `POST /sourcing/prospects/{id}/action`, `GET /dashboard` |
 
 CORS is restricted to configured origins (default `http://localhost:3000`).
@@ -137,7 +137,7 @@ read from config. Key properties:
 
 ---
 
-## 5. Data model overview — the 32 tables
+## 5. Data model overview — the 31 tables
 
 Grouped by domain (`app/models/__init__.py` aggregates all so
 `Base.metadata` sees every table).
@@ -155,7 +155,7 @@ a founder.
 criteria, and overridable Founder Score `score_weights`).
 
 ### Entities (5)
-`Founder` (persistent identity; prestige attributes stored here for masking),
+`Founder` (persistent identity),
 `Company`, `FounderCompanyRelationship`, `Application` (inbound; minimum inputs
 = company name + pitch deck), `UploadedDocument` (deck stored outside the
 public static dir with a sanitized, random name).
@@ -170,12 +170,12 @@ public static dir with a sanitized, random name).
 `FounderScore` (versioned; never overwritten), `FounderMomentumSnapshot`
 (point-in-time series that forms the trajectory chart).
 
-### Opportunity & assessment (4)
+### Opportunity & assessment (3)
 `Opportunity` (the convergence point; carries `entry_type`, `stage`, `status`,
 `first_signal_at`/`recommendation_at` for first-signal→recommendation timing,
 `thesis_fit_score`),
 `OpportunityAssessment` (versioned screening pass), `AxisAssessment` (one of the
-three independent axes — never averaged), `PrestigeAudit`.
+three independent axes — never averaged).
 
 ### Workflow / decision (10)
 `DiligenceQuestion`, `DiligenceResponse`, `Debate` (versioned Arena),

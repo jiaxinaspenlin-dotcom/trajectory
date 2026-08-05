@@ -1,4 +1,4 @@
-"""Opportunity, three-axis assessments, and prestige audit."""
+"""Opportunity and three-axis assessments."""
 
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ class Opportunity(Base):
     stage: Mapped[WorkflowStage] = mapped_column(String(24), default=WorkflowStage.SOURCING)
     status: Mapped[OpportunityStatus] = mapped_column(String(24), default=OpportunityStatus.PROSPECT)
 
-    # 24-hour workflow tracking
+    # first-signal -> recommendation timing
     first_signal_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     recommendation_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
@@ -94,16 +94,3 @@ class AxisAssessment(Base):
     narrative: Mapped[str] = mapped_column(Text, default="")
 
 
-class PrestigeAudit(Base):
-    """Standard vs prestige-free ranking as a bias & sensitivity audit."""
-
-    __tablename__ = "prestige_audits"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    fund_id: Mapped[int] = mapped_column(ForeignKey("funds.id"), index=True)
-    computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    # ranked lists: [{opportunity_id, founder_id, name, standard_rank,
-    #   prestige_free_rank, standard_score, prestige_free_score, rank_delta,
-    #   influential_prestige_variables:[...], sensitivity, substantial_change:bool}]
-    entries: Mapped[list] = mapped_column(default=list)
-    is_demo: Mapped[bool] = mapped_column(Boolean, default=False)

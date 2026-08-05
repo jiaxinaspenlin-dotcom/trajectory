@@ -1,4 +1,4 @@
-import { Assessment, Debate, Momentum, RankingEntry } from "@/lib/types";
+import { Assessment, Debate, Momentum } from "@/lib/types";
 
 export const debate: Debate = {
   id: 1, opportunity_id: 1, version: 1, generated_by: "fallback", computed_at: "2026-07-18T00:00:00Z",
@@ -41,12 +41,3 @@ export const momentum: Momentum = {
   ],
 };
 
-export const ranking: RankingEntry[] = [
-  { candidate_id: 1, founder_id: 1, name: "Prestige A", standard_rank: 1, prestige_free_rank: 3, rank_delta: -2,
-    standard_score: 70, prestige_free_score: 55, substantive_score: 55, prestige_score: 95,
-    influential_prestige_variables: [{ variable: "elite_education", label: "elite university brand", value: 100, score_contribution: 9 }],
-    sensitivity: 0.15, substantial_change: true },
-  { candidate_id: 2, founder_id: 2, name: "Substance B", standard_rank: 2, prestige_free_rank: 1, rank_delta: 1,
-    standard_score: 68, prestige_free_score: 78, substantive_score: 78, prestige_score: 10,
-    influential_prestige_variables: [], sensitivity: 0.1, substantial_change: false },
-];

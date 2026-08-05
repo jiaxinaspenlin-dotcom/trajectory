@@ -30,10 +30,10 @@ class Founder(Base):
     bio: Mapped[str] = mapped_column(Text, default="")
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
 
-    # prestige-linked attributes (masked in prestige-free ranking)
-    education: Mapped[list] = mapped_column(default=list)   # [{school, degree, is_elite}]
-    work_history: Mapped[list] = mapped_column(default=list)  # [{company, role, is_famous}]
-    accelerators: Mapped[list] = mapped_column(default=list)  # [{name, is_elite}]
+    # founder background attributes
+    education: Mapped[list] = mapped_column(default=list)   # [{school, degree}]
+    work_history: Mapped[list] = mapped_column(default=list)  # [{company, role}]
+    accelerators: Mapped[list] = mapped_column(default=list)  # [{name}]
     prior_funding: Mapped[list] = mapped_column(default=list)  # [{round, amount, investor}]
 
     relationships: Mapped[list[FounderCompanyRelationship]] = relationship(

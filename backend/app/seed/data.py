@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-# 8 fictional founders + companies. Prestige flags drive the prestige-free audit.
+# 8 fictional founders + companies.
 # github_username values are intentionally fictional-looking; the seed marks all
 # of this as demo and does NOT hit the live GitHub API.
 

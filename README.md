@@ -4,7 +4,7 @@ Trajectory is an AI-powered operating system for venture capital that takes a fu
 **Sourcing → Screening → Diligence → Decision**. The **fund is the client**. Trajectory helps it
 define a thesis, discover promising founders before they fundraise, accept inbound applications,
 organize evidence, evaluate opportunities, surface contradictions and missing information, produce
-an evidence-backed investment memo, and recommend an actionable next step within 24 hours —
+an evidence-backed investment memo, and recommend an actionable next step —
 while **a human approves every consequential action**.
 
 > This is a demonstration product. No real fund uses Trajectory today, and all demo data is
@@ -70,18 +70,12 @@ while **a human approves every consequential action**.
 - **Human oversight** — the system recommends; the human records a separate decision. No automatic
   outreach or investment ever happens.
 
-## The three differentiators
+## The differentiators
 
 - **Founder Momentum** — measures the *direction and rate of change* of a founder's execution over
   time (contribution activity, releases, outside contributors, product iteration, …), labeling the
   trajectory `accelerating / improving / stable / declining / insufficient_history` and explaining
   *why* the score changed. GitHub **stars are never treated as commercial traction**.
-- **Prestige-Free Ranking** — a **bias & sensitivity audit** that masks university, employer,
-  accelerator, investor-network and geography-as-proxy signals while retaining substantive evidence
-  (what was built, real traction, technical contributions, repeated execution). It shows how much
-  prestige moves your ranking — without claiming the prestige-free view is automatically superior.
-  *(The engine and `/api/ranking/*` endpoints are live; the side-by-side comparison was removed from
-  the investor dashboard UI — it remains available via the API.)*
 - **Investment Arena** — original illustrated **Bull**, **Bear**, and a neutral human **Referee**.
   The Bull makes the strongest evidence-backed case to advance, the Bear the strongest case for
   caution, and the Referee judges **evidence quality and independence** (not persuasive writing) to
@@ -110,7 +104,7 @@ while **a human approves every consequential action**.
                                                    └────────────────────────┘
 ```
 
-- **Python owns** API integration, evidence processing, scoring/ranking, PDF processing, AI
+- **Python owns** API integration, evidence processing, scoring, PDF processing, AI
   orchestration, data validation, and business logic.
 - The **AI provider layer** is abstracted so another provider can be added without rewriting the app.
   The AI features require an `OPENAI_API_KEY`; without one those endpoints return HTTP 503 (no fake
@@ -259,7 +253,6 @@ Interactive OpenAPI docs at **`/docs`** (schema at `/openapi.json`). 50+ documen
 - `POST /api/search/parse`, `POST /api/search/apply`
 - `GET /api/opportunities…`, `POST …/analyze | assessment | diligence | arena | memo`
 - `GET …/workflow`, `POST …/decision`, `POST …/validate-evidence-refs`
-- `GET /api/ranking`, `/ranking/prestige-audit`, `/ranking/prestige-sensitivity`
 - `GET/PUT /api/tour`, `GET /api/dashboard`
 
 ## Product pages
@@ -301,7 +294,7 @@ Trajectory/
 │       ├── app/             pages (App Router)
 │       ├── components/      Arena, guided tour, charts, tables, UI
 │       └── lib/             api client, types, hooks
-├── docs/                    architecture, scoring, prestige, momentum, AI, security, testing
+├── docs/                    architecture, scoring, momentum, AI, security, testing
 ├── docker-compose.yml       Postgres + backend + frontend
 ├── Makefile                 developer shortcuts
 └── .env.example
@@ -333,7 +326,6 @@ See [docs/security-and-limitations.md](docs/security-and-limitations.md) for the
 - [docs/architecture.md](docs/architecture.md)
 - [docs/scoring-methodology.md](docs/scoring-methodology.md)
 - [docs/founder-momentum.md](docs/founder-momentum.md)
-- [docs/prestige-audit.md](docs/prestige-audit.md)
 - [docs/ai-prompting-and-validation.md](docs/ai-prompting-and-validation.md)
 - [docs/security-and-limitations.md](docs/security-and-limitations.md)
 - [docs/testing.md](docs/testing.md)

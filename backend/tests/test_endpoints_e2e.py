@@ -132,16 +132,6 @@ def test_evidence_ref_validation_endpoint(client, seeded):
     assert r.json()["all_valid"] is False
 
 
-def test_ranking_and_prestige_audit(client, seeded):
-    r = client.get("/api/ranking/prestige-sensitivity")
-    assert r.status_code == 200
-    entries = r.json()["entries"]
-    assert len(entries) >= 2
-    for e in entries:
-        assert "standard_rank" in e and "prestige_free_rank" in e
-    assert "bias & sensitivity audit" in r.json()["note"]
-
-
 def test_dashboard_action_queue_is_named_and_prioritized(client, seeded):
     body = client.get("/api/dashboard").json()
     assert "action_queue" in body

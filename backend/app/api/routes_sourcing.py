@@ -244,12 +244,8 @@ def dashboard(db: Session = Depends(get_db)) -> dict:
     outbound_opps.sort(key=lambda o: -o.id)
     outbound = [opportunity_out(db, o) for o in outbound_opps[:24]]
 
-    # prioritized action queue (replaces the old per-deal 24h timers)
+    # prioritized action queue — the investor's next steps
     action_queue = build_action_queue(db, fund.id, limit=8)
-
-    from app.services.ranking_service import compute_rankings
-    ranking = compute_rankings(db, fund.id, persist=False)
-    largest_changes = sorted(ranking["entries"], key=lambda e: abs(e["rank_delta"]), reverse=True)[:5]
 
     recent_evidence = db.scalars(
         select(Evidence).order_by(Evidence.collected_at.desc()).limit(8)
@@ -262,7 +258,6 @@ def dashboard(db: Session = Depends(get_db)) -> dict:
         "top_outbound_prospects": outbound,
         "recent_inbound_applications": inbound,
         "highest_momentum": momentum_ranked[:5],
-        "largest_prestige_changes": largest_changes,
         "action_queue": action_queue,
         "recent_evidence": [
             {"id": e.id, "kind": e.kind, "title": e.title, "source_name": e.source_name,

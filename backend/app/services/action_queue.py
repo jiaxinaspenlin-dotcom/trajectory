@@ -1,7 +1,7 @@
 """Prioritized 'Action queue' for the investor dashboard.
 
-Replaces the old per-deal 24-hour timers with a single, specific, prioritized
-list: for each open opportunity, the ONE concrete next action, sorted so the
+A single, specific, prioritized list: for each open opportunity, the ONE
+concrete next action, sorted so the
 things the investor can act on now come first. Every row is named (company +
 founder), never a bare opportunity id.
 """

@@ -1,6 +1,6 @@
 # Testing
 
-Trajectory ships with **42 backend tests** and **13 frontend tests**. The suites
+Trajectory ships with **39 backend tests** and **11 frontend tests**. The suites
 are designed to run **offline** — no network, no API key, no Postgres — so
 they exercise the deterministic core and the safety guarantees directly.
 
@@ -44,9 +44,9 @@ cd frontend && npm run build     # next build
 
 ---
 
-## 2. Backend test coverage (42)
+## 2. Backend test coverage (39)
 
-### `test_scoring.py` — deterministic scoring core (10)
+### `test_scoring.py` — deterministic scoring core (8)
 - **Founder Score determinism & bounds**: same evidence → same score; `0–100`;
   component weights sum to 1.0.
 - **Missing-evidence fairness**: empty evidence → score 0, confidence 0, every
@@ -55,11 +55,6 @@ cd frontend && npm run build     # next build
 - **Momentum trajectory**: 20→25→30→45 over 90 days gives `change_30d = 15`,
   trajectory `accelerating`, explanation mentions "release frequency".
 - **Momentum insufficient history**: empty series → `insufficient_history`.
-- **Prestige masking flips ranks**: strong-prestige/weak-substance loses to
-  weak-prestige/strong-substance once masked; `substantial_change` set;
-  `elite_education` surfaced as influential.
-- **Prestige-free retains substance ordering**: with no prestige, substance
-  still ranks #1.
 - **Trust score**: independent + verified beats founder-reported; contradictions
   penalize; results bounded 0–100.
 - **Numeric contradiction detection**: 2000 vs 800 users flagged `high`
@@ -100,7 +95,7 @@ cd frontend && npm run build     # next build
   an email and are distinct records.
 - **Login is role-scoped** — correct credentials with the wrong role are rejected.
 
-### `test_endpoints_e2e.py` — API & full happy path (11)
+### `test_endpoints_e2e.py` — API & full happy path (10)
 - **Health** endpoint; **settings never leaks full key**; **thesis CRUD** with
   impact summary; **connector status** (github live, planned connectors
   `live == False`).
@@ -115,22 +110,16 @@ cd frontend && npm run build     # next build
   record a **separate** human decision keeping `system_recommended_action`.
 - **Evidence-ref validation endpoint** rejects nonexistent IDs
   (`all_valid == False`).
-- **Ranking & prestige audit** returns both ranks per entry and the "bias &
-  sensitivity audit" note.
 - **Search parse** returns editable filters and the "not the entire internet"
   disclaimer.
 
 ---
 
-## 3. Frontend test coverage (13)
+## 3. Frontend test coverage (11)
 
-### `components/components.test.tsx` (7)
+### `components/components.test.tsx` (5)
 - **ThreeAxes** (1): renders Founder / Market / Idea vs Market with three
   distinct scores (72, 40, 65) and a "not averaged" note.
-- **PrestigeCompare** (2): shows both rankings, toggles to the delta (Δ) view
-  with "Influential prestige"; warns when rankings "change substantially once
-  prestige signals are masked". *(The component and this test remain even though
-  the dashboard section that used it was removed.)*
 - **MomentumChart** (1): shows current score (45), 30-day change (+15),
   trajectory "Accelerating", and "release frequency increased".
 - **GuidedTour** (3): Next → Back with a step counter (`Step N of {DASHBOARD_TOUR.length}`,

@@ -137,5 +137,4 @@ several are surfaced through API responses and status endpoints.
 
 - **No production hardening beyond the above.** `SECRET_KEY` defaults to a
   placeholder that must be set in production; there is no CSRF layer, WAF, or
-  audit-log signing. The workflow's 24-hour target is a tracking goal, not an
-  SLA.
+  audit-log signing.

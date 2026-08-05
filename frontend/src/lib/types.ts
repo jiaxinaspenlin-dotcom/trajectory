@@ -249,23 +249,3 @@ export interface Opportunity {
   evidence?: Evidence[];
 }
 
-export interface RankingEntry {
-  candidate_id: number;
-  founder_id: number | null;
-  name: string;
-  standard_rank: number;
-  prestige_free_rank: number;
-  rank_delta: number;
-  standard_score: number;
-  prestige_free_score: number;
-  substantive_score: number;
-  prestige_score: number;
-  influential_prestige_variables: {
-    variable: string;
-    label: string;
-    value: number;
-    score_contribution: number;
-  }[];
-  sensitivity: number;
-  substantial_change: boolean;
-}

@@ -1,10 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ThreeAxes } from "./ThreeAxes";
-import { PrestigeCompare } from "./PrestigeCompare";
 import { MomentumChart } from "./MomentumChart";
 import { GuidedTour, DASHBOARD_TOUR } from "./GuidedTour";
-import { assessment, ranking, momentum } from "@/test/fixtures";
+import { assessment, momentum } from "@/test/fixtures";
 
 vi.mock("@/lib/api", () => ({ api: { put: vi.fn().mockResolvedValue({}) } }));
 
@@ -19,23 +18,6 @@ describe("ThreeAxes", () => {
     expect(screen.getByText("40")).toBeInTheDocument();
     expect(screen.getByText("65")).toBeInTheDocument();
     expect(screen.getByText(/not averaged/i)).toBeInTheDocument();
-  });
-});
-
-describe("PrestigeCompare", () => {
-  it("shows both rankings and toggles to delta view", () => {
-    render(<PrestigeCompare entries={ranking} />);
-    expect(screen.getByText("Standard ranking")).toBeInTheDocument();
-    expect(screen.getByText("Prestige-free ranking")).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("prestige-toggle"));
-    // delta view renders the delta (Δ) column header
-    expect(screen.getByText("Δ")).toBeInTheDocument();
-    expect(screen.getByText("Influential prestige")).toBeInTheDocument();
-  });
-
-  it("warns when rankings change substantially", () => {
-    render(<PrestigeCompare entries={ranking} />);
-    expect(screen.getByText(/change substantially once prestige signals are masked/i)).toBeInTheDocument();
   });
 });
 
