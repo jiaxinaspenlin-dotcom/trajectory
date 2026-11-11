@@ -112,3 +112,43 @@ export function Tooltip({ children, text }: { children: ReactNode; text: string 
     </span>
   );
 }
+
+// Page-level hierarchy: small eyebrow, title, one-line purpose, primary action on the right.
+export function PageHeader({ eyebrow, title, subtitle, actions }: { eyebrow: string; title: string; subtitle?: ReactNode; actions?: ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="min-w-0">
+        <p className="label text-brand">{eyebrow}</p>
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink">{title}</h1>
+        {subtitle && <p className="mt-1 max-w-3xl text-sm text-ink-muted">{subtitle}</p>}
+      </div>
+      {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
+    </div>
+  );
+}
+
+// Compact segmented control used for table filters.
+export function Segmented<T extends string>({ label, value, options, onChange }: {
+  label: string;
+  value: T;
+  options: { value: T; label: ReactNode }[];
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="inline-flex overflow-hidden rounded-lg border border-line bg-white" role="group" aria-label={label}>
+      {options.map((o, i) => (
+        <button
+          key={o.value}
+          type="button"
+          aria-pressed={value === o.value}
+          onClick={() => onChange(o.value)}
+          className={`px-3 py-1.5 text-xs font-medium transition-colors ${i > 0 ? "border-l border-line" : ""} ${
+            value === o.value ? "bg-ink text-white" : "text-ink-soft hover:bg-surface-sunken"
+          }`}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}

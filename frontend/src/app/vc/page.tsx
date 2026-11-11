@@ -134,15 +134,15 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Section title="Top Outbound Prospects" subtitle="Surfaced before they formally apply">
+        <Section title="Top Outbound Prospects" subtitle="Surfaced before they formally apply" right={<Link href="/vc/founders" className="btn-ghost text-xs">All founders →</Link>}>
           <div data-tour="sourcing" className="space-y-2">
             {outboundProspects.length ? outboundProspects.map(({ o, status }) => (
               <OppRow key={o.id} o={o} status={status} />
-            )) : <p className="text-sm text-ink-muted">No prospects yet. Sync a GitHub profile from Discovery.</p>}
+            )) : <p className="text-sm text-ink-muted">No prospects yet. <Link href="/vc/founders" className="text-brand hover:underline">Source founders</Link> to get started.</p>}
           </div>
         </Section>
 
-        <Section title="Recent Inbound Applications" subtitle="Founder-initiated">
+        <Section title="Recent Inbound Applications" subtitle="Founder-initiated" right={<Link href="/vc/pipeline?source=inbound" className="btn-ghost text-xs">Pipeline →</Link>}>
           <div data-tour="inbound" className="space-y-2">
             {data.recent_inbound_applications.length ? data.recent_inbound_applications.map((o) => (
               <OppRow key={o.id} o={o} />
