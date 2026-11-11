@@ -249,3 +249,16 @@ export interface Opportunity {
   evidence?: Evidence[];
 }
 
+
+// Founders view row: an outbound-sourced opportunity plus list-level evidence signals.
+export interface FounderLead extends Opportunity {
+  evidence_count: number;
+  top_project: { name: string; url: string | null; stars: number | null } | null;
+}
+
+// Pipeline view row: an active deal plus its single next action (null once decided).
+export interface PipelineDeal extends Opportunity {
+  next_action: string | null;
+  priority: number | null;
+  age_days: number;
+}

@@ -152,6 +152,25 @@ def diligence_out(q: DiligenceQuestion) -> dict:
     }
 
 
+def founder_signals_out(db: Session, founder_id: int | None) -> dict:
+    """List-level evidence signals for a founder: how much evidence exists and
+    their most-starred public repo (a 'project' when there's no company yet).
+    Stars are external interest only, never commercial traction."""
+    if not founder_id:
+        return {"evidence_count": 0, "top_project": None}
+    evidence = db.scalars(select(Evidence).where(Evidence.founder_id == founder_id)).all()
+    repos = [e for e in evidence if e.kind == "github_repo"]
+    top = max(repos, key=lambda e: (e.structured_value or {}).get("stars") or 0, default=None)
+    return {
+        "evidence_count": len(evidence),
+        "top_project": (
+            {"name": top.title.removeprefix("Public repository: "), "url": top.source_url,
+             "stars": (top.structured_value or {}).get("stars")}
+            if top else None
+        ),
+    }
+
+
 def opportunity_out(db: Session, o: Opportunity, *, detail: bool = False) -> dict:
     founder = db.get(Founder, o.founder_id) if o.founder_id else None
     company = db.get(Company, o.company_id) if o.company_id else None

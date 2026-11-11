@@ -14,6 +14,7 @@ import { FounderScoreBreakdown } from "@/components/FounderScoreBreakdown";
 import { HumanDecisionPanel } from "@/components/HumanDecisionPanel";
 import { Claim, Evidence, Opportunity } from "@/lib/types";
 import { humanStatus, verificationTone } from "@/lib/format";
+import { leadStatus } from "@/lib/pipeline";
 import {
   getMyDecision, getPipelineStatus, LocalDecision, PipelineStatus,
   saveMyDecision, setPipelineStatus,
@@ -33,6 +34,8 @@ export default function OpportunityPage() {
   const [confirmRegen, setConfirmRegen] = useState(false);
   const [regenError, setRegenError] = useState<string | null>(null);
   const [memoBusy, setMemoBusy] = useState(false);
+  const [confirmScreening, setConfirmScreening] = useState(false);
+  const [screeningError, setScreeningError] = useState<string | null>(null);
   // per-browser workspace overlay for this opportunity
   const [myStatus, setMyStatus] = useState<PipelineStatus | null>(null);
   const [myDecision, setMyDecision] = useState<LocalDecision | null>(null);
@@ -53,9 +56,20 @@ export default function OpportunityPage() {
       setMyStatus(pipelineMap[action]);
       return;
     }
-    // Recommend outreach / invite to apply are real, shared workflow steps.
+    // Recommend outreach / move to screening are real, shared workflow steps.
     await api.post(`/api/sourcing/prospects/${id}/action`, { action });
     await reload();
+  }
+
+  async function moveToScreening() {
+    setScreeningError(null);
+    try {
+      // historically named invite_to_apply; it moves this opportunity to Screening and sends nothing
+      await prospectAction("invite_to_apply");
+      setConfirmScreening(false);
+    } catch (e) {
+      setScreeningError(e instanceof Error ? e.message : "Could not move to screening.");
+    }
   }
 
   async function generateMemo() {
@@ -95,8 +109,16 @@ export default function OpportunityPage() {
   const founderEvidence: Evidence[] = o.evidence || o.founder?.evidence || [];
   const notAnalyzed = !o.assessment && !o.debate;
 
+  const inPipeline = o.stage !== "sourcing";
+
   return (
     <div className="space-y-6">
+      <nav aria-label="Breadcrumb" className="text-xs text-ink-muted">
+        {o.entry_type === "outbound" && <><Link href="/vc/founders" className="hover:text-brand">Founders</Link><span className="mx-1.5">/</span></>}
+        {inPipeline && <><Link href={`/vc/pipeline?stage=${o.stage}`} className="hover:text-brand">Pipeline</Link><span className="mx-1.5">/</span></>}
+        <span className="text-ink-soft">{o.company?.name || o.founder?.full_name}</span>
+      </nav>
+
       {/* header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -106,7 +128,7 @@ export default function OpportunityPage() {
             <Badge tone="bg-neutral-wash text-neutral">{humanStatus(o.entry_type)}</Badge>
             <Badge tone="bg-brand-wash text-brand">{humanStatus(o.stage)}</Badge>
             {(() => {
-              const shown = myStatus ?? o.status;
+              const shown = leadStatus(o, myStatus);
               const tone = shown === "saved" || shown === "monitoring"
                 ? "bg-positive-wash text-positive"
                 : shown === "dismissed"
@@ -136,6 +158,17 @@ export default function OpportunityPage() {
           <button className={`text-xs ${myStatus === "monitoring" ? "btn-primary" : "btn-secondary"}`} onClick={() => prospectAction("monitor")}>Monitor</button>
           <button className={`text-xs ${myStatus === "dismissed" ? "btn-primary" : "btn-ghost"}`} onClick={() => prospectAction("dismiss")}>Dismiss</button>
           <button className="btn-ghost text-xs" onClick={() => prospectAction("recommend_outreach")}>Recommend outreach</button>
+          {!inPipeline && (confirmScreening ? (
+            <>
+              <span className="text-xs text-ink-soft">Move into the fund&apos;s Pipeline at Screening? No outreach is sent.</span>
+              <button className="btn-primary text-xs" onClick={moveToScreening}>Confirm move</button>
+              <button className="btn-ghost text-xs" onClick={() => setConfirmScreening(false)}>Cancel</button>
+            </>
+          ) : (
+            <button className="btn-secondary text-xs" onClick={() => setConfirmScreening(true)}>Move to Screening</button>
+          ))}
+          {inPipeline && <Link href={`/vc/pipeline?stage=${o.stage}`} className="btn-ghost text-xs">In Pipeline · {humanStatus(o.stage)} →</Link>}
+          {screeningError && <span className="text-xs text-negative" role="alert">{screeningError}</span>}
           <span className="ml-auto text-xs text-ink-muted">
             {myStatus === "saved" || myStatus === "monitoring"
               ? "Pinned to the top of your dashboard (this browser only)."

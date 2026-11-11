@@ -2,7 +2,8 @@ import { WorkspaceNav } from "@/components/WorkspaceNav";
 
 const VC_LINKS = [
   { href: "/vc", label: "Dashboard" },
-  { href: "/vc/discovery", label: "Discovery" },
+  { href: "/vc/founders", label: "Founders" },
+  { href: "/vc/pipeline", label: "Pipeline" },
   { href: "/vc/thesis", label: "Thesis" },
 ];
 

@@ -20,7 +20,7 @@ from app.models.workflow import RecommendedAction, WorkflowEvent
 from app.schemas.requests import DiscoverIn, GitHubSyncIn, ProspectActionIn, SearchIn
 from app.services.discovery import run_ai_discovery
 from app.services.github_sync import sync_github_user
-from app.services.serializers import opportunity_out
+from app.services.serializers import founder_signals_out, opportunity_out
 
 router = APIRouter(tags=["sourcing"], prefix="/api")
 
@@ -156,10 +156,15 @@ def apply_search(payload: dict, db: Session = Depends(get_db)) -> dict:
 
 @router.get("/sourcing/prospects")
 def list_prospects(db: Session = Depends(get_db)) -> dict:
+    """Every outbound-sourced founder, in any stage — leads stay discoverable here
+    after they move into the pipeline, so Founders never loses a record."""
     opps = db.scalars(
         select(Opportunity).where(Opportunity.entry_type == EntryType.OUTBOUND)
+        .order_by(Opportunity.id.desc())
     ).all()
-    return {"items": [opportunity_out(db, o) for o in opps]}
+    return {"items": [
+        {**opportunity_out(db, o), **founder_signals_out(db, o.founder_id)} for o in opps
+    ]}
 
 
 @router.post("/sourcing/prospects/{opp_id}/action")
@@ -189,16 +194,23 @@ def prospect_action(opp_id: int, body: ProspectActionIn, db: Session = Depends(g
         ))
         detail = "Outreach recommended (pending human approval)"
     elif action == "invite_to_apply":
-        o.status = OpportunityStatus.APPLIED
-        o.stage = WorkflowStage.SCREENING
-        detail = "Invited to apply (human-approved). Converges into inbound workflow."
+        # Historical action name. What it actually does: the investor approves
+        # moving this sourced prospect into Screening, converging it with the
+        # inbound workflow. No invitation or outreach is sent to the founder.
+        if str(o.stage) == WorkflowStage.SOURCING:
+            o.status = OpportunityStatus.APPLIED
+            o.stage = WorkflowStage.SCREENING
+            detail = "Moved to screening (investor-approved). No outreach sent."
+        else:
+            # Never move a deal backwards (e.g. Diligence -> Screening).
+            detail = f"Already in {o.stage}; stage unchanged."
     else:
         raise HTTPException(422, "Unknown action.")
 
     db.add(WorkflowEvent(opportunity_id=opp_id, event_type="prospect_action",
                          detail=detail, actor="investor", occurred_at=datetime.now(UTC)))
     db.commit()
-    return {"ok": True, "status": str(o.status), "detail": detail,
+    return {"ok": True, "status": str(o.status), "stage": str(o.stage), "detail": detail,
             "note": "No automated outreach is ever sent; consequential actions require human approval."}
 
 

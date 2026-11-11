@@ -1,0 +1,106 @@
+"""Founders -> Screening -> Pipeline: one opportunity record moves between the
+two investor views by stable ID, never duplicated."""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime
+
+import pytest
+from app.models.enums import Provenance, SourceType, VerificationStatus
+from app.models.sources import Evidence
+
+
+@pytest.fixture
+def stub_github(monkeypatch):
+    """Replace the live GitHub fetch with one public-repo evidence item, so the
+    real sync route (founder + outbound opportunity creation) runs offline."""
+
+    async def fake_sync(db, founder_id, username, thesis):
+        db.add(Evidence(
+            founder_id=founder_id, source_name=f"GitHub {username}/ledgerkit",
+            source_type=SourceType.GITHUB_REPO, source_url=f"https://github.com/{username}/ledgerkit",
+            kind="github_repo", title="Public repository: ledgerkit", raw_value="",
+            structured_value={"stars": 42}, collected_at=datetime.now(UTC),
+            provenance=Provenance.INDEPENDENT, verification_status=VerificationStatus.VERIFIED,
+        ))
+        db.flush()
+        return {"status": "success", "message": "stubbed", "evidence_added": 1}
+
+    monkeypatch.setattr("app.api.routes_sourcing.sync_github_user", fake_sync)
+
+
+def _pipeline_ids(client, **params) -> list[int]:
+    r = client.get("/api/pipeline", params=params)
+    assert r.status_code == 200
+    return [o["id"] for o in r.json()["items"]]
+
+
+def test_github_prospect_flows_from_founders_to_pipeline(client, seeded, stub_github):
+    sync = client.post("/api/sourcing/github/sync", json={"username": "solo-builder"})
+    assert sync.status_code == 200
+    opp_id = sync.json()["opportunity_id"]
+
+    # Founders: present, no company yet, evidence + project surfaced honestly.
+    prospects = client.get("/api/sourcing/prospects").json()["items"]
+    row = next(p for p in prospects if p["id"] == opp_id)
+    assert row["company"] is None
+    assert row["founder"]["github_username"] == "solo-builder"
+    assert row["stage"] == "sourcing"
+    assert row["evidence_count"] == 1
+    assert row["top_project"] == {"name": "ledgerkit", "url": "https://github.com/solo-builder/ledgerkit", "stars": 42}
+    # A sourcing-stage lead is not yet an active deal.
+    assert opp_id not in _pipeline_ids(client)
+
+    # Investor-approved move to screening, on the same opportunity ID.
+    act = client.post(f"/api/sourcing/prospects/{opp_id}/action", json={"action": "invite_to_apply"})
+    assert act.status_code == 200
+    assert act.json()["stage"] == "screening"
+    assert "No outreach sent" in act.json()["detail"]
+
+    pipeline = client.get("/api/pipeline").json()["items"]
+    deal = next(o for o in pipeline if o["id"] == opp_id)
+    assert deal["stage"] == "screening" and deal["entry_type"] == "outbound"
+    assert deal["next_action"] == "Run analysis"
+    assert _pipeline_ids(client).count(opp_id) == 1
+
+    # Still discoverable in Founders, now showing its pipeline stage.
+    prospects = client.get("/api/sourcing/prospects").json()["items"]
+    assert [p["stage"] for p in prospects if p["id"] == opp_id] == ["screening"]
+
+    # Re-syncing the same profile reuses the record rather than duplicating it.
+    again = client.post("/api/sourcing/github/sync", json={"username": "solo-builder"})
+    assert again.json()["opportunity_id"] == opp_id
+    assert _pipeline_ids(client).count(opp_id) == 1
+
+
+def test_screening_action_never_moves_a_deal_backwards(client, seeded):
+    diligence = client.get("/api/opportunities", params={"stage": "diligence", "entry_type": "outbound"}).json()["items"]
+    opp_id = diligence[0]["id"]
+    act = client.post(f"/api/sourcing/prospects/{opp_id}/action", json={"action": "invite_to_apply"})
+    assert act.json()["stage"] == "diligence"
+    assert client.get(f"/api/opportunities/{opp_id}").json()["stage"] == "diligence"
+
+
+def test_inbound_application_enters_pipeline_at_screening(client, seeded):
+    r = client.post("/api/applications", json={"company_name": "Pipeline Test Co", "sector": "fintech"})
+    opp_id = r.json()["opportunity_id"]
+
+    inbound = client.get("/api/pipeline", params={"entry_type": "inbound", "stage": "screening"}).json()["items"]
+    deal = next(o for o in inbound if o["id"] == opp_id)
+    assert deal["founder"] is None and deal["company"]["name"] == "Pipeline Test Co"
+    assert deal["next_action"] == "Review new application"
+    # inbound applications never show up as outbound leads in Founders
+    assert opp_id not in [p["id"] for p in client.get("/api/sourcing/prospects").json()["items"]]
+    assert opp_id not in _pipeline_ids(client, entry_type="outbound")
+
+
+def test_pipeline_excludes_sourcing_and_dismissed(client, seeded):
+    items = client.get("/api/pipeline").json()["items"]
+    assert items
+    assert all(o["stage"] in {"screening", "diligence", "decision"} for o in items)
+    assert all(o["status"] != "dismissed" for o in items)
+
+
+def test_pipeline_rejects_unknown_filters(client, seeded):
+    assert client.get("/api/pipeline", params={"stage": "sourcing"}).status_code == 422
+    assert client.get("/api/pipeline", params={"entry_type": "referral"}).status_code == 422

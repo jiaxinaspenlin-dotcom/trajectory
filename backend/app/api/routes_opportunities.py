@@ -13,7 +13,7 @@ from app.ai.validation import validate_evidence_ids
 from app.api.deps import get_db
 from app.core.rate_limit import ai_rate_limit
 from app.models.assessment import Opportunity, OpportunityAssessment
-from app.models.enums import DiligenceStatus, WorkflowStage
+from app.models.enums import DiligenceStatus, EntryType, OpportunityStatus, WorkflowStage
 from app.models.sources import Evidence
 from app.models.workflow import (
     Debate,
@@ -26,6 +26,7 @@ from app.models.workflow import (
 )
 from app.schemas.requests import DiligenceResponseIn, DiligenceStatusIn, HumanDecisionIn
 from app.services import analysis
+from app.services.action_queue import next_action_for, opportunity_age_days
 from app.services.serializers import (
     assessment_out,
     debate_out,
@@ -59,6 +60,40 @@ def list_opportunities(
         q = q.where(Opportunity.entry_type == entry_type)
     opps = db.scalars(q.order_by(Opportunity.id)).all()
     return {"items": [opportunity_out(db, o) for o in opps]}
+
+
+# Stages that make an opportunity an active deal. Outbound leads still in
+# Sourcing live in Founders until an investor moves them to Screening; inbound
+# applications enter at Screening, so every application appears here.
+PIPELINE_STAGES = (WorkflowStage.SCREENING, WorkflowStage.DILIGENCE, WorkflowStage.DECISION)
+
+
+@router.get("/pipeline")
+def list_pipeline(
+    stage: str | None = None, entry_type: str | None = None, db: Session = Depends(get_db),
+) -> dict:
+    """Active deals (Screening onward, not dismissed) with each one's next action."""
+    stages = [str(s) for s in PIPELINE_STAGES]
+    if stage and stage not in stages:
+        raise HTTPException(422, f"Invalid stage. Must be one of {stages}.")
+    if entry_type and entry_type not in {str(e) for e in EntryType}:
+        raise HTTPException(422, "Invalid entry_type. Must be 'inbound' or 'outbound'.")
+    q = select(Opportunity).where(
+        Opportunity.stage.in_([stage] if stage else stages),
+        Opportunity.status != OpportunityStatus.DISMISSED,
+    )
+    if entry_type:
+        q = q.where(Opportunity.entry_type == entry_type)
+    items = []
+    for o in db.scalars(q.order_by(Opportunity.id.desc())).all():
+        nxt = next_action_for(db, o)
+        items.append({
+            **opportunity_out(db, o),
+            "next_action": nxt[0] if nxt else None,
+            "priority": nxt[1] if nxt else None,
+            "age_days": opportunity_age_days(o),
+        })
+    return {"items": items, "stages": stages}
 
 
 @router.get("/opportunities/{opp_id}")
