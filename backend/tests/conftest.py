@@ -100,3 +100,31 @@ def mock_ai(monkeypatch):
     monkeypatch.setattr(provider, "enabled", True)
     monkeypatch.setattr(provider, "generate_json", _stub_generate_json)
     yield
+
+
+@pytest.fixture
+def stub_github(monkeypatch):
+    """Replace the live GitHub fetch with one public-repo evidence item, so the
+    real sync route (founder + outbound opportunity creation) runs offline.
+    Every stubbed profile gets a Rust repo tagged with GITHUB_STUB_TOPICS."""
+    from datetime import UTC, datetime
+
+    from app.models.enums import Provenance, SourceType, VerificationStatus
+    from app.models.sources import Evidence
+
+    async def fake_sync(db, founder_id, username, thesis):
+        db.add(Evidence(
+            founder_id=founder_id, source_name=f"GitHub {username}/ledgerkit",
+            source_type=SourceType.GITHUB_REPO, source_url=f"https://github.com/{username}/ledgerkit",
+            kind="github_repo", title="Public repository: ledgerkit", raw_value="",
+            structured_value={"stars": 42, "language": "Rust", "topics": list(GITHUB_STUB_TOPICS)},
+            collected_at=datetime.now(UTC),
+            provenance=Provenance.INDEPENDENT, verification_status=VerificationStatus.VERIFIED,
+        ))
+        db.flush()
+        return {"status": "success", "message": "stubbed", "evidence_added": 1}
+
+    monkeypatch.setattr("app.api.routes_sourcing.sync_github_user", fake_sync)
+
+
+GITHUB_STUB_TOPICS = ("ledger", "payments")

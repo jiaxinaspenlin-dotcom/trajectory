@@ -33,26 +33,27 @@ export function WorkspaceNav({
 
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-white/90 backdrop-blur">
-      <div className="mx-auto flex w-full max-w-[1900px] items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-3">
+      <div className="mx-auto flex w-full max-w-[1900px] items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
+        <div className="flex shrink-0 items-center gap-3">
           <Link href={homeHref} className="flex items-center gap-2">
             <TrajectoryLogo size={22} />
             <span className="text-sm font-semibold text-ink">Trajectory</span>
           </Link>
-          <span className={`chip ${persona === "VC" ? "bg-brand-wash text-brand" : "bg-positive-wash text-positive"}`}>
+          <span className={`chip hidden sm:inline-flex ${persona === "VC" ? "bg-brand-wash text-brand" : "bg-positive-wash text-positive"}`}>
             {persona === "VC" ? "Investor Workspace" : "Founder Portal"}
           </span>
         </div>
 
-        <div className="flex items-center gap-3">
-          <nav className="flex items-center gap-1" aria-label="Primary">
+        <div className="flex min-w-0 items-center gap-3">
+          {/* scrolls sideways on narrow screens instead of widening the page */}
+          <nav className="-mx-1 flex min-w-0 items-center gap-1 overflow-x-auto px-1" aria-label="Primary">
             {links.map((l) => {
               const active = l.href === homeHref ? pathname === homeHref : pathname.startsWith(l.href);
               return (
                 <Link
                   key={l.href}
                   href={l.href}
-                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                  className={`shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                     active ? "bg-brand-wash text-brand" : "text-ink-soft hover:bg-surface-sunken"
                   }`}
                   aria-current={active ? "page" : undefined}

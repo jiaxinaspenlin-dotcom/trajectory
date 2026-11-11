@@ -4,6 +4,7 @@ const VC_LINKS = [
   { href: "/vc", label: "Dashboard" },
   { href: "/vc/founders", label: "Founders" },
   { href: "/vc/pipeline", label: "Pipeline" },
+  { href: "/vc/map", label: "Map" },
   { href: "/vc/thesis", label: "Thesis" },
 ];
 

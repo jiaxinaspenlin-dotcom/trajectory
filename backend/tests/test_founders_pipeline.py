@@ -3,31 +3,6 @@ two investor views by stable ID, never duplicated."""
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-
-import pytest
-from app.models.enums import Provenance, SourceType, VerificationStatus
-from app.models.sources import Evidence
-
-
-@pytest.fixture
-def stub_github(monkeypatch):
-    """Replace the live GitHub fetch with one public-repo evidence item, so the
-    real sync route (founder + outbound opportunity creation) runs offline."""
-
-    async def fake_sync(db, founder_id, username, thesis):
-        db.add(Evidence(
-            founder_id=founder_id, source_name=f"GitHub {username}/ledgerkit",
-            source_type=SourceType.GITHUB_REPO, source_url=f"https://github.com/{username}/ledgerkit",
-            kind="github_repo", title="Public repository: ledgerkit", raw_value="",
-            structured_value={"stars": 42}, collected_at=datetime.now(UTC),
-            provenance=Provenance.INDEPENDENT, verification_status=VerificationStatus.VERIFIED,
-        ))
-        db.flush()
-        return {"status": "success", "message": "stubbed", "evidence_added": 1}
-
-    monkeypatch.setattr("app.api.routes_sourcing.sync_github_user", fake_sync)
-
 
 def _pipeline_ids(client, **params) -> list[int]:
     r = client.get("/api/pipeline", params=params)

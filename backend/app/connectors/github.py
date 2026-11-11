@@ -366,6 +366,7 @@ class GitHubConnector(Connector):
                     "forks": repo.get("forks_count"),
                     "open_issues": repo.get("open_issues_count"),
                     "language": repo.get("language"),
+                    "topics": repo.get("topics") or [],
                     "created_at": repo.get("created_at"),
                     "pushed_at": repo.get("pushed_at"),
                     "stars_note": "external interest only, NOT commercial traction",

@@ -27,6 +27,7 @@ from app.models.workflow import (
 from app.schemas.requests import DiligenceResponseIn, DiligenceStatusIn, HumanDecisionIn
 from app.services import analysis
 from app.services.action_queue import next_action_for, opportunity_age_days
+from app.services.opportunity_map import PIPELINE_STAGES, build_map
 from app.services.serializers import (
     assessment_out,
     debate_out,
@@ -62,12 +63,6 @@ def list_opportunities(
     return {"items": [opportunity_out(db, o) for o in opps]}
 
 
-# Stages that make an opportunity an active deal. Outbound leads still in
-# Sourcing live in Founders until an investor moves them to Screening; inbound
-# applications enter at Screening, so every application appears here.
-PIPELINE_STAGES = (WorkflowStage.SCREENING, WorkflowStage.DILIGENCE, WorkflowStage.DECISION)
-
-
 @router.get("/pipeline")
 def list_pipeline(
     stage: str | None = None, entry_type: str | None = None, db: Session = Depends(get_db),
@@ -94,6 +89,13 @@ def list_pipeline(
             "age_days": opportunity_age_days(o),
         })
     return {"items": items, "stages": stages}
+
+
+@router.get("/map")
+def opportunity_map(db: Session = Depends(get_db)) -> dict:
+    """Founder leads + active deals for the Map, with grouping and plot fields,
+    in one request. Same records and IDs as /sourcing/prospects and /pipeline."""
+    return build_map(db)
 
 
 @router.get("/opportunities/{opp_id}")

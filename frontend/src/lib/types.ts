@@ -262,3 +262,40 @@ export interface PipelineDeal extends Opportunity {
   priority: number | null;
   age_days: number;
 }
+
+// Map read model (GET /api/map): founder leads + active deals, same IDs as Founders / Pipeline.
+export interface MapNode {
+  id: number;
+  name: string;
+  entry_type: string;
+  stage: string;
+  status: string;
+  kind: "lead" | "deal";
+  in_founders: boolean;
+  in_pipeline: boolean;
+  founder: { id: number; full_name: string; github_username: string | null } | null;
+  company: { id: number; name: string; sector: string | null; one_liner: string } | null;
+  founder_score: number | null;
+  evidence_count: number;
+  top_project: { name: string; url: string | null; stars: number | null } | null;
+  topics: string[];
+  group: { key: string; label: string; field: string | null };
+  thesis_fit: { value: number | null; reason: string | null };
+  momentum: { value: number | null; current_score: number | null; trajectory: string | null; history_days?: number; reason: string | null };
+  next_action: string | null;
+  is_demo: boolean;
+}
+
+export interface MapLink {
+  source: number;
+  target: number;
+  kind: "same_founder" | "same_company" | "shared_topic";
+  label: string;
+  topics?: string[];
+}
+
+export interface MapData {
+  items: MapNode[];
+  links: MapLink[];
+  has_thesis: boolean;
+}
