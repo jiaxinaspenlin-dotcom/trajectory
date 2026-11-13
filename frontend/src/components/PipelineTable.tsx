@@ -10,12 +10,16 @@ export function PipelineTable({ deals }: { deals: PipelineDeal[] }) {
   const router = useRouter();
   return (
     <div className="card overflow-x-auto">
-      <table className="w-full min-w-[820px] border-collapse text-left text-sm">
+      <table className="table min-w-[860px]">
         <thead>
-          <tr className="border-b border-line bg-surface-sunken">
-            {["Opportunity", "Source", "Stage", "Next action", "Fit", "Founder score", "Age"].map((h) => (
-              <th key={h} scope="col" className="label px-4 py-2.5">{h}</th>
-            ))}
+          <tr>
+            <th scope="col">Opportunity</th>
+            <th scope="col">Source</th>
+            <th scope="col">Stage</th>
+            <th scope="col">Next action</th>
+            <th scope="col" className="text-right">Fit</th>
+            <th scope="col" className="text-right">Founder score</th>
+            <th scope="col" className="text-right">Age</th>
           </tr>
         </thead>
         <tbody>
@@ -23,14 +27,9 @@ export function PipelineTable({ deals }: { deals: PipelineDeal[] }) {
             const href = `/vc/opportunities/${d.id}`;
             const founderName = d.founder?.full_name;
             return (
-              <tr
-                key={d.id}
-                data-testid={`deal-row-${d.id}`}
-                onClick={() => router.push(href)}
-                className="cursor-pointer border-t border-line transition-colors hover:bg-surface-sunken"
-              >
-                <td className="max-w-[320px] px-4 py-3">
-                  <Link href={href} onClick={(e) => e.stopPropagation()} className="font-semibold text-ink hover:text-brand">
+              <tr key={d.id} data-testid={`deal-row-${d.id}`} onClick={() => router.push(href)} className="table-row-link">
+                <td className="max-w-[340px]">
+                  <Link href={href} onClick={(e) => e.stopPropagation()} className="font-medium text-ink hover:text-brand">
                     {opportunityName(d)}
                   </Link>
                   <p className="truncate text-xs text-ink-muted">
@@ -39,21 +38,24 @@ export function PipelineTable({ deals }: { deals: PipelineDeal[] }) {
                       : "No company yet"}
                   </p>
                 </td>
-                <td className="px-4 py-3"><SourceBadge entryType={d.entry_type} /></td>
-                <td className="px-4 py-3"><StageBadge stage={d.stage} /></td>
-                <td className="px-4 py-3">
+                <td><SourceBadge entryType={d.entry_type} /></td>
+                <td><StageBadge stage={d.stage} /></td>
+                <td>
                   {d.next_action ? (
-                    <span className={d.priority === 1 ? "font-medium text-brand" : "text-ink-soft"}>{d.next_action}</span>
+                    <span className={`flex items-center gap-1.5 ${d.priority === 1 ? "font-medium text-ink" : "text-ink-soft"}`}>
+                      {d.priority === 1 && <span aria-label="Act now" className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />}
+                      {d.next_action}
+                    </span>
                   ) : <span className="text-xs text-ink-muted">None — decided</span>}
                 </td>
-                <td className="px-4 py-3 tabular-nums">
+                <td className="text-right">
                   {/* thesis fit is computed from a company; GitHub-sourced founders without one carry a 0 placeholder */}
-                  {d.company ? <span className="text-ink-soft">{Math.round(d.thesis_fit_score)}</span> : <span className="text-xs text-ink-muted">Not computed</span>}
+                  {d.company ? <span className="num text-ink-soft">{Math.round(d.thesis_fit_score)}</span> : <span className="text-xs text-ink-muted">Not computed</span>}
                 </td>
-                <td className="px-4 py-3 tabular-nums">
-                  {d.founder_score ? <span className="text-ink-soft">{Math.round(d.founder_score.score)}</span> : <span className="text-xs text-ink-muted">Not scored</span>}
+                <td className="text-right">
+                  {d.founder_score ? <span className="num text-ink-soft">{Math.round(d.founder_score.score)}</span> : <span className="text-xs text-ink-muted">Not scored</span>}
                 </td>
-                <td className="px-4 py-3 text-xs text-ink-muted">{d.age_days === 0 ? "today" : `${d.age_days}d`}</td>
+                <td className="num text-right text-xs text-ink-muted">{d.age_days === 0 ? "today" : `${d.age_days}d`}</td>
               </tr>
             );
           })}

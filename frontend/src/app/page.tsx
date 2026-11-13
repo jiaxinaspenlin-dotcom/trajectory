@@ -1,93 +1,99 @@
 import Link from "next/link";
-import { BullCharacter, BearCharacter, RefereeCharacter } from "@/components/arena/Characters";
-import { LandingBackdrop } from "@/components/arena/LandingBackdrop";
 import { TrajectoryLogo } from "@/components/TrajectoryLogo";
+import { ArrowRightIcon } from "@/components/icons";
+
+const STEPS = [
+  {
+    n: "01",
+    title: "Source from public evidence",
+    body: "Find builders on public GitHub before they fundraise. Every founder gets an evidence trail and a deterministic Founder Score.",
+  },
+  {
+    n: "02",
+    title: "Screen and diligence",
+    body: "Three independent screening axes, a Bull / Bear / Referee debate, claims with trust scores, and diligence questions — all cited to stored evidence.",
+  },
+  {
+    n: "03",
+    title: "Decide, with a human in charge",
+    body: "Trajectory recommends the next step. Investors approve every consequential action; nothing is sent or invested automatically.",
+  },
+];
 
 export default function Landing() {
   return (
-    <div className="relative min-h-screen">
-      {/* The Investment Arena stadium behind everything (no characters) */}
-      <div className="pointer-events-none fixed inset-0 z-0">
-        <LandingBackdrop />
-      </div>
-
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1900px] flex-col px-6 py-8 sm:px-8 lg:px-12 xl:px-20">
-        <div className="flex items-center gap-2">
-          <TrajectoryLogo size={28} />
-          <span className="text-lg font-semibold text-ink">Trajectory</span>
-          <span className="chip bg-neutral-wash text-neutral">demo</span>
-        </div>
-
-        {/* hero + doors, vertically centered in the remaining space */}
-        <div className="flex flex-1 flex-col justify-center py-10">
-        <div className="max-w-5xl">
-          <h1 className="text-4xl font-semibold tracking-tight text-ink sm:text-5xl xl:text-6xl">
-            The AI operating system for venture capital.
-          </h1>
-          <p className="mt-4 text-lg text-ink-soft lg:text-xl">
-            Trajectory connects two sides of a deal. Choose how you want to enter.
-          </p>
-        </div>
-
-        {/* Two doors */}
-        <div className="mt-10 grid gap-6 md:grid-cols-2 lg:mt-12 lg:gap-8">
-          {/* VC door */}
-          <Link
-            href="/vc"
-            className="group card flex flex-col p-6 transition-shadow hover:shadow-raised focus:outline-none focus-visible:ring-2 focus-visible:ring-brand lg:p-8"
-          >
-            <div className="flex items-center justify-between">
-              <span className="chip bg-brand-wash text-brand">For Investors</span>
-              <div className="flex -space-x-2">
-                <BullCharacter size={40} />
-                <RefereeCharacter size={40} />
-                <BearCharacter size={40} />
-              </div>
-            </div>
-            <h2 className="mt-4 text-xl font-semibold text-ink lg:text-2xl">I&rsquo;m a VC</h2>
-            <p className="mt-2 flex-1 text-sm text-ink-soft">
-              Define your fund&rsquo;s thesis, discover founders before they fundraise, review
-              inbound applications, and run the full <strong>Sourcing → Screening → Diligence →
-              Decision</strong> workflow — with Founder Momentum and the Investment Arena. You
-              approve every consequential action.
-            </p>
-            <ul className="mt-3 space-y-1 text-xs text-ink-muted">
-              <li>• Investment thesis &amp; pipeline dashboard</li>
-              <li>• Discovery: outbound sourcing from public GitHub</li>
-              <li>• Founder profiles, Trust Scores, diligence &amp; memos</li>
-            </ul>
-            <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-brand">
-              Enter investor workspace <span className="transition-transform group-hover:translate-x-0.5">→</span>
-            </span>
+    <div className="min-h-[100dvh] bg-white">
+      <header className="border-b border-line">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-5">
+          <Link href="/" className="flex items-center gap-2">
+            <TrajectoryLogo size={22} />
+            <span className="text-[15px] font-semibold text-ink">Trajectory</span>
           </Link>
+          <nav className="flex items-center gap-1" aria-label="Primary">
+            <Link href="/founder" className="btn-ghost">For founders</Link>
+            <Link href="/vc" className="btn-secondary">Investor workspace</Link>
+          </nav>
+        </div>
+      </header>
 
-          {/* Founder door */}
-          <Link
-            href="/founder"
-            className="group card flex flex-col p-6 transition-shadow hover:shadow-raised focus:outline-none focus-visible:ring-2 focus-visible:ring-positive lg:p-8"
-          >
-            <div className="flex items-center justify-between">
-              <span className="chip bg-positive-wash text-positive">For Founders</span>
-              <BullCharacter size={40} />
-            </div>
-            <h2 className="mt-4 text-xl font-semibold text-ink lg:text-2xl">I&rsquo;m a Founder</h2>
-            <p className="mt-2 flex-1 text-sm text-ink-soft">
-              Apply to the fund with just your company name and a pitch deck. We validate and read
-              your deck, run a fast first-pass screen, and tell you exactly what additional
-              information would help — no busywork, no unnecessary fields.
+      <main>
+        <section className="dot-grid border-b border-line">
+          <div className="mx-auto max-w-6xl px-5 py-20 sm:py-28">
+            <p className="label text-brand">Venture research &amp; deal workflow</p>
+            <h1 className="mt-3 max-w-3xl text-4xl font-semibold leading-[1.1] tracking-[-0.02em] text-ink sm:text-5xl">
+              Find, screen, and decide on founders — grounded in evidence.
+            </h1>
+            <p className="mt-4 max-w-2xl text-[17px] leading-7 text-ink-soft">
+              Trajectory connects outbound sourcing and inbound applications in one workflow, from first signal to investment decision.
             </p>
-            <ul className="mt-3 space-y-1 text-xs text-ink-muted">
-              <li>• Apply with a company name + PDF pitch deck</li>
-              <li>• See your extraction &amp; first-pass screen</li>
-              <li>• Track what the fund still needs from you</li>
-            </ul>
-            <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-positive">
-              Enter founder portal <span className="transition-transform group-hover:translate-x-0.5">→</span>
-            </span>
-          </Link>
-        </div>
-        </div>
-      </div>
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <Link href="/vc" className="btn-primary h-10 px-5 text-[14px]">
+                Open investor workspace <ArrowRightIcon size={15} />
+              </Link>
+              <Link href="/founder" className="btn-ghost h-10 px-4 text-[14px]">
+                Applying as a founder? Start here
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-6xl px-5 py-14">
+          <ol className="grid gap-px overflow-hidden rounded-lg border border-line bg-line md:grid-cols-3">
+            {STEPS.map((s) => (
+              <li key={s.n} className="bg-white p-6">
+                <span className="num font-mono text-xs text-ink-faint">{s.n}</span>
+                <h2 className="mt-2 text-[15px] font-semibold text-ink">{s.title}</h2>
+                <p className="mt-1.5 text-[13px] leading-6 text-ink-muted">{s.body}</p>
+              </li>
+            ))}
+          </ol>
+
+          <div className="mt-10 grid gap-4 md:grid-cols-2">
+            <div className="rounded-lg border border-line p-6">
+              <p className="label">For investors</p>
+              <p className="mt-2 text-[13px] leading-6 text-ink-soft">
+                A map of every lead and deal, a founder table with evidence and momentum, a pipeline of next actions, and a fund
+                profile that every score is evaluated against.
+              </p>
+              <Link href="/vc" className="btn-secondary mt-4">Enter the workspace</Link>
+            </div>
+            <div className="rounded-lg border border-line p-6">
+              <p className="label">For founders</p>
+              <p className="mt-2 text-[13px] leading-6 text-ink-soft">
+                Apply with a company name and a PDF pitch deck. See your first-pass screen right away, and exactly what else
+                would help the fund decide.
+              </p>
+              <Link href="/founder" className="btn-secondary mt-4">Apply to the fund</Link>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="border-t border-line">
+        <p className="mx-auto max-w-6xl px-5 py-6 text-xs text-ink-muted">
+          Demo environment with fictional seed data alongside live public GitHub data. Humans approve every consequential action.
+        </p>
+      </footer>
     </div>
   );
 }

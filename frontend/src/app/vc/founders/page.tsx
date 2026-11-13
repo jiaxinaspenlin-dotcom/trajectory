@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useFetch } from "@/lib/useFetch";
-import { Badge, EmptyState, ErrorState, PageHeader, Section, Segmented, Spinner } from "@/components/ui";
+import { Badge, Drawer, EmptyState, ErrorState, PageHeader, Segmented, Spinner, Toolbar } from "@/components/ui";
 import { FoundersTable } from "@/components/FoundersTable";
+import { SearchIcon } from "@/components/icons";
 import { FounderLead } from "@/lib/types";
 import { clearPipelineStatus, getPipeline, PipelineStatus, setPipelineStatus } from "@/lib/myWorkspace";
-import { FOUNDER_VIEWS, FounderView, matchesFounderView, matchesQuery, sortLeads } from "@/lib/pipeline";
+import { FOUNDER_VIEWS, FounderView, inPipeline, matchesFounderView, matchesQuery, sortLeads } from "@/lib/pipeline";
 
 interface Prospect {
   opportunity_id: number;
@@ -33,47 +35,66 @@ interface DiscoveryResult {
   disclaimer: string;
 }
 
-export default function FoundersPage() {
-  const leads = useFetch<{ items: FounderLead[] }>("/api/sourcing/prospects");
-  const [sourcingOpen, setSourcingOpen] = useState(false);
+const DISCOVERY_CACHE = "trajectory_last_discovery";
 
-  // Open the sourcing panel when there's a restored shortlist to show, or
-  // nothing sourced yet — otherwise lead with the table.
-  useEffect(() => {
-    try {
-      if (sessionStorage.getItem(DISCOVERY_CACHE)) setSourcingOpen(true);
-    } catch {
-      /* ignore */
-    }
-  }, []);
-  useEffect(() => {
-    if (leads.data && leads.data.items.length === 0) setSourcingOpen(true);
-  }, [leads.data]);
+export default function FoundersPage() {
+  return (
+    <Suspense fallback={<Spinner label="Loading founders…" />}>
+      <Founders />
+    </Suspense>
+  );
+}
+
+function Founders() {
+  const leads = useFetch<{ items: FounderLead[] }>("/api/sourcing/prospects");
+  const params = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  // ?source=open opens the sourcing drawer (used by the Map and empty states)
+  const sourcingOpen = params.get("source") === "open";
+  const setSourcingOpen = useCallback(
+    (open: boolean) => router.replace(open ? `${pathname}?source=open` : pathname, { scroll: false }),
+    [pathname, router]
+  );
+
+  const all = leads.data?.items ?? [];
+  const pipelineCount = all.filter(inPipeline).length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
-        eyebrow="Founders"
-        title="Founder leads"
-        subtitle="Builders surfaced from public GitHub before they apply. Review the evidence, keep your shortlist, and move the strongest into Screening."
-        actions={
-          <button className="btn-primary" onClick={() => setSourcingOpen((v) => !v)} aria-expanded={sourcingOpen}>
-            {sourcingOpen ? "Hide sourcing" : "+ Source founders"}
-          </button>
-        }
+        title="Founders"
+        subtitle={leads.data ? `${all.length} founder leads sourced from public evidence · ${pipelineCount} moved into the pipeline` : "Founder leads sourced from public evidence"}
+        actions={<button className="btn-primary" onClick={() => setSourcingOpen(true)}>+ Source founders</button>}
       />
-      {sourcingOpen && (
-        <div className="grid gap-6 xl:grid-cols-3">
-          <div className="xl:col-span-2"><AiDiscovery onSourced={leads.reload} /></div>
-          <ManualAdd onSourced={leads.reload} />
-        </div>
-      )}
       <FounderLeads leads={leads} onOpenSourcing={() => setSourcingOpen(true)} />
+      <Drawer
+        open={sourcingOpen}
+        onClose={() => setSourcingOpen(false)}
+        title="Source founders"
+        subtitle="Search public GitHub with AI, or sync a profile you already know. Nothing is sent to founders."
+        width="max-w-2xl"
+      >
+        <SourcingTabs onSourced={leads.reload} />
+      </Drawer>
     </div>
   );
 }
 
-const DISCOVERY_CACHE = "trajectory_last_discovery";
+function SourcingTabs({ onSourced }: { onSourced: () => void }) {
+  const [tab, setTab] = useState<"ai" | "github">("ai");
+  return (
+    <div className="space-y-4">
+      <Segmented
+        label="Sourcing method"
+        value={tab}
+        onChange={setTab}
+        options={[{ value: "ai", label: "AI Discovery" }, { value: "github", label: "GitHub profile" }]}
+      />
+      {tab === "ai" ? <AiDiscovery onSourced={onSourced} /> : <ManualAdd onSourced={onSourced} />}
+    </div>
+  );
+}
 
 function AiDiscovery({ onSourced }: { onSourced: () => void }) {
   const [brief, setBrief] = useState("");
@@ -131,78 +152,66 @@ function AiDiscovery({ onSourced }: { onSourced: () => void }) {
   }
 
   return (
-    <Section title="Run AI Discovery" subtitle="Trajectory plans the search from your thesis, then finds & ranks real founders on GitHub">
-      <textarea
-        className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-brand focus:outline-none"
-        rows={2}
-        placeholder="Optional: refine the search (e.g. 'technical pre-seed founders building payments infrastructure, strong recent execution'). Leave blank to use your fund thesis."
-        value={brief}
-        onChange={(e) => setBrief(e.target.value)}
-      />
-      <div className="mt-2 flex items-center gap-3">
-        <button className="btn-primary" onClick={run} disabled={loading}>
-          {loading ? "Discovering…" : "Run AI Discovery"}
-        </button>
+    <div className="space-y-3">
+      <label className="block">
+        <span className="label">Search brief</span>
+        <textarea
+          className="textarea mt-1"
+          rows={3}
+          placeholder="Optional — e.g. technical pre-seed founders building payments infrastructure. Leave blank to search from your fund thesis."
+          value={brief}
+          onChange={(e) => setBrief(e.target.value)}
+        />
+      </label>
+      <div className="flex items-center gap-3">
+        <button className="btn-primary" onClick={run} disabled={loading}>{loading ? "Discovering…" : "Run AI Discovery"}</button>
         {loading && <Spinner label="Planning the search, querying GitHub, scoring candidates…" />}
       </div>
-      {error && <div className="mt-2"><ErrorState message={error} /></div>}
+      {error && <ErrorState message={error} />}
 
       {result && (
-        <div className="mt-4 space-y-3">
+        <div className="space-y-3 border-t border-line pt-3">
           <div className="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
-            <Badge tone="bg-brand-wash text-brand">planned by {result.planned_by}</Badge>
-            <span>{result.candidates_found} candidates found · searched {result.searched_sources.join(", ")}</span>
-            {result.rate_limit_remaining !== null && <span>· GitHub search budget: {result.rate_limit_remaining}</span>}
-            <button className="btn-ghost text-xs" onClick={() => setShowPlan((v) => !v)}>
-              {showPlan ? "Hide" : "Show"} search plan
-            </button>
-            <button className="btn-ghost text-xs" onClick={clearResults}>Clear results</button>
+            <Badge tone="bg-brand-wash text-brand">Planned by {result.planned_by}</Badge>
+            <span className="num">{result.candidates_found} candidates · searched {result.searched_sources.join(", ")}</span>
+            {result.rate_limit_remaining !== null && <span className="num">· GitHub budget {result.rate_limit_remaining}</span>}
+            <button className="btn-ghost btn-sm" onClick={() => setShowPlan((v) => !v)}>{showPlan ? "Hide" : "Show"} search plan</button>
+            <button className="btn-ghost btn-sm" onClick={clearResults}>Clear</button>
           </div>
-
           {showPlan && (
-            <div className="rounded-lg border border-line bg-surface-sunken p-3 text-xs">
+            <div className="rounded-md border border-line bg-surface-sunken p-3 text-xs">
               <p className="text-ink-soft">{result.interpretation}</p>
-              <ul className="mt-2 space-y-1 font-mono text-ink-muted">
-                {result.queries_run.map((q, i) => <li key={i}>• {q}</li>)}
-              </ul>
+              <ul className="mt-2 space-y-0.5 font-mono text-ink-muted">{result.queries_run.map((q, i) => <li key={i}>{q}</li>)}</ul>
             </div>
           )}
-
           {result.notes.length > 0 && (
-            <div className="rounded-lg border border-caution/30 bg-caution-wash p-2 text-xs text-caution">
-              {result.notes.join(" ")}
-            </div>
+            <p className="rounded-md border border-caution/30 bg-caution-wash px-3 py-2 text-xs text-caution">{result.notes.join(" ")}</p>
           )}
-
-          <p className="text-sm font-medium text-ink">Ranked shortlist</p>
           {result.prospects.length ? (
-            <div className="space-y-2">
-              {result.prospects.map((p, idx) => (
-                <div key={p.opportunity_id} className="flex items-center justify-between gap-3 rounded-lg border border-line bg-surface p-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-ink-muted">#{idx + 1}</span>
-                      <Link href={`/vc/opportunities/${p.opportunity_id}`} className="truncate text-sm font-semibold text-ink hover:text-brand">
-                        {p.name}
-                      </Link>
-                      <a href={p.github_url} target="_blank" rel="noreferrer" className="text-xs text-brand hover:underline">@{p.login} ↗</a>
-                    </div>
-                    <p className="text-xs text-ink-muted">{p.evidence_added} public evidence items collected</p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <Badge tone="bg-brand-wash text-brand">Score {Math.round(p.founder_score)}</Badge>
-                    <Link href={`/vc/opportunities/${p.opportunity_id}`} className="btn-secondary text-xs">Review</Link>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <table className="table rounded-md border border-line">
+              <thead><tr><th>#</th><th>Founder</th><th className="text-right">Evidence</th><th className="text-right">Score</th><th /></tr></thead>
+              <tbody>
+                {result.prospects.map((p, idx) => (
+                  <tr key={p.opportunity_id}>
+                    <td className="num text-ink-muted">{idx + 1}</td>
+                    <td>
+                      <Link href={`/vc/opportunities/${p.opportunity_id}`} className="font-medium text-ink hover:text-brand">{p.name}</Link>
+                      <a href={p.github_url} target="_blank" rel="noreferrer" className="ml-1.5 text-xs text-ink-muted hover:text-brand">@{p.login} ↗</a>
+                    </td>
+                    <td className="num text-right text-ink-soft">{p.evidence_added}</td>
+                    <td className="num text-right font-semibold text-ink">{Math.round(p.founder_score)}</td>
+                    <td className="text-right"><Link href={`/vc/opportunities/${p.opportunity_id}`} className="btn-ghost btn-sm">Review →</Link></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           ) : (
-            <p className="text-sm text-ink-muted">No candidates surfaced this run — try refining the brief or your thesis.</p>
+            <p className="text-[13px] text-ink-muted">No candidates surfaced this run — try refining the brief or your thesis.</p>
           )}
           <p className="text-xs text-ink-muted">{result.disclaimer}</p>
         </div>
       )}
-    </Section>
+    </div>
   );
 }
 
@@ -231,23 +240,24 @@ function ManualAdd({ onSourced }: { onSourced: () => void }) {
   }
 
   return (
-    <Section title="Add a GitHub Profile" subtitle="Know someone already? Sync one profile directly (live public data)">
-      <div className="flex flex-wrap items-end gap-2">
-        <label className="block">
-          <span className="label">GitHub Username</span>
-          <input className="mt-1 w-48 rounded-lg border border-line px-3 py-2 text-sm" placeholder="e.g. torvalds" value={username} onChange={(e) => setUsername(e.target.value)} />
+    <div className="space-y-3">
+      <form className="flex flex-wrap items-end gap-2" onSubmit={(e) => { e.preventDefault(); if (username.trim()) sync(); }}>
+        <label className="block min-w-[14rem] flex-1">
+          <span className="label">GitHub username</span>
+          <input className="input mt-1" placeholder="e.g. torvalds" value={username} onChange={(e) => setUsername(e.target.value)} />
         </label>
-        <button className="btn-secondary" onClick={sync} disabled={loading || !username.trim()}>Sync from GitHub</button>
-        {loading && <Spinner label="Syncing…" />}
-      </div>
-      {error && <div className="mt-2"><ErrorState message={error} /></div>}
+        <button type="submit" className="btn-primary" disabled={loading || !username.trim()}>Sync from GitHub</button>
+      </form>
+      <p className="text-xs text-ink-muted">Pulls one public profile and its repositories as live evidence, then scores the founder.</p>
+      {loading && <Spinner label="Syncing…" />}
+      {error && <ErrorState message={error} />}
       {result && (
-        <div className="mt-3 rounded-lg border border-line bg-surface-sunken p-3 text-sm">
+        <div className="rounded-md border border-line bg-surface-sunken p-3 text-[13px]">
           <p className="font-medium text-ink">Sync {result.sync?.status}: {result.sync?.message}</p>
-          {result.opportunity_id && <Link href={`/vc/opportunities/${result.opportunity_id}`} className="btn-secondary mt-2">Open Founder Profile →</Link>}
+          {result.opportunity_id && <Link href={`/vc/opportunities/${result.opportunity_id}`} className="btn-secondary btn-sm mt-2">Open Founder Profile →</Link>}
         </div>
       )}
-    </Section>
+    </div>
   );
 }
 
@@ -278,21 +288,14 @@ function FounderLeads({
     await leads.reload();
   }
 
-  if (leads.loading && !leads.data) return <Section title="Leads"><Spinner label="Loading founders…" /></Section>;
-  if (leads.error) {
-    return (
-      <Section title="Leads">
-        <ErrorState message={`Couldn't load founders: ${leads.error}`} />
-        <button className="btn-secondary mt-3" onClick={leads.reload}>Retry</button>
-      </Section>
-    );
-  }
+  if (leads.loading && !leads.data) return <Spinner label="Loading founders…" />;
+  if (leads.error) return <ErrorState message={`Couldn't load founders: ${leads.error}`} onRetry={leads.reload} />;
   const all = leads.data?.items ?? [];
   if (!all.length) {
     return (
       <EmptyState
         title="No founders sourced yet"
-        hint="Run AI Discovery or sync a GitHub profile above — sourced founders appear here with their score, momentum, and evidence."
+        hint="Run AI Discovery or sync a GitHub profile — sourced founders appear here with their score, momentum, and evidence."
         action={<button className="btn-primary" onClick={onOpenSourcing}>Source founders</button>}
       />
     );
@@ -306,23 +309,27 @@ function FounderLeads({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
+      <Toolbar>
         <Segmented
           label="Filter founders"
           value={view}
           onChange={setView}
-          options={FOUNDER_VIEWS.map((v) => ({ value: v.key, label: `${v.label} ${count(v.key)}` }))}
+          options={FOUNDER_VIEWS.map((v) => ({ value: v.key, label: <>{v.label} <span className="opacity-60">{count(v.key)}</span></> }))}
         />
-        <input
-          type="search"
-          aria-label="Search founders"
-          placeholder="Search name, @handle, company, project"
-          className="w-64 rounded-lg border border-line bg-white px-3 py-1.5 text-sm focus:border-brand focus:outline-none"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
+        <label className="relative">
+          <span className="sr-only">Search founders</span>
+          <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-muted" />
+          <input
+            type="search"
+            aria-label="Search founders"
+            placeholder="Search name, @handle, company, project"
+            className="input w-72 pl-8"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </label>
         {leads.loading && <Spinner label="Refreshing…" />}
-      </div>
+      </Toolbar>
       {shown.length ? (
         <FoundersTable leads={shown} overlay={overlay} onSetStatus={setStatus} onMoveToScreening={moveToScreening} />
       ) : (
@@ -332,8 +339,8 @@ function FounderLeads({
         />
       )}
       <p className="text-xs text-ink-muted">
-        Saved / Monitoring / Dismissed is your personal shortlist in this browser. Moving to Screening is a shared pipeline step
-        that the investor approves — no outreach is ever sent automatically.
+        Saved / Monitoring / Dismissed is your personal shortlist in this browser. Moving to Screening is a shared, investor-approved
+        pipeline step — no outreach is ever sent automatically.
       </p>
     </div>
   );

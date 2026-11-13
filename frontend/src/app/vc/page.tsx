@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useFetch } from "@/lib/useFetch";
-import { Badge, DemoBadge, ErrorState, Section, Spinner, Stat } from "@/components/ui";
+import { Badge, DemoBadge, ErrorState, PageHeader, Section, Spinner, Stat } from "@/components/ui";
 import { DASHBOARD_TOUR, GuidedTour } from "@/components/GuidedTour";
-import { ArenaHero } from "@/components/ArenaHero";
+import { SourceBadge, StageBadge } from "@/components/DealBadges";
 import { humanStatus, trajectoryTone } from "@/lib/format";
 import { accountScope } from "@/lib/auth";
 import { getMyDecisions, getPipeline, LocalDecision, PipelineStatus } from "@/lib/myWorkspace";
@@ -32,8 +33,16 @@ interface Dashboard {
   connectors: { live: string[]; planned: string[] };
 }
 
+const STAGE_LINKS: Record<string, string> = {
+  sourcing: "/vc/founders",
+  screening: "/vc/pipeline?stage=screening",
+  diligence: "/vc/pipeline?stage=diligence",
+  decision: "/vc/pipeline?stage=decision",
+};
+
 export default function DashboardPage() {
-  const { data, error, loading } = useFetch<Dashboard>("/api/dashboard");
+  const { data, error, loading, reload } = useFetch<Dashboard>("/api/dashboard");
+  const router = useRouter();
   const [tourOpen, setTourOpen] = useState(false);
   const [tourChecked, setTourChecked] = useState(false);
   // per-browser workspace overlay (saved / monitoring / dismissed + decisions)
@@ -46,7 +55,7 @@ export default function DashboardPage() {
 
   // Auto-start the tour the first time THIS signed-in investor reaches the
   // dashboard — tracked per account so a new sign-in gets it, and only once the
-  // dashboard (incl. the Arena hero the tour anchors to) has actually rendered.
+  // dashboard (incl. the panels the tour anchors to) has actually rendered.
   const tourSeenKey = `trajectory_tour_seen_${accountScope("investor")}`;
   useEffect(() => {
     if (!data || tourChecked) return;
@@ -63,8 +72,22 @@ export default function DashboardPage() {
     try { localStorage.setItem(tourSeenKey, "1"); } catch { /* ignore */ }
   }
 
-  if (loading) return <Spinner label="Loading dashboard…" />;
-  if (error) return <ErrorState message={error} />;
+  const header = (
+    <PageHeader
+      title="Dashboard"
+      subtitle={data?.thesis ? `${data.thesis.fund_name} · what needs your attention across the pipeline` : "What needs your attention across the pipeline"}
+      actions={
+        <>
+          <button className="btn-ghost" onClick={() => setTourOpen(true)}>Take the tour</button>
+          <Link href="/vc/map" className="btn-secondary">Open map</Link>
+          <Link href="/vc/founders?source=open" className="btn-primary">+ Source founders</Link>
+        </>
+      }
+    />
+  );
+
+  if (loading) return <div className="space-y-4">{header}<Spinner label="Loading dashboard…" /></div>;
+  if (error) return <div className="space-y-4">{header}<ErrorState message={error} onRetry={reload} /></div>;
   if (!data) return null;
 
   // Apply this browser's pipeline overlay: hide prospects it dismissed, pin the
@@ -74,7 +97,7 @@ export default function DashboardPage() {
     .map((o: any) => ({ o, status: pipeline[o.id] ?? null }))
     .filter((x) => x.status !== "dismissed")
     .sort((a, b) => rank(a.status) - rank(b.status))
-    .slice(0, 8);
+    .slice(0, 6);
 
   // The Action Queue is built server-side from shared state, so it doesn't know
   // this browser already acted. Drop items for opportunities you've decided or
@@ -84,128 +107,138 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-ink">Investor Dashboard</h1>
-          <p className="text-sm text-ink-muted">
-            Your deal pipeline: Sourcing → Screening → Diligence → Decision. New here? Take the tour.
-          </p>
+    <div className="space-y-5">
+      {header}
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" data-tour="overview">
+        {["sourcing", "screening", "diligence", "decision"].map((s) => (
+          <Stat
+            key={s}
+            label={humanStatus(s)}
+            value={data.stage_counts[s] || 0}
+            sub={s === "sourcing" ? "Founder leads" : "Active deals"}
+            href={STAGE_LINKS[s]}
+          />
+        ))}
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-3">
+        <div className="space-y-5 xl:col-span-2">
+          <Section
+            title="Next actions"
+            subtitle="One concrete step per opportunity — act-now items first"
+            flush
+            right={<Link href="/vc/pipeline" className="btn-ghost btn-sm">Pipeline →</Link>}
+          >
+            <div data-tour="action-queue" className="overflow-x-auto">
+              {actionQueue.length ? (
+                <table className="table min-w-[640px]">
+                  <thead>
+                    <tr><th>Opportunity</th><th>Source</th><th>Stage</th><th>Next action</th><th className="text-right">Waiting</th></tr>
+                  </thead>
+                  <tbody>
+                    {actionQueue.map((a) => (
+                      <tr key={a.opportunity_id} className="table-row-link" onClick={() => router.push(`/vc/opportunities/${a.opportunity_id}`)}>
+                        <td>
+                          <Link href={`/vc/opportunities/${a.opportunity_id}`} onClick={(e) => e.stopPropagation()} className="font-medium text-ink hover:text-brand">{a.name}</Link>
+                          {a.founder_name && a.founder_name !== a.name && <span className="block text-xs text-ink-muted">{a.founder_name}</span>}
+                        </td>
+                        <td><SourceBadge entryType={a.entry_type} /></td>
+                        <td><StageBadge stage={a.stage} /></td>
+                        <td>
+                          <span className={`flex items-center gap-1.5 ${a.priority === 1 ? "font-medium text-ink" : "text-ink-soft"}`}>
+                            {a.priority === 1 && <span aria-label="Act now" className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />}
+                            {a.next_action}
+                          </span>
+                        </td>
+                        <td className="num text-right text-xs text-ink-muted">{a.age_days === 0 ? "today" : `${a.age_days}d`}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : <p className="px-4 py-6 text-[13px] text-ink-muted">Nothing needs your action right now.</p>}
+            </div>
+          </Section>
+
+          <div className="grid gap-5 lg:grid-cols-2">
+            <Section title="Top outbound prospects" subtitle="Surfaced before they apply" flush right={<Link href="/vc/founders" className="btn-ghost btn-sm">Founders →</Link>}>
+              <div data-tour="sourcing">
+                {outboundProspects.length ? (
+                  <ul className="divide-y divide-line">
+                    {outboundProspects.map(({ o, status }) => <OppRow key={o.id} o={o} status={status} />)}
+                  </ul>
+                ) : (
+                  <p className="px-4 py-6 text-[13px] text-ink-muted">No prospects yet. <Link href="/vc/founders?source=open" className="text-brand hover:underline">Source founders</Link> to get started.</p>
+                )}
+              </div>
+            </Section>
+            <Section title="Recent inbound applications" subtitle="Founder-initiated" flush right={<Link href="/vc/pipeline?source=inbound" className="btn-ghost btn-sm">Pipeline →</Link>}>
+              <div data-tour="inbound">
+                {data.recent_inbound_applications.length ? (
+                  <ul className="divide-y divide-line">
+                    {data.recent_inbound_applications.map((o) => <OppRow key={o.id} o={o} />)}
+                  </ul>
+                ) : <p className="px-4 py-6 text-[13px] text-ink-muted">No inbound applications yet.</p>}
+              </div>
+            </Section>
+          </div>
         </div>
-        <button className="btn-secondary" onClick={() => setTourOpen(true)}>Take the Guided Tour</button>
-      </div>
 
-      {/* The Investment Arena — the first thing an investor sees; anchors the tour */}
-      <ArenaHero />
+        <div className="space-y-5">
+          <Section title="Fund thesis" subtitle="Every score is evaluated through it" right={<Link href="/vc/fund" className="btn-ghost btn-sm">Edit</Link>}>
+            <div data-tour="thesis">
+              {data.thesis ? (
+                <dl className="space-y-2 text-[13px]">
+                  <p className="font-semibold text-ink">{data.thesis.fund_name}</p>
+                  <ChipRow label="Sectors" items={data.thesis.sectors} />
+                  <ChipRow label="Stages" items={data.thesis.stages} />
+                  <ChipRow label="Geographies" items={data.thesis.geographies} />
+                </dl>
+              ) : (
+                <div className="text-[13px] text-ink-muted">
+                  No active thesis yet. <Link href="/vc/fund" className="btn-primary btn-sm ml-1">Set up the fund</Link>
+                </div>
+              )}
+            </div>
+          </Section>
 
-      {/* thesis + stage counts */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Section title="Your Investment Thesis" subtitle="Your fund's strategy — everything is scored against it" id="thesis-section" right={<Link href="/vc/thesis" className="btn-ghost text-xs">Edit</Link>}>
-          <div data-tour="thesis">
-            {data.thesis ? (
-              <>
-                <p className="text-base font-semibold text-ink">{data.thesis.fund_name}</p>
-                <p className="mt-1 text-sm text-ink-soft">{data.thesis.sectors.join(", ")}</p>
-                <p className="mt-1 text-xs text-ink-muted">
-                  {data.thesis.stages.join(", ")} · {data.thesis.geographies.join(", ")}
-                </p>
-                <p className="mt-2 text-xs text-ink-muted">Every score, ranking and recommendation is evaluated through this thesis.</p>
-              </>
-            ) : (
-              <Link href="/vc/thesis" className="btn-primary">Set Up a Thesis</Link>
-            )}
-          </div>
-        </Section>
+          <Section title="Highest founder momentum" subtitle="Current score and trajectory" flush>
+            <ul data-tour="momentum" className="divide-y divide-line">
+              {data.highest_momentum.map((m) => (
+                <li key={m.opportunity_id}>
+                  <Link href={`/vc/opportunities/${m.opportunity_id}`} className="flex items-center justify-between gap-2 px-4 py-2 hover:bg-surface-sunken">
+                    <span className="truncate text-[13px] font-medium text-ink">{m.company_name || m.founder_name}</span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      <span className="num text-xs text-ink-muted">{Math.round(m.current_score)}</span>
+                      <Badge tone={trajectoryTone(m.trajectory)}>{humanStatus(m.trajectory)}</Badge>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </Section>
 
-        <Section title="Workflow Stages" subtitle="Pipeline counts">
-          <div className="grid grid-cols-2 gap-2">
-            {["sourcing", "screening", "diligence", "decision"].map((s) => (
-              <Stat key={s} label={humanStatus(s)} value={data.stage_counts[s] || 0} />
-            ))}
-          </div>
-        </Section>
+          <Section title="Recent evidence" subtitle="Newest collected items" right={<DemoBadge />} flush>
+            <ul data-tour="evidence" className="divide-y divide-line">
+              {data.recent_evidence.map((e) => (
+                <li key={e.id} className="px-4 py-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-[13px] text-ink-soft">{e.title}</span>
+                    <span className="font-mono text-[11px] text-ink-faint">E{e.id}</span>
+                  </div>
+                  <p className="text-xs text-ink-muted">{e.source_name} · {humanStatus(e.kind)}</p>
+                </li>
+              ))}
+            </ul>
+          </Section>
 
-        <Section title="Connectors" subtitle="Live vs planned">
-          <div className="flex flex-wrap gap-2">
-            {data.connectors.live.map((c) => <Badge key={c} tone="bg-positive-wash text-positive">{c} · Live</Badge>)}
-            {data.connectors.planned.map((c) => <Badge key={c} tone="bg-neutral-wash text-neutral">{c} · Planned</Badge>)}
-          </div>
-        </Section>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Section title="Top Outbound Prospects" subtitle="Surfaced before they formally apply" right={<Link href="/vc/founders" className="btn-ghost text-xs">All founders →</Link>}>
-          <div data-tour="sourcing" className="space-y-2">
-            {outboundProspects.length ? outboundProspects.map(({ o, status }) => (
-              <OppRow key={o.id} o={o} status={status} />
-            )) : <p className="text-sm text-ink-muted">No prospects yet. <Link href="/vc/founders" className="text-brand hover:underline">Source founders</Link> to get started.</p>}
-          </div>
-        </Section>
-
-        <Section title="Recent Inbound Applications" subtitle="Founder-initiated" right={<Link href="/vc/pipeline?source=inbound" className="btn-ghost text-xs">Pipeline →</Link>}>
-          <div data-tour="inbound" className="space-y-2">
-            {data.recent_inbound_applications.length ? data.recent_inbound_applications.map((o) => (
-              <OppRow key={o.id} o={o} />
-            )) : <p className="text-sm text-ink-muted">No inbound applications yet.</p>}
-          </div>
-        </Section>
-      </div>
-
-      {/* Action queue — the primary "what should I do next, and on whom?" list */}
-      <Section title="Action Queue" subtitle="Your prioritized next steps — the deals you can act on now come first">
-        <div data-tour="action-queue" className="space-y-2">
-          {actionQueue.length ? actionQueue.map((a) => (
-            <Link
-              key={a.opportunity_id}
-              href={`/vc/opportunities/${a.opportunity_id}`}
-              className="flex items-center justify-between gap-3 rounded-lg border border-line bg-surface px-3 py-2.5 hover:border-brand/40"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-ink">
-                  {a.name}
-                  {a.founder_name && a.founder_name !== a.name && <span className="font-normal text-ink-muted"> · {a.founder_name}</span>}
-                </p>
-                <p className="text-xs text-ink-muted">{humanStatus(a.entry_type)} · {humanStatus(a.stage)}</p>
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <Badge tone={a.priority === 1 ? "bg-brand-wash text-brand" : "bg-neutral-wash text-neutral"}>{a.next_action}</Badge>
-                <span className="w-14 text-right text-xs text-ink-muted">{a.age_days === 0 ? "today" : `${a.age_days}d open`}</span>
-              </div>
-            </Link>
-          )) : <p className="text-sm text-ink-muted">Nothing needs your action right now.</p>}
+          <Section title="Connectors">
+            <div className="flex flex-wrap gap-1.5">
+              {data.connectors.live.map((c) => <Badge key={c} tone="bg-positive-wash text-positive">{humanStatus(c)} · live</Badge>)}
+              {data.connectors.planned.map((c) => <Badge key={c}>{humanStatus(c)} · planned</Badge>)}
+            </div>
+          </Section>
         </div>
-      </Section>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Section title="Highest Founder Momentum" subtitle="Direction & rate of change">
-          <div data-tour="momentum" className="space-y-2">
-            {data.highest_momentum.map((m) => (
-              <div key={m.opportunity_id} className="flex items-center justify-between rounded-lg bg-surface-sunken px-3 py-2">
-                <Link href={`/vc/opportunities/${m.opportunity_id}`} className="text-sm font-medium text-ink hover:text-brand">
-                  {m.company_name || m.founder_name}
-                </Link>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-ink-muted">{m.current_score}</span>
-                  <Badge tone={trajectoryTone(m.trajectory)}>{humanStatus(m.trajectory)}</Badge>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Section>
-
-        <Section title="Recent Evidence Updates" subtitle="Newest collected items" right={<DemoBadge />}>
-          <div data-tour="evidence" className="space-y-2">
-            {data.recent_evidence.map((e) => (
-              <div key={e.id} className="rounded-lg bg-surface-sunken px-3 py-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-ink-soft">{e.title}</span>
-                  <span className="font-mono text-[11px] text-ink-muted">E{e.id}</span>
-                </div>
-                <p className="text-xs text-ink-muted">{e.source_name} · {e.kind}</p>
-              </div>
-            ))}
-          </div>
-        </Section>
       </div>
 
       <GuidedTour steps={DASHBOARD_TOUR} open={tourOpen} onClose={closeTour} />
@@ -213,20 +246,31 @@ export default function DashboardPage() {
   );
 }
 
+function ChipRow({ label, items }: { label: string; items: string[] }) {
+  return (
+    <div>
+      <dt className="text-xs text-ink-muted">{label}</dt>
+      <dd className="mt-0.5 flex flex-wrap gap-1">
+        {items.length ? items.map((s) => <Badge key={s}>{s}</Badge>) : <span className="text-xs text-ink-faint">Any</span>}
+      </dd>
+    </div>
+  );
+}
+
 function OppRow({ o, status }: { o: any; status?: PipelineStatus | null }) {
   return (
-    <Link href={`/vc/opportunities/${o.id}`} className="flex items-center justify-between rounded-lg bg-surface-sunken px-3 py-2 hover:bg-line/40">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-ink">{o.company?.name || o.founder?.full_name || `Opportunity #${o.id}`}</p>
-        <p className="truncate text-xs text-ink-muted">{o.company?.one_liner || o.surfaced_reason}</p>
-      </div>
-      <div className="ml-2 flex shrink-0 items-center gap-2">
-        {(status === "saved" || status === "monitoring") && (
-          <Badge tone="bg-positive-wash text-positive">{humanStatus(status)}</Badge>
-        )}
-        {o.founder_score && <span className="text-sm font-semibold text-ink">{Math.round(o.founder_score.score)}</span>}
-        <Badge tone="bg-brand-wash text-brand">fit {Math.round(o.thesis_fit_score)}</Badge>
-      </div>
-    </Link>
+    <li>
+      <Link href={`/vc/opportunities/${o.id}`} className="flex items-center justify-between gap-2 px-4 py-2 hover:bg-surface-sunken">
+        <span className="min-w-0">
+          <span className="block truncate text-[13px] font-medium text-ink">{o.company?.name || o.founder?.full_name || `Opportunity #${o.id}`}</span>
+          <span className="block truncate text-xs text-ink-muted">{o.company?.one_liner || o.surfaced_reason}</span>
+        </span>
+        <span className="flex shrink-0 items-center gap-1.5">
+          {(status === "saved" || status === "monitoring") && <Badge tone="bg-positive-wash text-positive">{humanStatus(status)}</Badge>}
+          {o.founder_score && <span className="num text-[13px] font-semibold text-ink" title="Founder score">{Math.round(o.founder_score.score)}</span>}
+          {o.company && <Badge tone="bg-brand-wash text-brand">fit {Math.round(o.thesis_fit_score)}</Badge>}
+        </span>
+      </Link>
+    </li>
   );
 }

@@ -4,15 +4,13 @@ import { humanStatus } from "@/lib/format";
 import { groupFieldLabel, groupNodes, matchesSearch, nodeColor, nodeKindLabel } from "@/lib/opportunityMap";
 import { MapNode } from "@/lib/types";
 
-// Same nodes and grouping as the graph, as a keyboard-friendly list. Used when
-// WebGL is unavailable, or when the investor picks the list layout.
+// Same nodes and grouping as the canvas, as a keyboard-friendly list. Used when
+// WebGL is unavailable, and as the "List" view over the canvas.
 export function MapList({
-  nodes,
-  selectedId,
-  query,
-  onSelect,
+  nodes, colors, selectedId, query, onSelect,
 }: {
   nodes: MapNode[];
+  colors: Map<string, string>;
   selectedId: number | null;
   query: string;
   onSelect: (id: number) => void;
@@ -20,32 +18,36 @@ export function MapList({
   const byId = new Map(nodes.map((n) => [n.id, n]));
   const visible = nodes.filter((n) => matchesSearch(n, query));
   const groups = groupNodes(visible);
-  if (!visible.length) return <p className="p-4 text-sm text-ink-muted">No opportunities match this search.</p>;
+  if (!visible.length) return <p className="p-4 text-[13px] text-ink-muted">No opportunities match this search.</p>;
   return (
-    <div className="space-y-4 p-4" data-testid="map-list">
+    <div className="space-y-3 p-3" data-testid="map-list">
       {groups.map((g) => (
-        <section key={g.key}>
-          <h3 className="label">{g.label} · {g.ids.length}</h3>
-          <p className="text-[11px] text-ink-muted">Grouped by: {groupFieldLabel(g.field)}</p>
-          <ul className="mt-1.5 divide-y divide-line rounded-lg border border-line bg-white">
+        <section key={g.key} aria-label={`${g.label} group`}>
+          <h3 className="flex items-center gap-1.5 px-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-ink">
+            <span aria-hidden className="h-2 w-2 rounded-full" style={{ background: colors.get(g.key) }} />
+            {g.label} · {g.ids.length}
+          </h3>
+          <p className="px-1 text-[11px] text-ink-muted">Grouped by {groupFieldLabel(g.field).toLowerCase()}</p>
+          <ul className="mt-1 divide-y divide-line overflow-hidden rounded-md border border-line bg-white">
             {g.ids.map((id) => {
               const n = byId.get(id)!;
+              const color = nodeColor(n, colors);
               return (
                 <li key={id}>
                   <button
                     type="button"
                     onClick={() => onSelect(id)}
                     aria-current={id === selectedId ? "true" : undefined}
-                    className={`flex w-full items-center gap-2.5 px-3 py-2 text-left hover:bg-surface-sunken ${id === selectedId ? "bg-brand-wash" : ""}`}
+                    className={`flex w-full items-center gap-2.5 px-2.5 py-1.5 text-left hover:bg-surface-sunken ${id === selectedId ? "bg-brand-wash" : ""}`}
                   >
                     <span
                       aria-hidden
                       className="h-3 w-3 shrink-0 rounded-full"
-                      style={n.kind === "deal" ? { background: nodeColor(n) } : { border: `3px solid ${nodeColor(n)}` }}
+                      style={n.kind === "deal" ? { background: color } : { border: `3px solid ${color}` }}
                     />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium text-ink">{n.name}</span>
-                      <span className="block truncate text-xs text-ink-muted">
+                      <span className="block truncate text-[13px] font-medium text-ink">{n.name}</span>
+                      <span className="block truncate text-[11px] text-ink-muted">
                         {nodeKindLabel(n)} · {humanStatus(n.entry_type)}
                         {n.founder_score != null ? ` · score ${Math.round(n.founder_score)}` : " · not scored"}
                       </span>

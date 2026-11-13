@@ -24,6 +24,11 @@ export function stageTone(stage: string): string {
   }
 }
 
+// Solid dot per stage (badges use washes; dots need a visible fill).
+export function stageDot(stage: string): string {
+  return { sourcing: "bg-positive", screening: "bg-brand-soft", diligence: "bg-brand", decision: "bg-ink" }[stage] ?? "bg-neutral";
+}
+
 export function sourceLabel(entryType: string): string {
   return entryType === "inbound" ? "Inbound" : entryType === "outbound" ? "Outbound" : humanStatus(entryType);
 }

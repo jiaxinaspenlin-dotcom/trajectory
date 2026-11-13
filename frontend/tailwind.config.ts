@@ -1,45 +1,64 @@
 import type { Config } from "tailwindcss";
 
-// Restrained, institutional design system: neutral slate base + semantic status.
+// Trajectory design system: a light, restrained research-tool palette.
+// Neutral slate ink on white, hairline dividers, one blue accent for actions and
+// selection, and semantic colors reserved for status. Token names are shared by
+// every page, so changing them here restyles the whole product.
 const config: Config = {
   content: ["./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
         ink: {
-          DEFAULT: "#0f172a",
-          soft: "#334155",
-          muted: "#64748b",
+          DEFAULT: "#0b1220",
+          soft: "#2b3648",
+          muted: "#667085",
+          faint: "#98a2b3",
         },
         surface: {
           DEFAULT: "#ffffff",
-          sunken: "#f8fafc",
+          sunken: "#f7f8fa",
           raised: "#ffffff",
         },
-        line: "#e2e8f0",
-        brand: {
-          DEFAULT: "#1e40af",
-          soft: "#3b82f6",
-          wash: "#eff6ff",
+        canvas: "#fbfbfc",
+        line: {
+          DEFAULT: "#e6e8ec",
+          strong: "#d0d5dd",
         },
+        brand: {
+          DEFAULT: "#1f4fd8",
+          soft: "#3b6cf0",
+          deep: "#163ca8",
+          wash: "#eef3ff",
+        },
+        // Trajectory's amber tip — used sparingly for "new" and highlights
+        signal: { DEFAULT: "#e8950c", wash: "#fff6e5" },
         // semantic status
-        positive: { DEFAULT: "#047857", wash: "#ecfdf5" },
-        caution: { DEFAULT: "#b45309", wash: "#fffbeb" },
-        negative: { DEFAULT: "#b91c1c", wash: "#fef2f2" },
-        neutral: { DEFAULT: "#475569", wash: "#f1f5f9" },
-        bull: "#047857",
-        bear: "#b45309",
-        referee: "#1e40af",
+        positive: { DEFAULT: "#067647", wash: "#ecfdf3" },
+        caution: { DEFAULT: "#b54708", wash: "#fffaeb" },
+        negative: { DEFAULT: "#b42318", wash: "#fef3f2" },
+        neutral: { DEFAULT: "#475467", wash: "#f2f4f7" },
+        bull: "#067647",
+        bear: "#b54708",
+        referee: "#1f4fd8",
       },
       fontFamily: {
         sans: ["var(--font-inter)", "ui-sans-serif", "system-ui", "sans-serif"],
+        mono: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+      },
+      fontSize: {
+        "2xs": ["0.6875rem", { lineHeight: "1rem" }],
       },
       boxShadow: {
-        card: "0 1px 2px rgba(15,23,42,0.04), 0 1px 3px rgba(15,23,42,0.06)",
-        raised: "0 4px 12px rgba(15,23,42,0.08)",
+        card: "0 1px 2px rgba(16,24,40,0.04)",
+        raised: "0 8px 24px -6px rgba(16,24,40,0.14), 0 2px 6px rgba(16,24,40,0.06)",
+        overlay: "0 16px 40px -12px rgba(16,24,40,0.22), 0 4px 10px rgba(16,24,40,0.06)",
       },
       borderRadius: {
-        xl: "0.875rem",
+        DEFAULT: "0.3125rem",
+        md: "0.375rem",
+        lg: "0.5rem",
+        xl: "0.625rem",
       },
     },
   },

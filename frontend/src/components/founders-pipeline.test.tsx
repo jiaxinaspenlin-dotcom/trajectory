@@ -44,9 +44,9 @@ describe("FoundersTable", () => {
     expect(within(row).getByText("Ada Builder")).toHaveAttribute("href", "/vc/opportunities/11");
     expect(within(row).getByText(/No company yet/)).toBeInTheDocument();
     expect(within(row).getByText("ledgerkit ↗")).toBeInTheDocument();
-    expect(within(row).getByText("Score 61")).toBeInTheDocument();
+    expect(within(row).getByText("61")).toBeInTheDocument();
     expect(within(row).getByText(/Accelerating/)).toBeInTheDocument();
-    expect(within(row).getByText("4 evidence items")).toBeInTheDocument();
+    expect(within(row).getByText("4")).toBeInTheDocument();
     expect(within(row).getByText("Review →")).toHaveAttribute("href", "/vc/opportunities/11");
   });
 
@@ -80,6 +80,30 @@ describe("FoundersTable", () => {
     render(<FoundersTable leads={[lead()]} overlay={{}} onSetStatus={() => {}} onMoveToScreening={async () => {}} />);
     fireEvent.click(screen.getByText("No company yet"));
     expect(push).toHaveBeenCalledWith("/vc/opportunities/11");
+  });
+});
+
+describe("FoundersTable sorting", () => {
+  it("sorts by a column header and reports aria-sort", () => {
+    const score = (v: number) => ({ id: 1, founder_id: 1, version: 1, score: v, confidence: 1, components: [], explanation: "", evidence_ids: [], computed_at: "" });
+    render(
+      <FoundersTable
+        leads={[
+          lead({ id: 1, founder: { ...founder, full_name: "Bea" }, founder_score: score(20) }),
+          lead({ id: 2, founder: { ...founder, full_name: "Ann" }, founder_score: score(80) }),
+          lead({ id: 3, founder: { ...founder, full_name: "Cal" }, founder_score: null }),
+        ]}
+        overlay={{}} onSetStatus={() => {}} onMoveToScreening={async () => {}}
+      />
+    );
+    const order = () => screen.getAllByTestId(/founder-row-/).map((r) => r.getAttribute("data-testid"));
+    expect(order()).toEqual(["founder-row-1", "founder-row-2", "founder-row-3"]);
+    fireEvent.click(screen.getByRole("button", { name: /Score/ }));
+    expect(order()).toEqual(["founder-row-2", "founder-row-1", "founder-row-3"]);
+    expect(screen.getByRole("columnheader", { name: /Score/ })).toHaveAttribute("aria-sort", "descending");
+    fireEvent.click(screen.getByRole("button", { name: /Founder/ }));
+    expect(order()).toEqual(["founder-row-2", "founder-row-1", "founder-row-3"]);
+    expect(screen.getByRole("columnheader", { name: /^Founder$/ })).toHaveAttribute("aria-sort", "ascending");
   });
 });
 

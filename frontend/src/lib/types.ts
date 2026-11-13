@@ -20,6 +20,7 @@ export interface Thesis {
   custom_description: string;
   custom_scoring_criteria: Record<string, unknown>[];
   score_weights: Record<string, number>;
+  updated_at?: string | null;
 }
 
 export interface ScoreComponent {

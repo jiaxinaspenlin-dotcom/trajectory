@@ -77,7 +77,7 @@ export function HumanDecisionPanel({
           <p className="text-xs text-ink-muted">Your decision is recorded separately from the system recommendation. No outreach or investment is executed automatically.</p>
           <label className="block">
             <span className="label">Decision</span>
-            <select className="mt-1 w-full rounded-lg border border-line px-2 py-1.5 text-sm" value={decision} onChange={(e) => setDecision(e.target.value)}>
+            <select className="select mt-1" value={decision} onChange={(e) => setDecision(e.target.value)}>
               {["approved", "rejected", "deferred", "overridden"].map((d) => (
                 <option key={d} value={d}>{humanStatus(d)}</option>
               ))}
@@ -85,17 +85,17 @@ export function HumanDecisionPanel({
           </label>
           <label className="block">
             <span className="label">Chosen action</span>
-            <select className="mt-1 w-full rounded-lg border border-line px-2 py-1.5 text-sm" value={action} onChange={(e) => setAction(e.target.value)}>
+            <select className="select mt-1" value={action} onChange={(e) => setAction(e.target.value)}>
               {ACTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
             </select>
           </label>
           <label className="block">
             <span className="label">Decided by</span>
-            <input className="mt-1 w-full rounded-lg border border-line px-2 py-1.5 text-sm" value={decidedBy} onChange={(e) => setDecidedBy(e.target.value)} />
+            <input className="input mt-1" value={decidedBy} onChange={(e) => setDecidedBy(e.target.value)} />
           </label>
           <label className="block">
             <span className="label">Notes</span>
-            <textarea className="mt-1 w-full rounded-lg border border-line px-2 py-1.5 text-sm" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+            <textarea className="textarea mt-1" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </label>
           {error && <p className="text-xs text-negative">{error}</p>}
           <button className="btn-primary w-full" onClick={submit} disabled={busy}>

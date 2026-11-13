@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-// Discovery now lives inside Founders; keep old links working.
+// Discovery now lives inside Founders (sourcing drawer); keep old links working.
 export default function DiscoveryRedirect() {
-  redirect("/vc/founders");
+  redirect("/vc/founders?source=open");
 }

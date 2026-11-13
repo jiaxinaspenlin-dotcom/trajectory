@@ -31,44 +31,59 @@ export default function ApplicationStatus() {
   const { data, loading, error, reload } = useFetch<ApplicationDetail>(`/api/applications/${id}`);
 
   if (loading) return <Spinner label="Loading application…" />;
-  if (error) return <ErrorState message={error} />;
+  if (error) return <ErrorState message={error} onRetry={reload} />;
   if (!data) return null;
 
   const deckReady = data.document && data.document.status === "extracted";
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-5">
+      <nav aria-label="Breadcrumb" className="text-xs text-ink-muted">
+        <Link href="/founder/applications" className="hover:text-brand">My applications</Link>
+        <span className="mx-1.5 text-ink-faint">/</span>
+        <span className="text-ink-soft">{data.company_name}</span>
+      </nav>
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-semibold text-ink">{data.company_name}</h1>
-            <Badge tone="bg-positive-wash text-positive">under review</Badge>
+            <Badge tone="bg-brand-wash text-brand">Under review</Badge>
           </div>
-          <p className="text-sm text-ink-muted">{data.sector || "Sector not set"} · {data.geography || "Geography not set"}</p>
+          <p className="mt-0.5 text-[13px] text-ink-muted">{data.sector || "Sector not set"} · {data.geography || "Location not set"}</p>
         </div>
-        <div className="flex gap-2">
-          <Link href="/founder/applications" className="btn-secondary">My Applications</Link>
-          {!deckReady && <Link href="/founder" className="btn-primary">Start / finish an application</Link>}
-        </div>
+        {!deckReady && <Link href="/founder" className="btn-primary">Finish your application</Link>}
       </div>
+
+      {/* status timeline */}
+      <ol className="grid grid-cols-3 overflow-hidden rounded-lg border border-line bg-white text-[13px]" aria-label="Application status">
+        {[
+          ["Application received", true],
+          ["Pitch deck read", !!deckReady],
+          ["Human review", false],
+        ].map(([label, done], i) => (
+          <li key={String(label)} className={`flex items-center gap-2 px-4 py-2.5 ${i > 0 ? "border-l border-line" : ""}`}>
+            <span className={`grid h-5 w-5 place-items-center rounded-full text-[11px] font-semibold ${done ? "bg-positive text-white" : i === 2 ? "bg-brand-wash text-brand" : "bg-line text-ink-muted"}`}>{done ? "✓" : i + 1}</span>
+            <span className={done ? "text-ink" : "text-ink-muted"}>{label}</span>
+          </li>
+        ))}
+      </ol>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <Stat label="Pitch Deck" value={deckReady ? "Received" : "Pending"} sub={data.document ? `${data.document.num_pages} pages parsed` : "Not uploaded yet"} tone={deckReady ? "text-positive" : "text-caution"} />
-        <Stat label="Users (Reported)" value={data.num_users ?? "—"} />
-        <Stat label="Funding Requested" value={data.funding_requested ? `$${data.funding_requested.toLocaleString()}` : "—"} />
+        <Stat label="Pitch deck" value={deckReady ? "Received" : "Pending"} sub={data.document ? `${data.document.num_pages} pages parsed` : "Not uploaded yet"} tone={deckReady ? "text-positive" : "text-caution"} />
+        <Stat label="Users (reported)" value={data.num_users ?? "—"} />
+        <Stat label="Funding requested" value={data.funding_requested ? `$${data.funding_requested.toLocaleString()}` : "—"} />
       </div>
 
-      <Section title="First-Pass Screen" subtitle="Automated, before human review">
-        <p className="text-sm text-ink-soft">{data.screen_summary || "Your application is queued for screening."}</p>
+      <Section title="First-pass screen" subtitle="Automated, before human review">
+        <p className="text-[13px] leading-6 text-ink-soft">{data.screen_summary || "Your application is queued for screening."}</p>
       </Section>
 
       <ProvideInfo app={data} onSaved={reload} />
 
-      <div className="rounded-xl border border-line bg-surface-sunken p-4 text-sm text-ink-muted">
-        A human investor reviews every application and makes the final decision. Trajectory never
-        auto-invests or sends automated messages. You&rsquo;ll be contacted with a next step
-        (interview, information request, or a pass) — the fund aims to respond promptly.
-      </div>
+      <p className="text-xs leading-5 text-ink-muted">
+        A human investor reviews every application and makes the final decision. Trajectory never auto-invests or sends automated
+        messages. You&rsquo;ll be contacted with a next step — an interview, an information request, or a pass.
+      </p>
     </div>
   );
 }
@@ -125,7 +140,7 @@ function ProvideInfo({ app, onSaved }: { app: ApplicationDetail; onSaved: () => 
       <span className="label">{label}</span>
       <input
         type={type}
-        className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-brand focus:outline-none"
+        className="input mt-1"
         value={form[k]}
         placeholder={ph}
         onChange={(e) => setForm({ ...form, [k]: e.target.value })}
@@ -135,11 +150,11 @@ function ProvideInfo({ app, onSaved }: { app: ApplicationDetail; onSaved: () => 
 
   return (
     <Section
-      title="What the Fund Still Needs From You"
-      subtitle="Only what genuinely helps a confident decision — fill in what you can and submit"
+      title="What would help the fund decide"
+      subtitle={app.missing_fields.length ? `${app.missing_fields.length} item${app.missing_fields.length === 1 ? "" : "s"} outstanding — fill in what you can` : "Everything requested has been provided"}
     >
       {done && (
-        <p className="mb-3 text-sm text-positive">You&rsquo;ve provided everything the fund asked for. You can still update details below.</p>
+        <p className="mb-3 text-[13px] text-positive">You&rsquo;ve provided everything the fund asked for. You can still update details below.</p>
       )}
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -153,7 +168,7 @@ function ProvideInfo({ app, onSaved }: { app: ApplicationDetail; onSaved: () => 
       <label className="mt-3 block">
         <span className="label">Team</span>
         <textarea
-          className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-brand focus:outline-none"
+          className="textarea mt-1"
           rows={2}
           placeholder="Founders, roles, relevant background…"
           value={form.team_info}
@@ -161,8 +176,8 @@ function ProvideInfo({ app, onSaved }: { app: ApplicationDetail; onSaved: () => 
         />
       </label>
 
-      {error && <p className="mt-2 text-sm text-negative">{error}</p>}
-      {saved && !error && <p className="mt-2 text-sm text-positive">Saved — sent to the fund. Thank you!</p>}
+      {error && <p className="mt-2 text-[13px] text-negative">{error}</p>}
+      {saved && !error && <p className="mt-2 text-[13px] text-positive">Saved — sent to the fund. Thank you!</p>}
 
       <div className="mt-3 flex items-center gap-2">
         <button className="btn-primary" onClick={submit} disabled={saving}>

@@ -203,7 +203,7 @@ evidence and is instructed never to invent facts; hallucinated evidence-ID refer
 
 1. (Optional) Create a GitHub personal access token with **public** read scope.
 2. Put it in `.env` as `GITHUB_TOKEN=...`.
-3. From **Discovery → Add a real public GitHub profile**, enter a username and sync.
+3. From **Founders → + Source founders → GitHub profile**, enter a username and sync.
 
 Only public data is collected, attributed to its source URL. Restricted platforms (LinkedIn, X)
 are never scraped. Rate limits, missing profiles, deleted repos, and incomplete responses are
@@ -259,10 +259,16 @@ Interactive OpenAPI docs at **`/docs`** (schema at `/openapi.json`). 50+ documen
 
 Two personas behind a landing chooser (login is currently disabled, so both open directly).
 
-- `/` landing (choose **I'm a VC** / **I'm a Founder**)
-- **Investor workspace** (`/vc/*`): `/vc` dashboard (Arena hero + Action Queue + guided tour) ·
-  `/vc/discovery` AI-driven outbound sourcing (NL brief → GitHub search → ranked shortlist) ·
-  `/vc/thesis` thesis editor · `/vc/opportunities/[id]` founder profile (Founder Score, momentum,
+- `/` landing (primary action: open the investor workspace; secondary: apply as a founder)
+- **Investor workspace** (`/vc/*`, left navigation rail; menu button on phones):
+  `/vc/map` canvas-first 3D map with two modes on one Three.js scene — **Relationships** (sector /
+  project clusters, named links) and **Custom Axes** (Thesis fit × 30-day momentum × an optional
+  third metric, real values only); state lives in the URL (`?view=axes&focus=<id>&x=&y=&z=`) ·
+  `/vc` dashboard (stage overview + next actions + guided tour) ·
+  `/vc/founders` sortable founder table with a **Source founders** drawer (AI Discovery + GitHub
+  profile sync; `/vc/discovery` opens it) · `/vc/pipeline` active deals by stage and source ·
+  `/vc/fund` fund profile and thesis editor (`/vc/thesis` redirects here) ·
+  `/vc/opportunities/[id]` opportunity (Founder Score, momentum,
   three axes with per-axis trend, claims/trust, the Investment Arena with an inline memo drawer and
   a full-screen debate player, pipeline Save/Monitor/Dismiss, human decision) ·
   `/vc/opportunities/[id]/diligence` diligence workspace · `/vc/opportunities/[id]/memo` print/PDF memo.
