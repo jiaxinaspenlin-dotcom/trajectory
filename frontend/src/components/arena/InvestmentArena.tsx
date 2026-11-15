@@ -17,9 +17,9 @@ const ROLE_META: Record<Role, { name: string; sub: string; color: string }> = {
 };
 
 function EvidenceRefs({ ids }: { ids: number[] }) {
-  if (!ids.length) return <span className="ml-1 text-[11px] text-caution">unverified</span>;
+  if (!ids.length) return <span className="ml-1 text-xs text-caution">unverified</span>;
   return (
-    <span className="ml-1 text-[11px] text-ink-muted">
+    <span className="ml-1 text-xs text-ink-muted">
       {ids.slice(0, 6).map((id) => (
         <span key={id} className="mr-1 rounded bg-surface-sunken px-1 font-mono">E{id}</span>
       ))}
@@ -131,7 +131,7 @@ export function InvestmentArena({
         <ArenaBackdrop />
         <div className="relative z-10 px-4 pb-5 pt-5">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] text-ink-muted">v{debate.version} · {debate.generated_by}</span>
+            <span className="text-xs text-ink-muted">v{debate.version} · {debate.generated_by}</span>
             {expandable && (
               <button className="btn-ghost text-xs" onClick={() => setExpanded(true)}>Expand Full Debate ↗</button>
             )}

@@ -26,7 +26,7 @@ from app.models.workflow import (
 )
 from app.schemas.requests import DiligenceResponseIn, DiligenceStatusIn, HumanDecisionIn
 from app.services import analysis, web_sourcing
-from app.services.action_queue import next_action_for, opportunity_age_days
+from app.services.action_queue import next_action_info, opportunity_age_days
 from app.services.opportunity_map import PIPELINE_STAGES, build_map
 from app.services.serializers import (
     assessment_out,
@@ -81,11 +81,13 @@ def list_pipeline(
         q = q.where(Opportunity.entry_type == entry_type)
     items = []
     for o in db.scalars(q.order_by(Opportunity.id.desc())).all():
-        nxt = next_action_for(db, o)
+        nxt = next_action_info(db, o)
         items.append({
             **opportunity_out(db, o),
-            "next_action": nxt[0] if nxt else None,
-            "priority": nxt[1] if nxt else None,
+            "next_action": nxt["label"] if nxt else None,
+            "next_action_key": nxt["key"] if nxt else None,
+            "next_action_detail": nxt["detail"] if nxt else None,
+            "priority": nxt["priority"] if nxt else None,
             "age_days": opportunity_age_days(o),
         })
     return {"items": items, "stages": stages}
@@ -120,6 +122,7 @@ def get_opportunity(opp_id: int, db: Session = Depends(get_db)) -> dict:
             ev[e.id] = e
     ordered = sorted(ev.values(), key=lambda e: (e.event_date or e.collected_at), reverse=True)
     base["evidence"] = [evidence_out(e) for e in ordered]
+    base["next_step"] = next_action_info(db, o)
     base["new_evidence_ids"] = web_sourcing.new_evidence_ids(db, o)
     base["identity"] = web_sourcing.lead_identity(db, o)
     return base

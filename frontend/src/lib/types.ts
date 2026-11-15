@@ -248,6 +248,8 @@ export interface Opportunity {
   memo?: Memo | null;
   diligence?: DiligenceQuestion[];
   evidence?: Evidence[];
+  // the one next step for this opportunity (detail view); null once decided
+  next_step?: { key: string; label: string; detail: string | null; priority: number } | null;
   // web-sourced evidence added since the investor last reviewed this lead
   new_evidence_ids?: number[];
   identity?: LeadIdentity;
@@ -273,6 +275,8 @@ export interface FounderLead extends Opportunity {
 // Pipeline view row: an active deal plus its single next action (null once decided).
 export interface PipelineDeal extends Opportunity {
   next_action: string | null;
+  next_action_key?: string | null;
+  next_action_detail?: string | null;
   priority: number | null;
   age_days: number;
 }
@@ -297,6 +301,7 @@ export interface MapNode {
   thesis_fit: { value: number | null; reason: string | null };
   momentum: { value: number | null; current_score: number | null; trajectory: string | null; history_days?: number; reason: string | null };
   next_action: string | null;
+  next_action_key?: string | null;
   new_evidence_count?: number;
   is_demo: boolean;
 }
@@ -324,6 +329,7 @@ export interface WebEvidence {
   title: string;
   domain: string;
   kind: "launch" | "release" | "changelog" | "company_site" | "press" | "other";
+  source_role?: "company_site" | "launch_page";
   claim: string;
   quote: string;
   event_date: string | null;

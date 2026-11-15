@@ -5,6 +5,7 @@ import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
 import { setPipelineStatus } from "@/lib/myWorkspace";
 import { WebEvidence, WebResult, WebSearchResponse, WebSearchStatus, WebSource } from "@/lib/types";
+import { useToast } from "./Toast";
 import { Badge, ErrorState, Spinner } from "./ui";
 
 const KIND_LABEL: Record<WebEvidence["kind"], string> = {
@@ -105,7 +106,7 @@ export function WebSourcing({ onSourced }: { onSourced: () => void }) {
     return (
       <div className="rounded-lg border border-dashed border-line-strong bg-white px-5 py-6" data-testid="web-not-configured">
         <p className="text-sm font-medium text-ink">Web search isn&apos;t set up yet</p>
-        <ul className="mt-2 space-y-1 text-[13px] text-ink-muted">
+        <ul className="mt-2 space-y-1 text-sm text-ink-muted">
           {!status.search_configured && <li>Add <code className="font-mono text-ink-soft">TAVILY_API_KEY</code> to the backend environment and restart it.</li>}
           {!status.ai_configured && <li>Add <code className="font-mono text-ink-soft">OPENAI_API_KEY</code>. Results are structured with AI and checked against their sources.</li>}
         </ul>
@@ -204,7 +205,7 @@ function SearchResults({
       )}
 
       {search.updated_leads.length > 0 && (
-        <div className="rounded-md border border-signal/40 bg-signal-wash px-3 py-2 text-[13px] text-ink-soft" role="status" data-testid="web-updated-leads">
+        <div className="rounded-md border border-signal/40 bg-signal-wash px-3 py-2 text-sm text-ink-soft" role="status" data-testid="web-updated-leads">
           New evidence added to{" "}
           {search.updated_leads.map((u, i) => (
             <span key={u.opportunity_id}>
@@ -217,12 +218,12 @@ function SearchResults({
       )}
 
       {search.status === "no_sources" && (
-        <p className="rounded-md border border-line bg-surface-sunken px-3 py-3 text-[13px] text-ink-muted">
+        <p className="rounded-md border border-line bg-surface-sunken px-3 py-3 text-sm text-ink-muted">
           The web search returned no pages for this request. Try broader wording or a different sector.
         </p>
       )}
       {search.status === "no_results" && (
-        <p className="rounded-md border border-line bg-surface-sunken px-3 py-3 text-[13px] text-ink-muted">
+        <p className="rounded-md border border-line bg-surface-sunken px-3 py-3 text-sm text-ink-muted">
           Found {search.source_count} pages, but none described a specific early-stage company with claims that could be tied to a source.
           Try naming a product category or a kind of launch.
         </p>
@@ -267,7 +268,7 @@ function Cites({ ids, sources }: { ids: string[]; sources: Record<string, WebSou
           target="_blank"
           rel="noreferrer"
           title={sources[id] ? `${sources[id].title} — ${sources[id].domain}` : id}
-          className="rounded border border-line px-1 font-mono text-[10px] leading-4 text-ink-muted hover:border-brand hover:text-brand"
+          className="rounded border border-line px-1 font-mono text-[11px] leading-4 text-ink-muted hover:border-brand hover:text-brand"
         >
           {id}
         </a>
@@ -310,7 +311,7 @@ function EvidenceRow({ e, showStatus }: { e: WebEvidence; showStatus: boolean })
   const date = formatEvidenceDate(e);
   return (
     <li className="grid grid-cols-[5.5rem_1fr] gap-x-3 gap-y-0.5 py-1.5" data-testid="web-evidence">
-      <span className="text-[11px] text-ink-muted">
+      <span className="text-xs text-ink-muted">
         {date ? (
           <span title={e.date_basis === "stated_in_source" ? `Date stated in the source: “${e.date_text}”` : "Published date reported by the search provider"}>
             {date}{e.date_basis === "search_provider" && <span aria-hidden> *</span>}
@@ -319,13 +320,18 @@ function EvidenceRow({ e, showStatus }: { e: WebEvidence; showStatus: boolean })
           <span className="italic">Date unknown</span>
         )}
       </span>
-      <span className="min-w-0 text-[13px] text-ink-soft">
-        <span className="mr-1.5 text-[11px] font-medium uppercase tracking-wide text-ink-muted">{KIND_LABEL[e.kind]}</span>
+      <span className="min-w-0 text-sm text-ink-soft">
+        <span className="mr-1.5 text-xs font-medium uppercase tracking-wide text-ink-muted">{KIND_LABEL[e.kind]}</span>
         {e.claim}
         {showStatus && e.status === "new" && <Badge tone="ml-1.5 bg-signal-wash text-caution">New</Badge>}
-        {showStatus && e.status === "known" && <span className="ml-1.5 text-[11px] text-ink-faint">Already saved</span>}
-        <a href={e.url} target="_blank" rel="noreferrer" className="block truncate text-[11px] text-ink-muted hover:text-brand">
-          {e.source_id} · {e.domain} ↗
+        {showStatus && e.status === "known" && <span className="ml-1.5 text-xs text-ink-faint">Already saved</span>}
+        {e.quote && (
+          <span className="mt-0.5 block border-l-2 border-line pl-2 text-[13px] italic text-ink-muted" title="Quoted from the source">
+            “{e.quote}”
+          </span>
+        )}
+        <a href={e.url} target="_blank" rel="noreferrer" className="block truncate text-xs text-ink-muted hover:text-brand">
+          {e.source_id} · {e.source_role === "company_site" ? "Company site" : e.source_role === "launch_page" ? "Launch page" : "Source"} · {e.domain} ↗
         </a>
       </span>
     </li>
@@ -344,6 +350,7 @@ function ResultCard({
   onSaved: (key: string, opportunityId: number, created: boolean) => void;
 }) {
   const [busy, setBusy] = useState<"saved" | "monitoring" | null>(null);
+  const notify = useToast();
   const [error, setError] = useState<string | null>(null);
   const oppId = r.saved_opportunity_id ?? r.existing?.opportunity_id ?? null;
 
@@ -358,6 +365,13 @@ function ResultCard({
       // keep this browser's shortlist in step with the shared status
       setPipelineStatus(res.opportunity_id, status);
       onSaved(r.key, res.opportunity_id, res.created);
+      notify({
+        message: res.created
+          ? `${r.company_name} added to Founders as a lead in Sourcing (${status === "saved" ? "Saved" : "Monitoring"}).`
+          : `${r.company_name} was already a lead — updated it.`,
+        href: `/vc/opportunities/${res.opportunity_id}`,
+        linkLabel: "Open lead",
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't save this lead.");
     } finally {
@@ -371,7 +385,7 @@ function ResultCard({
     <article className="card p-4" data-testid={`web-result-${r.key}`} aria-label={r.company_name}>
       <header className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <h3 className="text-[15px] font-semibold text-ink">{r.company_name}</h3>
+          <h3 className="text-base font-semibold text-ink">{r.company_name}</h3>
           <p className="flex flex-wrap items-center gap-x-2 text-xs text-ink-muted">
             {r.website
               ? <a href={r.website} target="_blank" rel="noreferrer" title={r.website_basis ?? undefined} className="text-brand hover:underline">{r.domain} ↗</a>
@@ -386,7 +400,7 @@ function ResultCard({
         )}
       </header>
 
-      <p className="mt-2 text-[13px] text-ink">
+      <p className="mt-2 text-sm text-ink">
         {r.building.text}
         <Cites ids={r.building.source_ids} sources={sources} />
       </p>
@@ -395,7 +409,7 @@ function ResultCard({
       <div className="mt-3 grid gap-3">
         <section>
           <h4 className="label">Why it surfaced</h4>
-          <p className="mt-1 text-[13px] text-ink-soft">
+          <p className="mt-1 text-sm text-ink-soft">
             {r.why_matched.text}
             <Cites ids={r.why_matched.source_ids} sources={sources} />
           </p>
@@ -405,15 +419,15 @@ function ResultCard({
           <ul className="mt-0.5 divide-y divide-line">
             {r.evidence.map((e) => <EvidenceRow key={e.source_id} e={e} showStatus={oppId != null} />)}
           </ul>
-          {hasDated && <p className="mt-1 text-[11px] text-ink-muted">* Published date reported by the search provider, not stated on the page.</p>}
+          {hasDated && <p className="mt-1 text-xs text-ink-muted">* Published date reported by the search provider, not stated on the page.</p>}
         </section>
         <section>
           <h4 className="label">What&apos;s unknown</h4>
           {r.unknowns.length ? (
-            <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[13px] text-ink-muted">
+            <ul className="mt-1 list-disc space-y-0.5 pl-4 text-sm text-ink-muted">
               {r.unknowns.map((u) => <li key={u}>{u}</li>)}
             </ul>
-          ) : <p className="mt-1 text-[13px] text-ink-muted">Nothing flagged.</p>}
+          ) : <p className="mt-1 text-sm text-ink-muted">Nothing flagged.</p>}
         </section>
       </div>
 

@@ -68,7 +68,7 @@ export function FounderScoreBreakdown({ components }: { components: ScoreCompone
               ))}
             </tbody>
           </table>
-          <p className="mt-2 text-[11px] text-ink-muted">
+          <p className="mt-2 text-xs text-ink-muted">
             The numeric baseline is computed deterministically in Python; the language model never invents the score.
           </p>
         </div>

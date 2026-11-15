@@ -192,11 +192,8 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
 
 export const DASHBOARD_TOUR: TourStep[] = [
   { target: "overview", title: "Your pipeline at a glance", body: "Welcome to your investor workspace. These are your deals by stage — Sourcing, Screening, Diligence, Decision. Click any stage to jump to those records. Here's a quick tour." },
-  { target: "action-queue", title: "Next actions", body: "The single prioritized list of what to do next, and on whom — the deals you can act on now come first. Each row names the opportunity and the one concrete next step: run analysis, resolve diligence, or review a recommendation and decide." },
-  { target: "sourcing", title: "Outbound prospects", body: "Founders you've surfaced proactively from real public GitHub activity — before they ever apply. Source more from Founders." },
-  { target: "inbound", title: "Inbound applications", body: "Founders who applied directly with a company name and pitch deck. Inbound and outbound converge into the same evaluation workflow." },
-  { target: "thesis", title: "Your fund thesis", body: "Sectors, stages, geographies, check sizes and exclusions. Every score, ranking and recommendation is filtered through it. Edit it any time from Fund." },
-  { target: "momentum", title: "Founder Score & Momentum", body: "A persistent, evidence-based Founder Score (computed in code, not invented by AI) plus its direction and rate of change over time." },
-  { target: "evidence", title: "Evidence & Trust Scores", body: "Every claim links to stored evidence with a per-claim Trust Score and verification status. The AI is only ever given this stored evidence and can't cite anything that doesn't exist." },
+  { target: "action-queue", title: "Needs attention", body: "The five most urgent next steps, and on whom — deals you can act on now come first. Each row names the opportunity and one concrete step: run analysis, resolve diligence, or review a recommendation and decide. The full queue is in Pipeline." },
+  { target: "evidence", title: "Recent evidence", body: "The latest sources collected from GitHub, the web, and pitch decks. Every claim in Trajectory links back to stored evidence like this, with its own verification status." },
+  { target: "nav", title: "Everything else is one click away", body: "Map shows every lead and deal in one view. Founders ranks the leads you've sourced, Pipeline holds the full application queue, and Fund keeps your thesis — every score is evaluated against it." },
   { target: "action-queue", title: "Open an opportunity to go deeper", body: "On any opportunity you get the full assessment — three independent screening axes, the Bull / Bear / Referee debate, an evidence-backed memo, and a recommended next step you approve or override. The Map shows every lead and deal in one view." },
 ];

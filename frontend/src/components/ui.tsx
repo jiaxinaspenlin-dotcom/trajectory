@@ -18,10 +18,10 @@ export function PageHeader({ title, subtitle, actions }: { title: ReactNode; sub
   return (
     <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
       <div className="min-w-0">
-        <h1 className="text-xl font-semibold text-ink">{title}</h1>
-        {subtitle && <p className="mt-0.5 max-w-3xl text-[13px] text-ink-muted">{subtitle}</p>}
+        <h1 className="text-2xl font-semibold tracking-[-0.015em] text-ink">{title}</h1>
+        {subtitle && <p className="mt-1 max-w-3xl text-[15px] text-ink-muted">{subtitle}</p>}
       </div>
-      {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
+      {actions && <div className="flex min-w-0 flex-wrap items-center gap-2">{actions}</div>}
     </div>
   );
 }
@@ -37,32 +37,32 @@ export function Section({
       <div className="panel-header">
         <div className="min-w-0">
           <h2 className="panel-title">{title}</h2>
-          {subtitle && <p className="truncate text-xs text-ink-muted">{subtitle}</p>}
+          {subtitle && <p className="truncate text-[13px] text-ink-muted">{subtitle}</p>}
         </div>
         {right}
       </div>
-      <div className={flush ? "" : "p-4"}>{children}</div>
+      <div className={flush ? "" : "p-5"}>{children}</div>
     </section>
   );
 }
 
 // Filter / action row above a table.
 export function Toolbar({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`flex flex-wrap items-center gap-2 ${className}`}>{children}</div>;
+  return <div className={`flex flex-wrap items-center gap-3 ${className}`}>{children}</div>;
 }
 
 export function Stat({ label, value, sub, tone, href }: { label: string; value: ReactNode; sub?: ReactNode; tone?: string; href?: string }) {
   const body = (
     <>
       <div className="label">{label}</div>
-      <div className={`num mt-1 text-2xl font-semibold leading-none ${tone || "text-ink"}`}>{value}</div>
-      {sub && <div className="mt-1.5 text-xs text-ink-muted">{sub}</div>}
+      <div className={`num mt-2 text-[28px] font-semibold leading-none ${tone || "text-ink"}`}>{value}</div>
+      {sub && <div className="mt-2 text-[13px] text-ink-muted">{sub}</div>}
     </>
   );
   return href ? (
-    <Link href={href} className="block rounded-lg border border-line bg-white px-4 py-3 transition-colors hover:border-ink-faint">{body}</Link>
+    <Link href={href} className="block rounded-lg border border-line bg-white px-5 py-4 transition-colors hover:border-ink-faint">{body}</Link>
   ) : (
-    <div className="rounded-lg border border-line bg-white px-4 py-3">{body}</div>
+    <div className="rounded-lg border border-line bg-white px-5 py-4">{body}</div>
   );
 }
 
@@ -100,8 +100,8 @@ export function ConfidenceBar({ value }: { value: number }) {
 export function EmptyState({ title, hint, action }: { title: string; hint?: string; action?: ReactNode }) {
   return (
     <div className="rounded-lg border border-dashed border-line-strong bg-white px-6 py-10 text-center">
-      <p className="text-sm font-medium text-ink">{title}</p>
-      {hint && <p className="mx-auto mt-1 max-w-md text-[13px] text-ink-muted">{hint}</p>}
+      <p className="text-base font-medium text-ink">{title}</p>
+      {hint && <p className="mx-auto mt-1 max-w-md text-sm text-ink-muted">{hint}</p>}
       {action && <div className="mt-4 flex justify-center gap-2">{action}</div>}
     </div>
   );
@@ -109,7 +109,7 @@ export function EmptyState({ title, hint, action }: { title: string; hint?: stri
 
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-negative/25 bg-negative-wash px-4 py-3 text-[13px] text-negative" role="alert">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-negative/25 bg-negative-wash px-4 py-3 text-sm text-negative" role="alert">
       <span>{message}</span>
       {onRetry && <button className="btn-secondary btn-sm" onClick={onRetry}>Retry</button>}
     </div>
@@ -118,7 +118,7 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
 
 export function Spinner({ label = "Loading…" }: { label?: string }) {
   return (
-    <div className="flex items-center gap-2 text-[13px] text-ink-muted" role="status">
+    <div className="flex items-center gap-2 text-sm text-ink-muted" role="status">
       <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-line border-t-brand" aria-hidden />
       {label}
     </div>
@@ -154,14 +154,15 @@ export function Segmented<T extends string>({ label, value, options, onChange, s
   size?: "sm" | "md";
 }) {
   return (
-    <div className="inline-flex rounded-md border border-line-strong bg-white p-0.5" role="group" aria-label={label}>
+    // scrolls inside itself rather than widening the page on phones
+    <div className="inline-flex max-w-full overflow-x-auto rounded-md border border-line-strong bg-white p-0.5" role="group" aria-label={label}>
       {options.map((o) => (
         <button
           key={o.value}
           type="button"
           aria-pressed={value === o.value}
           onClick={() => onChange(o.value)}
-          className={`num whitespace-nowrap rounded-[4px] font-medium transition-colors ${size === "sm" ? "h-6 px-2 text-xs" : "h-7 px-2.5 text-[13px]"} ${
+          className={`num whitespace-nowrap rounded-[4px] font-medium transition-colors ${size === "sm" ? "h-8 px-2.5 text-[13px]" : "h-9 px-3 text-sm"} ${
             value === o.value ? "bg-ink text-white" : "text-ink-soft hover:bg-neutral-wash hover:text-ink"
           }`}
         >
@@ -206,7 +207,8 @@ export function Drawer({
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
+    // !m-0: parents often use space-y-*, whose margin would offset this fixed overlay
+    <div className="fixed inset-0 z-50 !m-0 flex justify-end">
       <div className="absolute inset-0 bg-ink/20" onClick={onClose} aria-hidden />
       <div
         ref={ref}
@@ -216,17 +218,17 @@ export function Drawer({
         tabIndex={-1}
         className={`relative flex h-full w-full ${width} flex-col border-l border-line bg-white shadow-overlay focus:outline-none`}
       >
-        <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-3.5">
+        <div className="flex items-start justify-between gap-3 border-b border-line px-6 py-4">
           <div className="min-w-0">
-            <h2 id={titleId} className="text-[15px] font-semibold text-ink">{title}</h2>
-            {subtitle && <p className="mt-0.5 text-xs text-ink-muted">{subtitle}</p>}
+            <h2 id={titleId} className="text-lg font-semibold text-ink">{title}</h2>
+            {subtitle && <p className="mt-1 text-sm text-ink-muted">{subtitle}</p>}
           </div>
           <button type="button" className="icon-btn -mr-1.5" onClick={onClose} aria-label="Close" data-drawer-close>
             <CloseIcon />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
-        {footer && <div className="flex items-center justify-end gap-2 border-t border-line px-5 py-3">{footer}</div>}
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
+        {footer && <div className="flex items-center justify-end gap-2 border-t border-line px-6 py-3">{footer}</div>}
       </div>
     </div>
   );

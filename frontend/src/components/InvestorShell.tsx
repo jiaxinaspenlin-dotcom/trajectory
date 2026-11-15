@@ -4,12 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Account, getSession, logout } from "@/lib/auth";
+import { ToastProvider } from "./Toast";
 import { TrajectoryLogo } from "./TrajectoryLogo";
 import { CloseIcon, DashboardIcon, FoundersIcon, FundIcon, MapIcon, MenuIcon, PipelineIcon } from "./icons";
 
 export const INVESTOR_NAV = [
-  { href: "/vc/map", label: "Map", icon: MapIcon },
+  // Dashboard is the investor landing page (/vc), so it leads the rail
   { href: "/vc", label: "Dashboard", icon: DashboardIcon },
+  { href: "/vc/map", label: "Map", icon: MapIcon },
   { href: "/vc/founders", label: "Founders", icon: FoundersIcon },
   { href: "/vc/pipeline", label: "Pipeline", icon: PipelineIcon },
   { href: "/vc/fund", label: "Fund", icon: FundIcon, also: ["/vc/thesis"] },
@@ -22,7 +24,7 @@ export function isNavActive(pathname: string, item: { href: string; also?: strin
 
 function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
   return (
-    <ul className="space-y-0.5">
+    <ul className="space-y-1">
       {INVESTOR_NAV.map((item) => {
         const active = isNavActive(pathname, item);
         const Icon = item.icon;
@@ -32,11 +34,11 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
               href={item.href}
               onClick={onNavigate}
               aria-current={active ? "page" : undefined}
-              className={`flex h-8 items-center gap-2.5 rounded-md px-2.5 text-[13px] font-medium transition-colors ${
+              className={`flex h-10 items-center gap-3 rounded-md px-3 text-[15px] font-medium transition-colors ${
                 active ? "bg-brand-wash text-brand" : "text-ink-soft hover:bg-neutral-wash hover:text-ink"
               }`}
             >
-              <Icon className={active ? "text-brand" : "text-ink-muted"} />
+              <Icon size={18} className={active ? "text-brand" : "text-ink-muted"} />
               {item.label}
             </Link>
           </li>
@@ -51,15 +53,15 @@ function RailFooter({ onNavigate }: { onNavigate?: () => void }) {
   const [account, setAccount] = useState<Account | null>(null);
   useEffect(() => { setAccount(getSession("investor")?.account ?? null); }, []);
   return (
-    <div className="space-y-0.5 border-t border-line pt-3 text-xs">
-      <Link href="/founder" onClick={onNavigate} className="flex h-7 items-center rounded-md px-2.5 text-ink-muted hover:bg-neutral-wash hover:text-ink">
+    <div className="space-y-0.5 border-t border-line pt-3 text-sm">
+      <Link href="/founder" onClick={onNavigate} className="flex h-9 items-center rounded-md px-3 text-ink-muted hover:bg-neutral-wash hover:text-ink">
         Founder portal
       </Link>
-      <Link href="/" onClick={onNavigate} className="flex h-7 items-center rounded-md px-2.5 text-ink-muted hover:bg-neutral-wash hover:text-ink">
+      <Link href="/" onClick={onNavigate} className="flex h-9 items-center rounded-md px-3 text-ink-muted hover:bg-neutral-wash hover:text-ink">
         About Trajectory
       </Link>
       {account && (
-        <div className="flex items-center justify-between gap-2 px-2.5 pt-2">
+        <div className="flex items-center justify-between gap-2 px-3 pt-2">
           <span className="truncate text-ink-muted" title={account.email}>{account.display_name}</span>
           <button className="btn-ghost btn-sm" onClick={async () => { await logout("investor"); router.replace("/"); }}>Sign out</button>
         </div>
@@ -86,24 +88,25 @@ export function InvestorShell({ children }: { children: React.ReactNode }) {
   }, [menuOpen]);
 
   return (
+    <ToastProvider>
     <div className="min-h-[100dvh] lg:flex">
       {/* desktop rail */}
-      <aside className="sticky top-0 hidden h-[100dvh] w-52 shrink-0 flex-col border-r border-line bg-white px-3 py-3 lg:flex">
-        <Link href="/vc" className="mb-4 flex h-8 items-center gap-2 px-1.5">
-          <TrajectoryLogo size={20} />
-          <span className="text-[14px] font-semibold text-ink">Trajectory</span>
+      <aside className="sticky top-0 hidden h-[100dvh] w-60 shrink-0 flex-col border-r border-line bg-white px-3 py-4 lg:flex">
+        <Link href="/vc" className="mb-5 flex h-10 items-center gap-2.5 px-3">
+          <TrajectoryLogo size={22} />
+          <span className="text-base font-semibold text-ink">Trajectory</span>
         </Link>
-        <nav aria-label="Investor workspace" className="flex-1">
+        <nav aria-label="Investor workspace" className="flex-1" data-tour="nav">
           <NavLinks pathname={pathname} />
         </nav>
         <RailFooter />
       </aside>
 
       {/* phone / tablet top bar */}
-      <header className="sticky top-0 z-40 flex h-12 items-center justify-between border-b border-line bg-white px-3 lg:hidden">
+      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-line bg-white px-4 lg:hidden">
         <Link href="/vc" className="flex items-center gap-2">
-          <TrajectoryLogo size={20} />
-          <span className="text-[14px] font-semibold text-ink">Trajectory</span>
+          <TrajectoryLogo size={22} />
+          <span className="text-base font-semibold text-ink">Trajectory</span>
         </Link>
         <button
           ref={menuButton}
@@ -118,7 +121,7 @@ export function InvestorShell({ children }: { children: React.ReactNode }) {
         </button>
       </header>
       {menuOpen && (
-        <div className="fixed inset-0 top-12 z-40 lg:hidden">
+        <div className="fixed inset-0 top-14 z-40 lg:hidden">
           <div className="absolute inset-0 bg-ink/20" onClick={() => setMenuOpen(false)} aria-hidden />
           <nav id="investor-mobile-nav" aria-label="Investor workspace" className="relative w-64 border-r border-line bg-white p-3 shadow-overlay">
             <NavLinks pathname={pathname} onNavigate={() => setMenuOpen(false)} />
@@ -127,9 +130,11 @@ export function InvestorShell({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      <main className={fullBleed ? "relative h-[calc(100dvh-3rem)] min-w-0 flex-1 lg:h-[100dvh]" : "min-w-0 flex-1"}>
-        {fullBleed ? children : <div className="mx-auto w-full max-w-[1440px] px-4 py-5 sm:px-6 lg:px-8 lg:py-6">{children}</div>}
+      <main className={fullBleed ? "relative h-[calc(100dvh-3.5rem)] min-w-0 flex-1 lg:h-[100dvh]" : "min-w-0 flex-1"}>
+        {/* 24–32px padding beside the rail; wide pages use the width up to a generous cap */}
+        {fullBleed ? children : <div className="w-full max-w-[1800px] px-4 py-6 sm:px-6 lg:py-7 xl:px-8">{children}</div>}
       </main>
     </div>
+    </ToastProvider>
   );
 }

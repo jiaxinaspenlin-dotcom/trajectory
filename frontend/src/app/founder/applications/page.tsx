@@ -33,8 +33,8 @@ export default function MyApplications() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-ink">My applications</h1>
-          <p className="mt-0.5 text-[13px] text-ink-muted">Applications you&rsquo;ve submitted from this device.</p>
+          <h1 className="text-2xl font-semibold tracking-[-0.015em] text-ink">My applications</h1>
+          <p className="mt-0.5 text-sm text-ink-muted">Applications you&rsquo;ve submitted from this device.</p>
         </div>
         <Link href="/founder" className="btn-primary">New application</Link>
       </div>
@@ -48,7 +48,7 @@ export default function MyApplications() {
               <li key={a.id}>
                 <Link href={`/founder/application/${a.id}`} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-surface-sunken">
                   <div className="min-w-0">
-                    <p className="truncate text-[13px] font-semibold text-ink">{a.company_name}</p>
+                    <p className="truncate text-sm font-semibold text-ink">{a.company_name}</p>
                     <p className="text-xs text-ink-muted">{a.sector || "Sector not set"}{a.missing_fields.length ? ` · ${a.missing_fields.length} item${a.missing_fields.length === 1 ? "" : "s"} would help` : ""}</p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">

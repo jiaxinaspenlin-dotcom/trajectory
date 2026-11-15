@@ -349,7 +349,8 @@ def dashboard(db: Session = Depends(get_db)) -> dict:
     outbound = [opportunity_out(db, o) for o in outbound_opps[:24]]
 
     # prioritized action queue — the investor's next steps
-    action_queue = build_action_queue(db, fund.id, limit=8)
+    # the whole queue, so the Dashboard can show the top items and an honest "N more"
+    action_queue = build_action_queue(db, fund.id, limit=None)
 
     recent_evidence = db.scalars(
         select(Evidence).order_by(Evidence.collected_at.desc()).limit(8)

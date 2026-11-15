@@ -53,7 +53,7 @@ describe("FoundersTable", () => {
   it("says so honestly when there is no score, evidence, or project", () => {
     render(<FoundersTable leads={[lead()]} overlay={{}} onSetStatus={() => {}} onMoveToScreening={async () => {}} />);
     expect(screen.getByText("Not scored")).toBeInTheDocument();
-    expect(screen.getByText("No evidence collected yet")).toBeInTheDocument();
+    expect(screen.getByText("None yet")).toBeInTheDocument();
     expect(screen.getByText("No company yet")).toBeInTheDocument();
   });
 
@@ -71,7 +71,8 @@ describe("FoundersTable", () => {
     render(<FoundersTable leads={[lead({ stage: "screening", status: "applied" })]} overlay={{}} onSetStatus={() => {}} onMoveToScreening={async () => {}} />);
     expect(screen.queryByText("Move to Screening")).not.toBeInTheDocument();
     expect(screen.getByText("View in Pipeline")).toHaveAttribute("href", "/vc/pipeline?stage=screening");
-    expect(screen.getByText("In Pipeline")).toBeInTheDocument();
+    // the shared stage is shown, not a pseudo-status
+    expect(screen.getByText("Screening")).toBeInTheDocument();
     expect(screen.queryByText("Applied")).not.toBeInTheDocument();
   });
 
@@ -113,9 +114,17 @@ describe("PipelineTable", () => {
     const row = screen.getByTestId("deal-row-11");
     expect(within(row).getByText("Outbound")).toBeInTheDocument();
     expect(within(row).getByText("Screening")).toBeInTheDocument();
-    expect(within(row).getByText("Run analysis")).toBeInTheDocument();
-    expect(within(row).getByText("Not computed")).toBeInTheDocument();
+    // the next action is a link to where it's done
+    expect(within(row).getByRole("link", { name: "Run analysis →" })).toHaveAttribute("href", "/vc/opportunities/11#next-step");
+    expect(within(row).getByText("No company")).toBeInTheDocument();
     expect(within(row).getByText("Ada Builder")).toHaveAttribute("href", "/vc/opportunities/11");
+  });
+
+  it("links a recommendation awaiting review to the decision panel", () => {
+    render(<PipelineTable deals={[deal({ next_action: "Review recommendation", next_action_key: "review_recommendation", next_action_detail: "Recommended: Continue Diligence", priority: 1 })]} />);
+    expect(screen.getByRole("link", { name: /Review recommendation/ })).toHaveAttribute("href", "/vc/opportunities/11#decision");
+    expect(screen.getByText("Recommended: Continue Diligence")).toBeInTheDocument();
+    expect(screen.getByLabelText("Awaiting your review")).toBeInTheDocument();
   });
 
   it("marks decided deals as having no next action", () => {
@@ -158,5 +167,47 @@ describe("pipeline helpers", () => {
       { 4: "monitoring" }
     );
     expect(sorted.map((l) => l.id)).toEqual([4, 3, 1, 2]);
+  });
+});
+
+describe("FoundersTable when space is tight", () => {
+  it("keeps Review inline and moves secondary actions into a row menu", async () => {
+    const onMove = vi.fn(async () => {});
+    const onSetStatus = vi.fn();
+    render(<FoundersTable layout="compact" leads={[lead()]} overlay={{}} onSetStatus={onSetStatus} onMoveToScreening={onMove} />);
+    const row = screen.getByTestId("founder-row-11");
+    expect(within(row).getByRole("link", { name: "Review Ada Builder" })).toHaveAttribute("href", "/vc/opportunities/11");
+    expect(within(row).queryByText("Move to Screening")).not.toBeInTheDocument();
+    expect(within(row).queryByLabelText(/Prospect status/)).not.toBeInTheDocument();
+
+    const more = within(row).getByRole("button", { name: "More actions for Ada Builder" });
+    fireEvent.click(more);
+    expect(more).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: /Monitoring/ }));
+    expect(onSetStatus).toHaveBeenCalledWith(11, "monitoring");
+
+    fireEvent.click(more);
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Move to Screening…" }));
+    // confirmation happens inside the menu; nothing moves until confirmed
+    expect(screen.getByRole("dialog", { name: "Move Ada Builder to Screening?" })).toHaveTextContent("No outreach is sent");
+    expect(onMove).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Confirm move" }));
+    await waitFor(() => expect(onMove).toHaveBeenCalledWith(11));
+  });
+
+  it("offers View in Pipeline from the menu for a lead already in the pipeline", async () => {
+    render(<FoundersTable layout="compact" leads={[lead({ stage: "screening", status: "applied" })]} overlay={{}} onSetStatus={() => {}} onMoveToScreening={async () => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "More actions for Ada Builder" }));
+    expect(await screen.findByRole("menuitem", { name: "View in Pipeline · Screening" })).toHaveAttribute("href", "/vc/pipeline?stage=screening");
+    expect(screen.queryByRole("menuitem", { name: "Move to Screening…" })).not.toBeInTheDocument();
+  });
+
+  it("stacks each row on phones with Review and the menu reachable", () => {
+    render(<FoundersTable layout="stacked" leads={[lead({ evidence_count: 4 })]} overlay={{}} onSetStatus={() => {}} onMoveToScreening={async () => {}} />);
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    const card = screen.getByTestId("founder-row-11");
+    expect(within(card).getByRole("link", { name: "Review Ada Builder" })).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "More actions for Ada Builder" })).toBeInTheDocument();
+    expect(within(card).getByText("Evidence")).toBeInTheDocument();
   });
 });

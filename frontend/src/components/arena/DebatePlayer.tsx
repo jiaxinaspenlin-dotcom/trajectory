@@ -62,7 +62,7 @@ function Avatar({ role, state, size }: { role: Role; state: CharState; size: num
 function Refs({ ids }: { ids?: number[] }) {
   if (!ids || !ids.length) return null;
   return (
-    <span className="ml-1 text-[10px] text-ink-muted">
+    <span className="ml-1 text-[11px] text-ink-muted">
       {ids.slice(0, 6).map((id) => (
         <span key={id} className="mr-1 rounded bg-surface-sunken px-1 font-mono">E{id}</span>
       ))}
@@ -206,7 +206,7 @@ export function DebatePlayer({ debate, onClose }: { debate: Debate; onClose: () 
                   <Avatar role={t.role} state="idle" size={40} />
                 </div>
                 <div className={`max-w-[80%] rounded-2xl border px-3 py-2 ${meta.wash} ${meta.border} ${alignRight ? "rounded-tr-sm" : "rounded-tl-sm"} ${t.verdict ? "ring-2 ring-brand/40" : ""}`}>
-                  <div className={`text-[11px] font-bold ${meta.color}`}>{meta.name}<span className="ml-1 font-normal text-ink-muted">· {meta.sub}</span></div>
+                  <div className={`text-xs font-bold ${meta.color}`}>{meta.name}<span className="ml-1 font-normal text-ink-muted">· {meta.sub}</span></div>
                   <p className="mt-0.5 text-sm text-ink-soft">{t.text}<Refs ids={t.evidence_ids} /></p>
                 </div>
               </div>

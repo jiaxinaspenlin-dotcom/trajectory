@@ -10,9 +10,10 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* A 15px root keeps the workspace dense and readable at every width. */
+/* 16px root: 15–16px body and navigation, 14px tables, 12–13px secondary labels,
+   40px primary controls (h-10). */
 html {
-  font-size: 15px;
+  font-size: 16px;
 }
 
 /* Respect reduced-motion everywhere. Components also check this in JS. */
@@ -43,15 +44,15 @@ html {
     @apply rounded-lg border border-line bg-surface;
   }
   .panel-header {
-    @apply flex items-center justify-between gap-3 border-b border-line px-4 py-2.5;
+    @apply flex min-h-[3.25rem] items-center justify-between gap-3 border-b border-line px-5 py-3;
   }
   .panel-title {
-    @apply text-[13px] font-semibold text-ink;
+    @apply text-base font-semibold text-ink;
   }
 
-  /* buttons: compact, one accent */
+  /* buttons: 40px primary controls, one accent */
   .btn {
-    @apply inline-flex h-8 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 text-[13px] font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md px-4 text-[15px] font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-50;
   }
   .btn-primary {
     @apply btn bg-brand text-white hover:bg-brand-deep;
@@ -65,41 +66,42 @@ html {
   .btn-danger {
     @apply btn border border-negative/30 bg-white text-negative hover:bg-negative-wash;
   }
+  /* row-level and inline actions */
   .btn-sm {
-    @apply h-7 px-2.5 text-xs;
+    @apply h-8 gap-1.5 px-3 text-sm;
   }
   .icon-btn {
-    @apply inline-grid h-8 w-8 shrink-0 place-items-center rounded-md text-ink-muted transition-colors hover:bg-neutral-wash hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand;
+    @apply inline-grid h-10 w-10 shrink-0 place-items-center rounded-md text-ink-muted transition-colors hover:bg-neutral-wash hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand;
   }
 
   /* status badges */
   .chip {
-    @apply inline-flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-px text-[11px] font-medium leading-4;
+    @apply inline-flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-medium leading-4;
   }
 
   /* forms */
   .label {
-    @apply text-[11px] font-medium uppercase tracking-[0.06em] text-ink-muted;
+    @apply text-xs font-medium uppercase tracking-[0.06em] text-ink-muted;
   }
   .input {
-    @apply h-8 w-full rounded-md border border-line-strong bg-white px-2.5 text-[13px] text-ink placeholder:text-ink-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15 disabled:bg-surface-sunken disabled:text-ink-muted;
+    @apply h-10 w-full rounded-md border border-line-strong bg-white px-3 text-[15px] text-ink placeholder:text-ink-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15 disabled:bg-surface-sunken disabled:text-ink-muted;
   }
   .textarea {
-    @apply input h-auto py-2 leading-5;
+    @apply input h-auto py-2.5 leading-6;
   }
   .select {
-    @apply input pr-7;
+    @apply input pr-8;
   }
 
-  /* data tables */
+  /* data tables: 14px rows, 12px headers */
   .table {
-    @apply w-full border-collapse text-left text-[13px];
+    @apply w-full border-collapse text-left text-sm;
   }
   .table thead th {
-    @apply h-8 whitespace-nowrap border-b border-line bg-surface-sunken px-3 text-[11px] font-medium uppercase tracking-[0.05em] text-ink-muted;
+    @apply h-10 whitespace-nowrap border-b border-line bg-surface-sunken px-4 text-xs font-medium uppercase tracking-[0.05em] text-ink-muted;
   }
   .table tbody td {
-    @apply border-b border-line px-3 py-2 align-middle;
+    @apply border-b border-line px-4 py-3 align-middle;
   }
   .table tbody tr:last-child td {
     @apply border-b-0;

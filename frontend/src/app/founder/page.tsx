@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { Badge, ErrorState, Section, Spinner } from "@/components/ui";
@@ -12,6 +12,13 @@ export default function ApplyFlow() {
   const [appResult, setAppResult] = useState<any | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [uploadResult, setUploadResult] = useState<any | null>(null);
+  // after submitting, move the founder (and screen readers) to the confirmation
+  const submittedRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!uploadResult) return;
+    submittedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    submittedRef.current?.focus({ preventScroll: true });
+  }, [uploadResult]);
   const [status, setStatus] = useState<"idle" | "creating" | "uploading">("idle");
   const [error, setError] = useState<string | null>(null);
 
@@ -55,18 +62,18 @@ export default function ApplyFlow() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-ink">Apply to the fund</h1>
-        <p className="mt-0.5 text-[13px] text-ink-muted">A company name and a PDF pitch deck are all you need. Everything else is optional.</p>
+        <h1 className="text-2xl font-semibold tracking-[-0.015em] text-ink">Apply to the fund</h1>
+        <p className="mt-0.5 text-sm text-ink-muted">A company name and a PDF pitch deck are all you need. Everything else is optional.</p>
       </div>
 
       {/* stepper */}
-      <ol className="grid grid-cols-3 overflow-hidden rounded-lg border border-line bg-white text-[13px]" aria-label="Application steps">
+      <ol className="grid grid-cols-3 overflow-hidden rounded-lg border border-line bg-white text-sm" aria-label="Application steps">
         {[["1", "Company"], ["2", "Pitch deck"], ["3", "Submitted"]].map(([n, label], idx) => {
           const done = step > idx + 1;
           const current = step === idx + 1;
           return (
             <li key={n} aria-current={current ? "step" : undefined} className={`flex items-center gap-2 px-4 py-2.5 ${idx > 0 ? "border-l border-line" : ""} ${current ? "bg-brand-wash" : ""}`}>
-              <span className={`num grid h-5 w-5 place-items-center rounded-full text-[11px] font-semibold ${done ? "bg-positive text-white" : current ? "bg-brand text-white" : "bg-line text-ink-muted"}`}>{done ? "✓" : n}</span>
+              <span className={`num grid h-5 w-5 place-items-center rounded-full text-xs font-semibold ${done ? "bg-positive text-white" : current ? "bg-brand text-white" : "bg-line text-ink-muted"}`}>{done ? "✓" : n}</span>
               <span className={current ? "font-medium text-ink" : "text-ink-muted"}>{label}</span>
             </li>
           );
@@ -89,7 +96,7 @@ export default function ApplyFlow() {
             />
           </label>
           <details className="mt-3 group" open={Object.values(optional).some(Boolean)}>
-            <summary className="cursor-pointer text-[13px] font-medium text-ink-soft hover:text-ink">Add optional details</summary>
+            <summary className="cursor-pointer text-sm font-medium text-ink-soft hover:text-ink">Add optional details</summary>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               {OPTIONAL.map(([k, label, ph]) => (
                 <label key={k} className="block">
@@ -110,7 +117,7 @@ export default function ApplyFlow() {
       {/* Step 1 result: first-pass screen */}
       {appResult && (
         <Section title="First-pass screen" subtitle="Automatic, before the deck">
-          <p className="text-[13px] leading-6 text-ink-soft">{appResult.screen_summary}</p>
+          <p className="text-sm leading-6 text-ink-soft">{appResult.screen_summary}</p>
           {appResult.missing_fields?.length > 0 && (
             <div className="mt-3">
               <span className="label">Information that would help</span>
@@ -130,7 +137,7 @@ export default function ApplyFlow() {
               <input type="file" accept="application/pdf" className="sr-only" onChange={(e) => setFile(e.target.files?.[0] || null)} />
               {file ? "Change file" : "Choose PDF"}
             </label>
-            <span className="text-[13px] text-ink-muted">{file ? file.name : "No file selected"}</span>
+            <span className="text-sm text-ink-muted">{file ? file.name : "No file selected"}</span>
           </div>
           <button className="btn-primary mt-4" onClick={uploadDeck} disabled={!file || status === "uploading"}>
             {status === "uploading" ? "Uploading & reading…" : "Submit application"}
@@ -141,21 +148,26 @@ export default function ApplyFlow() {
 
       {/* Step 3: submitted */}
       {uploadResult && (
+        <div ref={submittedRef} tabIndex={-1} className="scroll-mt-6 focus:outline-none">
         <Section title="Application submitted" subtitle="The fund will review it">
-          <p className="text-[13px] leading-6 text-ink-soft">
+          <p className="text-sm leading-6 text-ink-soft">
             We read <strong>{uploadResult.num_pages}</strong> page(s) of your deck ({uploadResult.extraction_status}).
             {uploadResult.extracted_fields?.missing?.length > 0 && (
               <> The deck appears to be missing: {uploadResult.extracted_fields.missing.join(", ")}.</>
             )}
           </p>
-          <p className="mt-2 text-[13px] text-ink-muted">
-            A human investor reviews every application and makes the final decision — the fund aims to respond promptly.
-          </p>
+          <h3 className="mt-4 text-[15px] font-semibold text-ink">What happens next</h3>
+          <ol className="mt-2 list-decimal space-y-1 pl-5 text-[15px] text-ink-soft">
+            <li>Your application is now with the fund, waiting for review.</li>
+            <li>An investor reviews it — a person makes every decision.</li>
+            <li>Check its status any time. If the fund needs more, it&apos;s listed under <em>What would help the fund decide</em>.</li>
+          </ol>
           <div className="mt-4 flex gap-2">
             <Link href={`/founder/application/${appResult.application_id}`} className="btn-primary">View application status →</Link>
             <Link href="/founder/applications" className="btn-secondary">My applications</Link>
           </div>
         </Section>
+        </div>
       )}
     </div>
   );

@@ -47,7 +47,7 @@ function AxisCard({ axis }: { axis: AxisAssessment }) {
       </div>
       {axis.trend && (
         <div className="mt-2 flex items-center gap-1">
-          <span className="text-[11px] uppercase tracking-wide text-ink-muted">Trend</span>
+          <span className="text-xs uppercase tracking-wide text-ink-muted">Trend</span>
           <Badge tone={trajectoryTone(axis.trend)}>
             <span className="mr-0.5">{TREND_ARROW[axis.trend] ?? "→"}</span>{humanStatus(axis.trend)}
           </Badge>
@@ -62,11 +62,11 @@ function AxisCard({ axis }: { axis: AxisAssessment }) {
             <li key={i} className="break-words">
               • {p.text}
               {p.evidence_ids.length > 0 ? (
-                <span className="ml-1 text-[11px] text-ink-muted">
+                <span className="ml-1 text-xs text-ink-muted">
                   {p.evidence_ids.slice(0, 4).map((id) => <span key={id} className="mr-1 inline-block rounded bg-surface-sunken px-1 font-mono">E{id}</span>)}
                 </span>
               ) : (
-                <span className="ml-1 text-[11px] text-caution">unverified</span>
+                <span className="ml-1 text-xs text-caution">unverified</span>
               )}
             </li>
           ))}

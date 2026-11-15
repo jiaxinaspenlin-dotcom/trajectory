@@ -23,6 +23,13 @@ export interface SceneNode {
 const FLAG_COLOR = "#e8950c";
 const FLAG_SCALE = 1.55;
 
+export interface Insets {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
 export interface SceneLink {
   source: number;
   target: number;
@@ -109,6 +116,15 @@ export class MapScene {
   private highlight: Set<number> | null = null;
   private hovered: number | null = null;
   private home: { pos: THREE.Vector3; target: THREE.Vector3 } | null = null;
+  // Screen-space areas covered by HUD controls and the drawer. The camera's view
+  // offset moves the visual center into the uncovered area, and the overview is
+  // fitted to it, so nodes are framed in the space the controls leave.
+  private insets: Insets = { top: 0, right: 0, bottom: 0, left: 0 };
+  private offset = { x: 0, y: 0 };
+  private offsetTarget = { x: 0, y: 0 };
+  // camera sits at this mode's overview (so an inset change may re-fit it)
+  private atHome = false;
+  private homeAtFraming = false;
   private framing = { pos: new THREE.Vector3(0, 0, 900), target: new THREE.Vector3(), radius: 300 };
   private refDistance = 900;
   private camTween: { t: number; dur: number; fromP: THREE.Vector3; toP: THREE.Vector3; fromT: THREE.Vector3; toT: THREE.Vector3 } | null = null;
@@ -150,7 +166,7 @@ export class MapScene {
     c.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
     // a user drag ends any camera flight and stops following the selected node's
     // tween (the orbit target stays on the node)
-    c.addEventListener("start", () => { this.camTween = null; });
+    c.addEventListener("start", () => { this.camTween = null; this.atHome = false; });
 
     // points: filled disc = active deal, ring = founder lead
     this.pMat = new THREE.ShaderMaterial({
@@ -264,6 +280,10 @@ export class MapScene {
   }
 
   // Camera state summary (tests verify orbit / zoom / reset actually moved it).
+  insetsState() {
+    return { ...this.insets, offset: { ...this.offset } };
+  }
+
   cameraState() {
     const c = this.camera.position;
     const t = this.controls.target;
@@ -312,7 +332,7 @@ export class MapScene {
     for (const s of this.order) {
       if (this.nodeLabelEls.has(s.node.id)) continue;
       const el = document.createElement("div");
-      el.className = "pointer-events-none absolute left-0 top-0 whitespace-nowrap rounded bg-white/85 px-1 text-[11px] font-medium text-ink";
+      el.className = "pointer-events-none absolute left-0 top-0 whitespace-nowrap rounded bg-white/85 px-1 text-xs font-medium text-ink";
       el.textContent = s.node.label; // textContent: names come from public profiles
       el.style.display = "none";
       this.labelLayer.appendChild(el);
@@ -346,12 +366,17 @@ export class MapScene {
     if (sel?.visible) {
       // keep focus on the selected record; its new overview is this mode's framing
       this.home = { pos: this.framing.pos.clone(), target: this.framing.target.clone() };
+      this.homeAtFraming = true;
       this.follow = sel.node.id;
       this.flyToNode(sel, instant);
     } else {
       this.follow = null;
-      if (this.selected != null) this.home = { pos: this.framing.pos.clone(), target: this.framing.target.clone() };
+      if (this.selected != null) {
+        this.home = { pos: this.framing.pos.clone(), target: this.framing.target.clone() };
+        this.homeAtFraming = true;
+      }
       this.flyTo(this.framing.pos, this.framing.target, instant ? 0 : 0.9);
+      this.atHome = this.selected == null;
     }
   }
 
@@ -365,11 +390,13 @@ export class MapScene {
       if (this.home) {
         this.flyTo(this.home.pos, this.home.target, instant ? 0 : 1.0);
         this.home = null;
+        this.atHome = this.homeAtFraming;
       }
       return;
     }
     if (this.selected == null && !this.home) {
       this.home = { pos: this.camera.position.clone(), target: this.controls.target.clone() };
+      this.homeAtFraming = this.atHome;
     }
     this.selected = id;
     if (s.visible) {
@@ -385,6 +412,7 @@ export class MapScene {
   }
 
   zoom(factor: number) {
+    this.atHome = false;
     const dir = this.tmp.copy(this.camera.position).sub(this.controls.target);
     const dist = THREE.MathUtils.clamp(dir.length() * factor, this.controls.minDistance, this.controls.maxDistance);
     this.flyTo(this.controls.target.clone().add(dir.setLength(dist)), this.controls.target.clone(), 0.35);
@@ -395,6 +423,46 @@ export class MapScene {
     this.follow = null;
     this.home = null;
     this.flyTo(this.framing.pos, this.framing.target, 0.8);
+    this.atHome = true;
+  }
+
+  /** Pixels covered by controls on each edge of the canvas. */
+  setInsets(next: Insets, { animate = true }: { animate?: boolean } = {}) {
+    const W = this.container.clientWidth;
+    const H = this.container.clientHeight;
+    if (!W || !H) return;
+    // never give away more than half of either dimension
+    const fit = (a: number, b: number, total: number) => {
+      const max = total * 0.5;
+      return a + b > max ? [(a * max) / (a + b), (b * max) / (a + b)] : [a, b];
+    };
+    const [left, right] = fit(Math.max(0, next.left), Math.max(0, next.right), W);
+    const [top, bottom] = fit(Math.max(0, next.top), Math.max(0, next.bottom), H);
+    const cur = this.insets;
+    if (Math.abs(cur.top - top) + Math.abs(cur.right - right) + Math.abs(cur.bottom - bottom) + Math.abs(cur.left - left) < 1) return;
+    this.insets = { top, right, bottom, left };
+    this.offsetTarget = { x: (left - right) / 2, y: (top - bottom) / 2 };
+    const instant = !animate || this.reducedMotion || !this.layout;
+    if (instant) {
+      this.offset = { ...this.offsetTarget };
+      this.applyViewOffset();
+    }
+    if (!this.layout) return;
+    const wasHome = this.atHome;
+    this.computeFraming();
+    if (wasHome && this.selected == null) {
+      this.flyTo(this.framing.pos, this.framing.target, instant ? 0 : 0.6);
+      this.atHome = true;
+    }
+  }
+
+  private applyViewOffset() {
+    const W = this.container.clientWidth;
+    const H = this.container.clientHeight;
+    if (!W || !H) return;
+    // a negative window offset moves the image right/down by the same amount
+    this.camera.setViewOffset(W, H, -this.offset.x, -this.offset.y, W, H);
+    this.camera.updateProjectionMatrix();
   }
 
   dispose() {
@@ -437,13 +505,19 @@ export class MapScene {
     const sphere = new THREE.Sphere();
     if (pts.length) sphere.setFromPoints(pts);
     const radius = Math.max(sphere.radius, 60);
-    const vFov = THREE.MathUtils.degToRad(this.camera.fov);
-    const hFov = 2 * Math.atan(Math.tan(vFov / 2) * this.camera.aspect);
-    const dist = (radius / Math.sin(Math.min(vFov, hFov) / 2)) * 1.06;
+    // fit the sphere into the uncovered area; node sizes stay keyed to the full
+    // canvas fit so they don't jump when the drawer opens or closes
+    const W = Math.max(this.container.clientWidth, 1);
+    const H = Math.max(this.container.clientHeight, 1);
+    const { top, right, bottom, left } = this.insets;
+    const tanV = Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2);
+    const fitDist = (tv: number, th: number) => (radius / Math.sin(Math.atan(Math.min(tv, th)))) * 1.06;
+    const fullDist = fitDist(tanV, tanV * this.camera.aspect);
+    const dist = fitDist((tanV * (H - top - bottom)) / H, (tanV * this.camera.aspect * (W - left - right)) / W);
     const dir = new THREE.Vector3(...(this.layout?.viewDir ?? [0, 0.3, 1])).normalize();
     this.framing = { pos: sphere.center.clone().addScaledVector(dir, dist), target: sphere.center.clone(), radius };
-    this.refDistance = dist;
-    this.pMat.uniforms.uRef.value = dist;
+    this.refDistance = fullDist;
+    this.pMat.uniforms.uRef.value = fullDist;
     this.controls.minDistance = Math.max(radius * 0.12, 25);
     this.controls.maxDistance = dist * 4;
     this.camera.near = Math.max(dist / 200, 0.5);
@@ -456,6 +530,7 @@ export class MapScene {
     const dir = this.tmp.copy(this.camera.position).sub(this.controls.target);
     if (dir.lengthSq() < 1e-6) dir.set(0, 0.3, 1);
     const dist = Math.max(this.refDistance * 0.42, this.controls.minDistance * 1.5);
+    this.atHome = false;
     this.flyTo(target.clone().add(dir.setLength(dist)), target, instant ? 0 : 1.1);
   }
 
@@ -483,7 +558,7 @@ export class MapScene {
       let el = this.clusterEls.get(c.key);
       if (!el) {
         el = document.createElement("div");
-        el.className = "pointer-events-none absolute left-0 top-0 whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.08em] text-ink";
+        el.className = "pointer-events-none absolute left-0 top-0 whitespace-nowrap text-xs font-semibold uppercase tracking-[0.08em] text-ink";
         el.dataset.cluster = c.key;
         this.labelLayer.appendChild(el);
         this.clusterEls.set(c.key, el);
@@ -543,8 +618,8 @@ export class MapScene {
       const tag = (text: string, anchor: Vec3, strong: boolean) => {
         const el = document.createElement("div") as HTMLDivElement & { anchor?: Vec3 };
         el.className = strong
-          ? "pointer-events-none absolute left-0 top-0 whitespace-nowrap rounded bg-ink px-1.5 py-0.5 text-[11px] font-semibold text-white shadow-card"
-          : "pointer-events-none absolute left-0 top-0 whitespace-nowrap rounded border border-line bg-white/90 px-1 text-[10.5px] font-medium text-ink-soft num";
+          ? "pointer-events-none absolute left-0 top-0 whitespace-nowrap rounded bg-ink px-1.5 py-0.5 text-xs font-semibold text-white shadow-card"
+          : "pointer-events-none absolute left-0 top-0 whitespace-nowrap rounded border border-line bg-white/90 px-1 text-[11px] font-medium text-ink-soft num";
         el.textContent = text;
         el.anchor = anchor;
         el.dataset.axis = a.axis;
@@ -638,7 +713,7 @@ export class MapScene {
     if (!w || !h) return;
     this.renderer.setSize(w, h);
     this.camera.aspect = w / h;
-    this.camera.updateProjectionMatrix();
+    this.applyViewOffset();
   }
 
   // ---- frame ------------------------------------------------------------------
@@ -656,6 +731,15 @@ export class MapScene {
         s.pos.lerpVectors(s.from, s.to, e);
         s.alpha = THREE.MathUtils.lerp(s.fromAlpha, s.visible ? 1 : 0, e);
       }
+    }
+    // ease the view offset when the drawer or panels change the uncovered area
+    const ox = this.offsetTarget.x - this.offset.x;
+    const oy = this.offsetTarget.y - this.offset.y;
+    if (Math.abs(ox) + Math.abs(oy) > 0.25) {
+      const k = Math.min(1, dt * 7);
+      this.offset.x += ox * k;
+      this.offset.y += oy * k;
+      this.applyViewOffset();
     }
     // flagged nodes breathe gently (held steady under reduced motion)
     this.pMat.uniforms.uPulse.value = this.reducedMotion ? 1 : 0.6 + 0.4 * Math.sin(performance.now() / 420);
@@ -756,7 +840,7 @@ export class MapScene {
       const d = this.cb.describe(this.hovered);
       t.replaceChildren();
       const title = document.createElement("div");
-      title.className = "text-[13px] font-semibold text-ink";
+      title.className = "text-sm font-semibold text-ink";
       title.textContent = d.title;
       t.append(title);
       for (const line of d.lines) {
@@ -784,8 +868,10 @@ export class MapScene {
     const W = this.renderer.domElement.clientWidth;
     const H = this.renderer.domElement.clientHeight;
     // keep labels fully inside the canvas so axis ends never clip at narrow widths
-    const clampX = (x: number, w: number) => Math.min(Math.max(x, w / 2 + 4), W - w / 2 - 4);
-    const clampY = (y: number, h: number) => Math.min(Math.max(y, h / 2 + 4), H - h / 2 - 4);
+    // ...and inside the area the HUD leaves uncovered
+    const { top, right, bottom, left } = this.insets;
+    const clampX = (x: number, w: number) => Math.min(Math.max(x, left + w / 2 + 4), W - right - w / 2 - 4);
+    const clampY = (y: number, h: number) => Math.min(Math.max(y, top + h / 2 + 4), H - bottom - h / 2 - 4);
     const place = (el: HTMLElement, v: THREE.Vector3, opacity: number, dy = 0) => {
       const p = this.project(v);
       if (p.behind || opacity <= 0.01) { el.style.opacity = "0"; return; }
@@ -824,6 +910,9 @@ export class MapScene {
     }).sort((u, v) => u.p.y - v.p.y);
     for (const { el, p } of items) {
       if (p.behind || clusterOpacity <= 0.01) { el.style.opacity = "0"; continue; }
+      // a cluster outside the uncovered area keeps its label hidden, rather than
+      // stacking it with others against the edge of the drawer or controls
+      if (p.x < left || p.x > W - right || p.y < top || p.y > H - bottom) { el.style.opacity = "0"; continue; }
       const w = el.offsetWidth || 80;
       const h = el.offsetHeight || 14;
       // first slot (anchor, then progressively further above/below) clear of every node and label

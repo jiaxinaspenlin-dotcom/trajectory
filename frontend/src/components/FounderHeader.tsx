@@ -18,8 +18,8 @@ export function FounderHeader() {
       <div className="mx-auto flex h-14 w-full max-w-5xl items-center justify-between gap-3 px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2">
           <TrajectoryLogo size={20} />
-          <span className="text-[14px] font-semibold text-ink">Trajectory</span>
-          <span className="hidden text-[13px] text-ink-muted sm:inline">· Founder portal</span>
+          <span className="text-[15px] font-semibold text-ink">Trajectory</span>
+          <span className="hidden text-sm text-ink-muted sm:inline">· Founder portal</span>
         </Link>
         <nav className="flex items-center gap-0.5" aria-label="Founder portal">
           {LINKS.map((l) => {
@@ -29,7 +29,7 @@ export function FounderHeader() {
                 key={l.href}
                 href={l.href}
                 aria-current={active ? "page" : undefined}
-                className={`rounded-md px-2.5 py-1.5 text-[13px] font-medium ${active ? "bg-brand-wash text-brand" : "text-ink-soft hover:bg-neutral-wash"}`}
+                className={`rounded-md px-2.5 py-1.5 text-sm font-medium ${active ? "bg-brand-wash text-brand" : "text-ink-soft hover:bg-neutral-wash"}`}
               >
                 {l.label}
               </Link>

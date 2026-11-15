@@ -6,6 +6,7 @@ import { humanStatus, trajectoryTone } from "@/lib/format";
 import {
   AxesLayout, formatMetric, groupFieldLabel, linksFor, METRICS, nodeColor, nodeKindLabel,
 } from "@/lib/opportunityMap";
+import { nextActionHref } from "@/lib/pipeline";
 import { MapLink, MapNode } from "@/lib/types";
 import { SourceBadge, StageBadge } from "../DealBadges";
 import { ArrowRightIcon, CloseIcon, LinkIcon } from "../icons";
@@ -56,15 +57,16 @@ export function MapDrawer({
     <aside
       data-testid="map-node-panel"
       aria-label={`Selected opportunity: ${node.name}`}
-      className="hud pointer-events-auto absolute inset-x-2 bottom-2 z-30 flex max-h-[58%] flex-col sm:inset-x-auto sm:bottom-3 sm:right-3 sm:top-3 sm:max-h-none sm:w-[360px]"
+      data-map-inset="auto"
+      className="hud pointer-events-auto absolute inset-x-3 bottom-3 z-30 flex max-h-[58%] flex-col sm:inset-x-auto sm:bottom-4 sm:right-4 sm:top-4 sm:max-h-none sm:w-[400px]"
     >
       <div className="flex items-start justify-between gap-2 border-b border-line px-4 py-3">
         <div className="min-w-0">
-          <p className="flex items-center gap-1.5 text-[11px] font-medium text-ink-muted">
+          <p className="flex items-center gap-1.5 text-xs font-medium text-ink-muted">
             <span aria-hidden className="inline-block h-2 w-2 rounded-full" style={{ background: nodeColor(node, colors) }} />
             {nodeKindLabel(node)}
           </p>
-          <h2 className="mt-0.5 truncate text-[15px] font-semibold text-ink">{node.name}</h2>
+          <h2 className="mt-0.5 truncate text-base font-semibold text-ink">{node.name}</h2>
           {node.company?.one_liner && <p className="mt-0.5 line-clamp-2 text-xs text-ink-muted">{node.company.one_liner}</p>}
           {node.founder && node.company && <p className="text-xs text-ink-muted">Founder · {node.founder.full_name}</p>}
         </div>
@@ -95,15 +97,15 @@ export function MapDrawer({
             <dl className="mt-3 grid grid-cols-3 gap-px overflow-hidden rounded-md border border-line bg-line">
               {axes.domains.map((d) => (
                 <div key={d.axis} className="bg-white px-2.5 py-1.5">
-                  <dt className="truncate text-[10.5px] text-ink-muted">{d.axis.toUpperCase()} · {METRICS[d.key].label}</dt>
-                  <dd className="num text-[13px] font-semibold text-ink">{formatMetric(d.key, values[d.key]!)}</dd>
+                  <dt className="truncate text-[11px] text-ink-muted">{d.axis.toUpperCase()} · {METRICS[d.key].label}</dt>
+                  <dd className="num text-sm font-semibold text-ink">{formatMetric(d.key, values[d.key]!)}</dd>
                 </div>
               ))}
             </dl>
           ) : null
         )}
 
-        <dl className="mt-3 divide-y divide-line text-[13px]">
+        <dl className="mt-3 divide-y divide-line text-sm">
           <Row label="Group">
             {node.group.label}
             <span className="block text-xs text-ink-muted">{groupFieldLabel(node.group.field)}</span>
@@ -141,7 +143,11 @@ export function MapDrawer({
             </Row>
           )}
           {node.topics.length > 0 && <Row label="Repo topics"><span className="text-xs">{node.topics.slice(0, 8).join(", ")}</span></Row>}
-          <Row label="Next action">{node.next_action ?? <Muted>None — decided or dismissed</Muted>}</Row>
+          <Row label="Next action">
+            {node.next_action
+              ? <Link href={nextActionHref(node.id, node.next_action_key)} className="font-medium text-brand hover:underline">{node.next_action} →</Link>
+              : <Muted>None — decided or dismissed</Muted>}
+          </Row>
         </dl>
 
         <div className="mt-3">

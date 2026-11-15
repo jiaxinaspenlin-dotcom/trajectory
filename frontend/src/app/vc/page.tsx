@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useFetch } from "@/lib/useFetch";
-import { Badge, DemoBadge, ErrorState, PageHeader, Section, Spinner, Stat } from "@/components/ui";
+import { ErrorState, PageHeader, Section, Spinner } from "@/components/ui";
 import { DASHBOARD_TOUR, GuidedTour } from "@/components/GuidedTour";
 import { SourceBadge, StageBadge } from "@/components/DealBadges";
-import { humanStatus, trajectoryTone } from "@/lib/format";
+import { humanStatus } from "@/lib/format";
+import { nextActionHref } from "@/lib/pipeline";
+import { ArrowRightIcon } from "@/components/icons";
 import { accountScope } from "@/lib/auth";
 import { getMyDecisions, getPipeline, LocalDecision, PipelineStatus } from "@/lib/myWorkspace";
 
@@ -18,6 +20,8 @@ interface ActionItem {
   entry_type: string;
   stage: string;
   next_action: string;
+  next_action_key: string;
+  next_action_detail: string | null;
   priority: number;
   age_days: number;
 }
@@ -72,205 +76,175 @@ export default function DashboardPage() {
     try { localStorage.setItem(tourSeenKey, "1"); } catch { /* ignore */ }
   }
 
+  const counts = data ? Object.values(data.stage_counts) : [];
+  const setupPending = !!data && (!data.thesis || !counts.some(Boolean)
+    || !((data.stage_counts.screening || 0) + (data.stage_counts.diligence || 0) + (data.stage_counts.decision || 0)));
   const header = (
     <PageHeader
       title="Dashboard"
-      subtitle={data?.thesis ? `${data.thesis.fund_name} · what needs your attention across the pipeline` : "What needs your attention across the pipeline"}
+      subtitle={data?.thesis ? `${data.thesis.fund_name} · what needs your attention today` : "What needs your attention today"}
       actions={
         <>
           <button className="btn-ghost" onClick={() => setTourOpen(true)}>Take the tour</button>
-          <Link href="/vc/map" className="btn-secondary">Open map</Link>
-          <Link href="/vc/founders?source=open" className="btn-primary">+ Source founders</Link>
+          <Link href="/vc/founders?source=open" className={setupPending ? "btn-secondary" : "btn-primary"}>+ Source founders</Link>
         </>
       }
     />
   );
 
-  if (loading) return <div className="space-y-4">{header}<Spinner label="Loading dashboard…" /></div>;
-  if (error) return <div className="space-y-4">{header}<ErrorState message={error} onRetry={reload} /></div>;
+  if (loading) return <div className={`${COLUMN} space-y-4`}>{header}<Spinner label="Loading dashboard…" /></div>;
+  if (error) return <div className={`${COLUMN} space-y-4`}>{header}<ErrorState message={error} onRetry={reload} /></div>;
   if (!data) return null;
 
-  // Apply this browser's pipeline overlay: hide prospects it dismissed, pin the
-  // ones it saved / is monitoring to the top, then trim to the display count.
-  const rank = (s: PipelineStatus | null) => (s === "saved" || s === "monitoring" ? 0 : 1);
-  const outboundProspects = (data.top_outbound_prospects || [])
-    .map((o: any) => ({ o, status: pipeline[o.id] ?? null }))
-    .filter((x) => x.status !== "dismissed")
-    .sort((a, b) => rank(a.status) - rank(b.status))
-    .slice(0, 6);
-
-  // The Action Queue is built server-side from shared state, so it doesn't know
-  // this browser already acted. Drop items for opportunities you've decided or
-  // dismissed — using your per-browser workspace, not any hardcoded list.
-  const actionQueue = (data.action_queue || []).filter(
+  // The queue is built server-side from shared state, so it doesn't know this
+  // browser already acted: drop opportunities you've decided or dismissed here.
+  const queue = (data.action_queue || []).filter(
     (a) => !decisions[a.opportunity_id] && pipeline[a.opportunity_id] !== "dismissed"
   );
+  const attention = queue.slice(0, 5);
+  const evidence = data.recent_evidence.slice(0, 3);
+  const total = Object.values(data.stage_counts).reduce((a, b) => a + b, 0);
+  const inPipeline = (data.stage_counts.screening || 0) + (data.stage_counts.diligence || 0) + (data.stage_counts.decision || 0);
+  const setup = [
+    { done: !!data.thesis, title: "Set your investment thesis", body: "Sectors, stages, and geographies every lead is scored against.", href: "/vc/fund?edit=1", cta: "Create thesis" },
+    { done: total > 0, title: "Source founders", body: "Search the web or GitHub for leads, or share the founder portal so founders can apply.", href: "/vc/founders?source=open", cta: "Source founders" },
+    { done: inPipeline > 0, title: "Move a lead to Screening", body: "Review a lead's evidence, then move it into Pipeline to start evaluating it.", href: "/vc/founders", cta: "Open Founders" },
+  ];
+  const nextSetup = setup.find((x) => !x.done);
 
   return (
-    <div className="space-y-5">
+    <div className={`${COLUMN} space-y-6`}>
       {header}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" data-tour="overview">
-        {["sourcing", "screening", "diligence", "decision"].map((s) => (
-          <Stat
+      {nextSetup && (
+        <section className="card border-brand/30 p-5" aria-labelledby="get-started" data-testid="get-started">
+          <h2 id="get-started" className="text-base font-semibold text-ink">Get started</h2>
+          <ol className="mt-3 space-y-3">
+            {setup.map((x, i) => (
+              <li key={x.title} className="flex items-start gap-3">
+                <span aria-hidden className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-semibold ${
+                  x.done ? "bg-positive text-white" : x === nextSetup ? "bg-brand text-white" : "bg-neutral-wash text-ink-muted"}`}>
+                  {x.done ? "✓" : i + 1}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className={`block text-[15px] font-medium ${x.done ? "text-ink-muted line-through decoration-ink-faint" : "text-ink"}`}>
+                    {x.title}<span className="sr-only">{x.done ? " (done)" : ""}</span>
+                  </span>
+                  {!x.done && <span className="block text-[13px] text-ink-muted">{x.body}</span>}
+                </span>
+                {x === nextSetup && <Link href={x.href} className="btn-primary btn-sm shrink-0">{x.cta}</Link>}
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+
+      {/* compact pipeline summary: one row, each stage opens its list */}
+      <nav aria-label="Pipeline summary" data-tour="overview"
+        className="grid grid-cols-2 overflow-hidden rounded-lg border border-line bg-white sm:grid-cols-4">
+        {STAGES.map((s, i) => (
+          <Link
             key={s}
-            label={humanStatus(s)}
-            value={data.stage_counts[s] || 0}
-            sub={s === "sourcing" ? "Founder leads" : "Active deals"}
             href={STAGE_LINKS[s]}
-          />
-        ))}
-      </div>
-
-      <div className="grid gap-5 xl:grid-cols-3">
-        <div className="min-w-0 space-y-5 xl:col-span-2">
-          <Section
-            title="Next actions"
-            subtitle="One concrete step per opportunity — act-now items first"
-            flush
-            right={<Link href="/vc/pipeline" className="btn-ghost btn-sm">Pipeline →</Link>}
+            className={`flex items-baseline justify-between gap-3 px-5 py-4 transition-colors hover:bg-surface-sunken ${
+              i % 2 ? "border-l border-line" : ""} ${i >= 2 ? "border-t border-line sm:border-t-0" : ""} ${i === 2 ? "sm:border-l" : ""}`}
           >
-            <div data-tour="action-queue" className="relative overflow-x-auto">
-              {actionQueue.length ? (
-                <table className="table min-w-[640px]">
-                  <thead>
-                    <tr><th>Opportunity</th><th>Source</th><th>Stage</th><th>Next action</th><th className="text-right">Waiting</th></tr>
-                  </thead>
-                  <tbody>
-                    {actionQueue.map((a) => (
-                      <tr key={a.opportunity_id} className="table-row-link" onClick={() => router.push(`/vc/opportunities/${a.opportunity_id}`)}>
-                        <td>
-                          <Link href={`/vc/opportunities/${a.opportunity_id}`} onClick={(e) => e.stopPropagation()} className="font-medium text-ink hover:text-brand">{a.name}</Link>
-                          {a.founder_name && a.founder_name !== a.name && <span className="block text-xs text-ink-muted">{a.founder_name}</span>}
-                        </td>
-                        <td><SourceBadge entryType={a.entry_type} /></td>
-                        <td><StageBadge stage={a.stage} /></td>
-                        <td>
-                          <span className={`flex items-center gap-1.5 ${a.priority === 1 ? "font-medium text-ink" : "text-ink-soft"}`}>
-                            {a.priority === 1 && <span aria-label="Act now" className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />}
-                            {a.next_action}
-                          </span>
-                        </td>
-                        <td className="num text-right text-xs text-ink-muted">{a.age_days === 0 ? "today" : `${a.age_days}d`}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : <p className="px-4 py-6 text-[13px] text-ink-muted">Nothing needs your action right now.</p>}
-            </div>
-          </Section>
+            <span className="min-w-0">
+              <span className="block text-[15px] font-medium text-ink">{humanStatus(s)}</span>
+              <span className="block text-[13px] text-ink-muted">{s === "sourcing" ? "Founder leads" : "Active deals"}</span>
+            </span>
+            <span className="num text-[28px] font-semibold leading-none text-ink">{data.stage_counts[s] || 0}</span>
+          </Link>
+        ))}
+      </nav>
 
-          <div className="grid gap-5 lg:grid-cols-2 [&>*]:min-w-0">
-            <Section title="Top outbound prospects" subtitle="Surfaced before they apply" flush right={<Link href="/vc/founders" className="btn-ghost btn-sm">Founders →</Link>}>
-              <div data-tour="sourcing">
-                {outboundProspects.length ? (
-                  <ul className="divide-y divide-line">
-                    {outboundProspects.map(({ o, status }) => <OppRow key={o.id} o={o} status={status} />)}
-                  </ul>
-                ) : (
-                  <p className="px-4 py-6 text-[13px] text-ink-muted">No prospects yet. <Link href="/vc/founders?source=open" className="text-brand hover:underline">Source founders</Link> to get started.</p>
-                )}
-              </div>
-            </Section>
-            <Section title="Recent inbound applications" subtitle="Founder-initiated" flush right={<Link href="/vc/pipeline?source=inbound" className="btn-ghost btn-sm">Pipeline →</Link>}>
-              <div data-tour="inbound">
-                {data.recent_inbound_applications.length ? (
-                  <ul className="divide-y divide-line">
-                    {data.recent_inbound_applications.map((o) => <OppRow key={o.id} o={o} />)}
-                  </ul>
-                ) : <p className="px-4 py-6 text-[13px] text-ink-muted">No inbound applications yet.</p>}
-              </div>
-            </Section>
-          </div>
+      <Section
+        title="Needs attention"
+        subtitle={queue.length ? `${queue.length} open ${queue.length === 1 ? "opportunity has" : "opportunities have"} a next step · most urgent first` : "One next step per open opportunity"}
+        flush
+        right={<Link href="/vc/pipeline" className="btn-ghost btn-sm">Pipeline →</Link>}
+      >
+        <div data-tour="action-queue">
+          {attention.length ? (
+            <ol className="divide-y divide-line">
+              {attention.map((a) => <AttentionRow key={a.opportunity_id} a={a} onOpen={() => router.push(nextActionHref(a.opportunity_id, a.next_action_key))} />)}
+            </ol>
+          ) : (
+            <div className="px-5 py-8">
+              <p className="text-[15px] font-medium text-ink">Nothing needs your action right now.</p>
+              <p className="mt-1 text-[13px] text-ink-muted">
+                {total ? "New applications and analysis results will appear here." : "Once you source founders or receive applications, their next steps appear here."}
+              </p>
+            </div>
+          )}
+          {queue.length > attention.length && (() => {
+            // the rest of the queue lives in two places: deals in Pipeline, leads in Founders
+            const rest = queue.slice(attention.length);
+            const deals = rest.filter((a) => a.stage !== "sourcing").length;
+            const leads = rest.length - deals;
+            return (
+              <p className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line px-5 py-3 text-sm text-ink-muted">
+                <span>{rest.length} more next {rest.length === 1 ? "step" : "steps"}:</span>
+                {deals > 0 && <Link href="/vc/pipeline" className="font-medium text-brand hover:underline">{deals} in Pipeline →</Link>}
+                {leads > 0 && <Link href="/vc/founders" className="font-medium text-brand hover:underline">{leads} {leads === 1 ? "lead" : "leads"} in Founders →</Link>}
+              </p>
+            );
+          })()}
         </div>
+      </Section>
 
-        <div className="space-y-5">
-          <Section title="Fund thesis" subtitle="Every score is evaluated through it" right={<Link href="/vc/fund" className="btn-ghost btn-sm">Edit</Link>}>
-            <div data-tour="thesis">
-              {data.thesis ? (
-                <dl className="space-y-2 text-[13px]">
-                  <p className="font-semibold text-ink">{data.thesis.fund_name}</p>
-                  <ChipRow label="Sectors" items={data.thesis.sectors} />
-                  <ChipRow label="Stages" items={data.thesis.stages} />
-                  <ChipRow label="Geographies" items={data.thesis.geographies} />
-                </dl>
-              ) : (
-                <div className="text-[13px] text-ink-muted">
-                  No active thesis yet. <Link href="/vc/fund" className="btn-primary btn-sm ml-1">Set up the fund</Link>
-                </div>
-              )}
-            </div>
-          </Section>
-
-          <Section title="Highest founder momentum" subtitle="Current score and trajectory" flush>
-            <ul data-tour="momentum" className="divide-y divide-line">
-              {data.highest_momentum.map((m) => (
-                <li key={m.opportunity_id}>
-                  <Link href={`/vc/opportunities/${m.opportunity_id}`} className="flex items-center justify-between gap-2 px-4 py-2 hover:bg-surface-sunken">
-                    <span className="truncate text-[13px] font-medium text-ink">{m.company_name || m.founder_name}</span>
-                    <span className="flex shrink-0 items-center gap-2">
-                      <span className="num text-xs text-ink-muted">{Math.round(m.current_score)}</span>
-                      <Badge tone={trajectoryTone(m.trajectory)}>{humanStatus(m.trajectory)}</Badge>
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </Section>
-
-          <Section title="Recent evidence" subtitle="Newest collected items" right={<DemoBadge />} flush>
-            <ul data-tour="evidence" className="divide-y divide-line">
-              {data.recent_evidence.map((e) => (
-                <li key={e.id} className="px-4 py-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="text-[13px] text-ink-soft">{e.title}</span>
-                    <span className="font-mono text-[11px] text-ink-faint">E{e.id}</span>
-                  </div>
-                  <p className="text-xs text-ink-muted">{e.source_name} · {humanStatus(e.kind)}</p>
-                </li>
-              ))}
-            </ul>
-          </Section>
-
-          <Section title="Connectors">
-            <div className="flex flex-wrap gap-1.5">
-              {data.connectors.live.map((c) => <Badge key={c} tone="bg-positive-wash text-positive">{humanStatus(c)} · live</Badge>)}
-              {data.connectors.planned.map((c) => <Badge key={c}>{humanStatus(c)} · planned</Badge>)}
-            </div>
-          </Section>
-        </div>
-      </div>
+      <Section title="Recent evidence" subtitle="The latest collected sources" flush>
+        <ul data-tour="evidence" className="divide-y divide-line">
+          {evidence.length ? evidence.map((e) => (
+            <li key={e.id} className="flex items-start justify-between gap-4 px-5 py-3.5">
+              <span className="min-w-0">
+                <span className="block text-[15px] leading-6 text-ink">{e.title}</span>
+                <span className="mt-0.5 block truncate text-[13px] text-ink-muted">{e.source_name} · {humanStatus(e.kind)}</span>
+              </span>
+              <span className="num shrink-0 text-[13px] leading-6 text-ink-muted">{relativeDay(e.collected_at)}</span>
+            </li>
+          )) : <li className="px-5 py-8 text-[15px] text-ink-muted">No evidence collected yet.</li>}
+        </ul>
+      </Section>
 
       <GuidedTour steps={DASHBOARD_TOUR} open={tourOpen} onClose={closeTour} />
     </div>
   );
 }
 
-function ChipRow({ label, items }: { label: string; items: string[] }) {
-  return (
-    <div>
-      <dt className="text-xs text-ink-muted">{label}</dt>
-      <dd className="mt-0.5 flex flex-wrap gap-1">
-        {items.length ? items.map((s) => <Badge key={s}>{s}</Badge>) : <span className="text-xs text-ink-faint">Any</span>}
-      </dd>
-    </div>
-  );
+// One readable column; the thesis lives on Fund, rankings on Founders, and the
+// full queue in Pipeline.
+const COLUMN = "max-w-[960px]";
+const STAGES = ["sourcing", "screening", "diligence", "decision"] as const;
+
+function relativeDay(iso: string): string {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  return days <= 0 ? "Today" : days === 1 ? "Yesterday" : `${days}d ago`;
 }
 
-function OppRow({ o, status }: { o: any; status?: PipelineStatus | null }) {
+function AttentionRow({ a, onOpen }: { a: ActionItem; onOpen: () => void }) {
+  const href = nextActionHref(a.opportunity_id, a.next_action_key);
   return (
-    <li>
-      <Link href={`/vc/opportunities/${o.id}`} className="flex items-center justify-between gap-2 px-4 py-2 hover:bg-surface-sunken">
-        <span className="min-w-0">
-          <span className="block truncate text-[13px] font-medium text-ink">{o.company?.name || o.founder?.full_name || `Opportunity #${o.id}`}</span>
-          <span className="block truncate text-xs text-ink-muted">{o.company?.one_liner || o.surfaced_reason}</span>
+    <li className="table-row-link grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 px-5 py-3.5 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)_auto]" onClick={onOpen}>
+      <span className="min-w-0">
+        <Link href={`/vc/opportunities/${a.opportunity_id}`} onClick={(e) => e.stopPropagation()} className="block truncate text-[15px] font-medium text-ink hover:text-brand">{a.name}</Link>
+        <span className="mt-1 flex flex-wrap items-center gap-1.5">
+          <StageBadge stage={a.stage} />
+          <SourceBadge entryType={a.entry_type} />
         </span>
-        <span className="flex shrink-0 items-center gap-1.5">
-          {(status === "saved" || status === "monitoring") && <Badge tone="bg-positive-wash text-positive">{humanStatus(status)}</Badge>}
-          {o.founder_score && <span className="num text-[13px] font-semibold text-ink" title="Founder score">{Math.round(o.founder_score.score)}</span>}
-          {o.company && <Badge tone="bg-brand-wash text-brand">fit {Math.round(o.thesis_fit_score)}</Badge>}
-        </span>
-      </Link>
+      </span>
+      <span className="col-span-2 row-start-2 min-w-0 sm:col-span-1 sm:row-start-auto">
+        <Link href={href} onClick={(e) => e.stopPropagation()}
+          className={`inline-flex items-center gap-1.5 text-[15px] hover:text-brand hover:underline ${a.priority === 1 ? "font-semibold text-ink" : "font-medium text-ink-soft"}`}>
+          {a.priority === 1 && <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />}
+          {a.next_action}
+          <ArrowRightIcon size={14} className="shrink-0" />
+        </Link>
+        {a.next_action_detail && <span className="block text-[13px] text-ink-muted">{a.next_action_detail}</span>}
+      </span>
+      <span className="num col-start-2 row-start-1 text-right text-[13px] text-ink-muted sm:col-start-auto sm:row-start-auto" title="Days since first signal">
+        {a.age_days === 0 ? "today" : `${a.age_days}d`}
+      </span>
     </li>
   );
 }

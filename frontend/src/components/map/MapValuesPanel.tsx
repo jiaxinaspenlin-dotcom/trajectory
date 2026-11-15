@@ -59,7 +59,7 @@ export function MapValuesPanel({
                           {node.name}
                         </button>
                         {same.length > 0 && (
-                          <span className="block text-[11px] text-signal">Same point as {same.map((o) => byId.get(o)?.name).join(", ")}</span>
+                          <span className="block text-xs text-signal">Same point as {same.map((o) => byId.get(o)?.name).join(", ")}</span>
                         )}
                       </td>
                       {axes.domains.map((d) => <td key={d.axis} className="num text-right text-ink-soft">{formatMetric(d.key, vals[d.key]!)}</td>)}
@@ -68,7 +68,7 @@ export function MapValuesPanel({
                 })}
               </tbody>
             </table>
-          ) : <p className="p-4 text-[13px] text-ink-muted">No records have values for all selected axes.</p>
+          ) : <p className="p-4 text-sm text-ink-muted">No records have values for all selected axes.</p>
         ) : axes.excluded.length ? (
           <ul className="divide-y divide-line" data-testid="excluded-list">
             {axes.excluded.map(({ node, reasons }) => (
@@ -79,13 +79,13 @@ export function MapValuesPanel({
                   aria-current={node.id === selectedId ? "true" : undefined}
                   className={`w-full px-3 py-2 text-left hover:bg-surface-sunken ${node.id === selectedId ? "bg-brand-wash" : ""}`}
                 >
-                  <span className="block text-[13px] font-medium text-ink">{node.name}</span>
-                  {reasons.map((r) => <span key={r} className="block text-[11px] text-ink-muted">{r}</span>)}
+                  <span className="block text-sm font-medium text-ink">{node.name}</span>
+                  {reasons.map((r) => <span key={r} className="block text-xs text-ink-muted">{r}</span>)}
                 </button>
               </li>
             ))}
           </ul>
-        ) : <p className="p-4 text-[13px] text-ink-muted">Every record in view is plotted.</p>}
+        ) : <p className="p-4 text-sm text-ink-muted">Every record in view is plotted.</p>}
       </div>
     </div>
   );

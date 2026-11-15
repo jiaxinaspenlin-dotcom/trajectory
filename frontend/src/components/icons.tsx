@@ -59,3 +59,6 @@ export const SortIcon = ({ dir, ...p }: IconProps & { dir: "asc" | "desc" | null
 export const SparkIcon = (p: IconProps) => <Svg {...p}><path d="M8 1.5v3M8 11.5v3M1.5 8h3M11.5 8h3M3.4 3.4l2 2M10.6 10.6l2 2M3.4 12.6l2-2M10.6 5.4l2-2" /></Svg>;
 export const LinkIcon = (p: IconProps) => <Svg {...p}><path d="M6.6 9.4a2.6 2.6 0 0 0 3.7 0l2.3-2.3a2.6 2.6 0 0 0-3.7-3.7l-.8.8M9.4 6.6a2.6 2.6 0 0 0-3.7 0L3.4 8.9a2.6 2.6 0 0 0 3.7 3.7l.8-.8" /></Svg>;
 export const ChevronDownIcon = (p: IconProps) => <Svg {...p}><path d="m4 6 4 4 4-4" /></Svg>;
+export const MoreIcon = (p: IconProps) => (
+  <Svg {...p}><circle cx="3.5" cy="8" r="1.15" fill="currentColor" stroke="none" /><circle cx="8" cy="8" r="1.15" fill="currentColor" stroke="none" /><circle cx="12.5" cy="8" r="1.15" fill="currentColor" stroke="none" /></Svg>
+);

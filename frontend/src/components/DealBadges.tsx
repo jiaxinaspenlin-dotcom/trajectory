@@ -1,5 +1,5 @@
 import { humanStatus } from "@/lib/format";
-import { sourceLabel, stageTone } from "@/lib/pipeline";
+import { Shortlist, SHORTLIST_LABEL, sourceLabel, stageTone } from "@/lib/pipeline";
 import { Badge } from "./ui";
 
 export function StageBadge({ stage }: { stage: string }) {
@@ -20,4 +20,10 @@ export function ProspectStatusBadge({ status }: { status: string }) {
     ? "bg-negative-wash text-negative"
     : "bg-neutral-wash text-neutral";
   return <Badge tone={tone}>{humanStatus(status)}</Badge>;
+}
+
+// Personal shortlist (this browser), never confused with the shared stage.
+export function ShortlistBadge({ shortlist }: { shortlist: Shortlist }) {
+  const tone = shortlist === "dismissed" ? "bg-negative-wash text-negative" : "bg-positive-wash text-positive";
+  return <Badge tone={tone} title="Your shortlist (this browser)">{SHORTLIST_LABEL[shortlist]}</Badge>;
 }

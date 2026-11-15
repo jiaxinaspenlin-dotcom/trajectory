@@ -26,9 +26,13 @@ def _aware(dt: datetime | None) -> datetime | None:
     return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
 
 
-def next_action_for(db: Session, o: Opportunity) -> tuple[str, int] | None:
-    """The ONE concrete next action for an open opportunity, plus its priority
-    (1 = act now). None for decided or dismissed opportunities."""
+def next_action_info(db: Session, o: Opportunity) -> dict | None:
+    """The ONE concrete next action for an open opportunity.
+
+    Returns {key, label, detail, priority} (priority 1 = act now) or None for
+    decided or dismissed opportunities. `key` is stable so the UI can link the
+    action to where it's done; `label` is short, plain language.
+    """
     # Deals already decided drop off the queue.
     if str(o.status) == "decided":
         return None
@@ -57,17 +61,28 @@ def next_action_for(db: Session, o: Opportunity) -> tuple[str, int] | None:
         ).all()
     )
 
+    def action(key: str, label: str, priority: int, detail: str | None = None) -> dict:
+        return {"key": key, "label": label, "detail": detail, "priority": priority}
+
     is_inbound = str(o.entry_type) == "inbound"
     if rec and not decided:
-        return f"Review recommendation ({rec.action}) & decide", 1
+        # awaiting the investor's review — not the same as the Decision stage
+        return action("review_recommendation", "Review recommendation", 1, f"Recommended: {rec.action}")
     if is_inbound and not assessment:
         # a founder just applied and is waiting — surface it prominently.
-        return "Review new application", 2
+        return action("review_application", "Review application", 2, "New inbound application")
     if open_diligence > 0:
-        return f"Resolve {open_diligence} diligence item{'s' if open_diligence != 1 else ''}", 3
+        plural = "s" if open_diligence != 1 else ""
+        return action("resolve_diligence", f"Resolve {open_diligence} diligence question{plural}", 3)
     if not assessment:
-        return "Run analysis", 4
-    return "Generate Arena & memo", 5
+        return action("run_analysis", "Run analysis", 4, "Scores the three screening axes")
+    return action("generate_memo", "Generate debate & memo", 5)
+
+
+def next_action_for(db: Session, o: Opportunity) -> tuple[str, int] | None:
+    """(label, priority) form of next_action_info, for list views."""
+    info = next_action_info(db, o)
+    return (info["label"], info["priority"]) if info else None
 
 
 def opportunity_age_days(o: Opportunity, now: datetime | None = None) -> int:
@@ -76,16 +91,15 @@ def opportunity_age_days(o: Opportunity, now: datetime | None = None) -> int:
     return max(0, (now - start).days)
 
 
-def build_action_queue(db: Session, fund_id: int, limit: int = 8) -> list[dict]:
+def build_action_queue(db: Session, fund_id: int, limit: int | None = 8) -> list[dict]:
     now = datetime.now(UTC)
     opps = db.scalars(select(Opportunity).where(Opportunity.fund_id == fund_id)).all()
 
     items: list[dict] = []
     for o in opps:
-        nxt = next_action_for(db, o)
+        nxt = next_action_info(db, o)
         if nxt is None:
             continue
-        action, priority = nxt
 
         founder = db.get(Founder, o.founder_id) if o.founder_id else None
         company = db.get(Company, o.company_id) if o.company_id else None
@@ -99,12 +113,14 @@ def build_action_queue(db: Session, fund_id: int, limit: int = 8) -> list[dict]:
                 "founder_name": founder_name,
                 "entry_type": str(o.entry_type),
                 "stage": str(o.stage),
-                "next_action": action,
-                "priority": priority,
+                "next_action": nxt["label"],
+                "next_action_key": nxt["key"],
+                "next_action_detail": nxt["detail"],
+                "priority": nxt["priority"],
                 "age_days": opportunity_age_days(o, now),
             }
         )
 
     # act-now first (lower priority number), then oldest-waiting first
     items.sort(key=lambda x: (x["priority"], -x["age_days"]))
-    return items[:limit]
+    return items if limit is None else items[:limit]

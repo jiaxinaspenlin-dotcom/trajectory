@@ -16,7 +16,7 @@ import { MapList } from "@/components/map/MapList";
 import { MapValuesPanel } from "@/components/map/MapValuesPanel";
 import { ErrorState, Segmented, Spinner } from "@/components/ui";
 import {
-  CloseIcon, FilterIcon, ListIcon, MinusIcon, PlusIcon, ResetIcon, SearchIcon, SlidersIcon, TableIcon,
+  ChevronDownIcon, CloseIcon, FilterIcon, ListIcon, MinusIcon, PlusIcon, ResetIcon, SearchIcon, SlidersIcon, TableIcon,
 } from "@/components/icons";
 
 // Three.js only runs in the browser; keep it out of the server render and other routes.
@@ -50,6 +50,11 @@ function OpportunityMap() {
   const [listOpen, setListOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [valuesOpen, setValuesOpen] = useState(false);
+  // legend: open by default where there's room; collapsible everywhere
+  const [legendOpen, setLegendOpen] = useState<boolean | null>(null);
+  const [roomy, setRoomy] = useState(true);
+  useEffect(() => setRoomy(window.innerWidth >= 1280), []);
+  const legendShown = legendOpen ?? roomy;
   const [q, setQ] = useState(state.q);
   const [resultsOpen, setResultsOpen] = useState(false);
   const canvasRef = useRef<MapCanvasHandle>(null);
@@ -91,8 +96,8 @@ function OpportunityMap() {
     return (
       <Centered>
         <div className="hud max-w-sm p-5 text-center">
-          <p className="text-[15px] font-semibold text-ink">Nothing to map yet</p>
-          <p className="mt-1 text-[13px] text-ink-muted">Founder leads and active deals appear here once you source founders or receive an application.</p>
+          <p className="text-base font-semibold text-ink">Nothing to map yet</p>
+          <p className="mt-1 text-sm text-ink-muted">Founder leads and active deals appear here once you source founders or receive an application.</p>
           <Link href="/vc/founders?source=open" className="btn-primary mt-4">Source founders</Link>
         </div>
       </Centered>
@@ -139,37 +144,40 @@ function OpportunityMap() {
           highlight={highlight}
           onSelect={select}
           onUnavailable={onUnavailable}
+          insetsKey={[state.focus ?? "", state.view, legendShown && !filtersOpen, filtersOpen, valuesOpen, listOpen, nodes.length].join("|")}
         />
       )}
 
       {!nodes.length && webgl !== false && (
         <Centered>
-          <div className="hud pointer-events-auto p-4 text-center text-[13px] text-ink-muted">
+          <div className="hud pointer-events-auto p-4 text-center text-sm text-ink-muted">
             No opportunities match these filters.
             <button className="btn-secondary btn-sm ml-2" onClick={() => update({ kind: "all", source: "all" })}>Clear filters</button>
           </div>
         </Centered>
       )}
 
-      {/* top row: sourcing · search · filters — one flex row so nothing collides, narrowing beside the drawer */}
-      <div className={`pointer-events-none absolute left-3 right-3 top-3 z-20 flex items-start gap-2 ${selected ? "sm:right-[384px]" : ""}`}>
+      {/* Every control sits 16px from the canvas edge. Elements marked data-map-inset
+          are measured by the canvas so nodes are framed in the space they leave. */}
+      {/* top row: sourcing · search · filters — one flex row, narrowing beside the drawer */}
+      <div data-map-inset="top" className={`pointer-events-none absolute left-3 right-3 top-3 z-20 flex items-start gap-2 sm:left-4 sm:right-4 sm:top-4 sm:gap-3 ${selected ? "sm:right-[432px]" : ""}`}>
         <div className="pointer-events-auto hidden shrink-0 items-center gap-2 lg:flex">
-          <div className="hud flex h-9 items-center gap-2 px-3 text-[13px]">
-            <span className="text-ink-muted">Founder leads</span>
+          <div className="hud flex h-10 items-center gap-2 px-4 text-sm">
+            <span className="text-ink-muted" title="Leads in Sourcing (not yet in Pipeline)">Leads</span>
             <span className="num font-semibold text-ink">{leadCount}</span>
           </div>
-          <Link href="/vc/founders?source=open" className="btn-primary h-9 shadow-raised">+ Source</Link>
+          <Link href="/vc/founders?source=open" className="btn-primary shadow-raised">+ Source</Link>
         </div>
 
-        <div className="pointer-events-auto relative mx-auto min-w-0 flex-1 lg:max-w-md">
-          <div className="hud flex h-9 items-center focus-within:border-brand" role="search">
-            <SearchIcon className="ml-2.5 shrink-0 text-ink-muted" />
+        <div className="pointer-events-auto relative mx-auto min-w-0 flex-1 lg:max-w-lg">
+          <div className="hud flex h-10 items-center focus-within:border-brand" role="search">
+            <SearchIcon size={18} className="ml-3 shrink-0 text-ink-muted" />
             <input
               type="search"
               value={q}
               aria-label="Search the map"
               placeholder="Search founders, companies, topics"
-              className="h-full min-w-0 flex-1 bg-transparent px-2 text-[13px] text-ink outline-none placeholder:text-ink-faint"
+              className="h-full min-w-0 flex-1 bg-transparent px-2.5 text-[15px] text-ink outline-none placeholder:text-ink-faint"
               onChange={(e) => { setQ(e.target.value); setResultsOpen(true); update({ q: e.target.value }); }}
               onFocus={() => setResultsOpen(true)}
               onKeyDown={(e) => {
@@ -180,21 +188,21 @@ function OpportunityMap() {
             />
             {q.trim() && (
               <>
-                <span className="num whitespace-nowrap text-[11px] text-ink-muted">{matches.length} {matches.length === 1 ? "match" : "matches"}</span>
-                <button type="button" className="icon-btn mx-0.5 h-7 w-7" aria-label="Clear search" onClick={() => { setQ(""); update({ q: "" }); }}>
-                  <CloseIcon size={14} />
+                <span className="num whitespace-nowrap text-[13px] text-ink-muted">{matches.length} {matches.length === 1 ? "match" : "matches"}</span>
+                <button type="button" className="icon-btn mx-0.5 h-9 w-9" aria-label="Clear search" onClick={() => { setQ(""); update({ q: "" }); }}>
+                  <CloseIcon size={16} />
                 </button>
               </>
             )}
           </div>
           {q.trim() && resultsOpen && (
-            <ul className="hud absolute inset-x-0 top-full mt-1 max-h-72 overflow-y-auto py-1" aria-label="Search results">
+            <ul className="hud absolute inset-x-0 top-full mt-2 max-h-80 overflow-y-auto py-1" aria-label="Search results">
               {matches.length ? matches.slice(0, 8).map((n) => (
                 <li key={n.id}>
                   <button
                     type="button"
                     data-search-result
-                    className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-[13px] hover:bg-surface-sunken focus:bg-surface-sunken focus:outline-none"
+                    className="flex min-h-10 w-full items-center justify-between gap-3 px-4 py-2 text-left text-[15px] hover:bg-surface-sunken focus:bg-surface-sunken focus:outline-none"
                     onClick={() => pick(n.id)}
                     onKeyDown={(e) => {
                       if (e.key === "ArrowDown") ((e.currentTarget.parentElement?.nextElementSibling?.firstElementChild) as HTMLElement | null)?.focus();
@@ -202,109 +210,113 @@ function OpportunityMap() {
                     }}
                   >
                     <span className="truncate font-medium text-ink">{n.name}</span>
-                    <span className="shrink-0 text-[11px] text-ink-muted">{n.group.label}</span>
+                    <span className="shrink-0 text-[13px] text-ink-muted">{n.group.label}</span>
                   </button>
                 </li>
-              )) : <li className="px-3 py-1.5 text-xs text-ink-muted">No matches in the current filters</li>}
+              )) : <li className="px-4 py-2 text-sm text-ink-muted">No matches in the current filters</li>}
             </ul>
           )}
         </div>
 
-        <div className="pointer-events-auto flex shrink-0 flex-col items-end gap-2">
-          <div className="flex gap-2">
-            <Link href="/vc/founders?source=open" className="hud grid h-9 w-9 place-items-center text-brand lg:hidden" aria-label="Source founders"><PlusIcon /></Link>
-            <button
-              type="button"
-              className={`hud flex h-9 items-center gap-1.5 px-2.5 text-[13px] font-medium ${filtersActive ? "text-brand" : "text-ink-soft"}`}
-              aria-expanded={filtersOpen}
-              aria-controls="map-filters"
-              aria-label="Filters"
-              onClick={() => setFiltersOpen((v) => !v)}
-            >
-              <FilterIcon /> <span className="hidden sm:inline">Filters</span>{filtersActive && <span className="h-1.5 w-1.5 rounded-full bg-brand" aria-label="active" />}
-            </button>
-          </div>
+        <div className="pointer-events-auto relative flex shrink-0 gap-2">
+          <Link href="/vc/founders?source=open" className="hud grid h-10 w-10 place-items-center text-brand lg:hidden" aria-label="Source founders"><PlusIcon size={18} /></Link>
+          <button
+            type="button"
+            className={`hud flex h-10 items-center gap-2 px-3 text-sm font-medium sm:px-3.5 ${filtersActive ? "text-brand" : "text-ink-soft"}`}
+            aria-expanded={filtersOpen}
+            aria-controls="map-filters"
+            aria-label="Filters"
+            onClick={() => setFiltersOpen((v) => !v)}
+          >
+            <FilterIcon size={18} /> <span className="hidden sm:inline">Filters</span>{filtersActive && <span className="h-1.5 w-1.5 rounded-full bg-brand" aria-label="active" />}
+          </button>
           {filtersOpen && (
-            <div id="map-filters" className="hud w-64 space-y-3 p-3">
+            <div id="map-filters" className="hud absolute right-0 top-full z-30 mt-2 w-72 space-y-4 p-4">
               <div>
-                <p className="label mb-1">Records</p>
+                <p className="label mb-1.5">Records</p>
                 <Segmented<MapKind> size="sm" label="Filter by record type" value={state.kind} onChange={(v) => update({ kind: v })}
                   options={[{ value: "all", label: "All" }, { value: "lead", label: "Leads" }, { value: "deal", label: "Deals" }]} />
+                <p className="mt-1.5 text-xs text-ink-muted">Leads are in Sourcing (Founders); deals are in Pipeline.</p>
               </div>
               <div>
-                <p className="label mb-1">Source</p>
+                <p className="label mb-1.5">Source</p>
                 <Segmented<MapSource> size="sm" label="Filter by source" value={state.source} onChange={(v) => update({ source: v })}
                   options={[{ value: "all", label: "All" }, { value: "inbound", label: "Inbound" }, { value: "outbound", label: "Outbound" }]} />
+                <p className="mt-1.5 text-xs text-ink-muted">Inbound applied through the founder portal; outbound were sourced by you.</p>
               </div>
-              <p className="num text-[11px] text-ink-muted">{nodes.length} of {all.length} shown</p>
+              <p className="num text-[13px] text-ink-muted">{nodes.length} of {all.length} shown</p>
             </div>
           )}
-          {!selected && !filtersOpen && <Legend nodes={nodes} colors={colors} />}
         </div>
       </div>
 
+      {/* legend: right edge under the top row; collapsible, and out of the way of the drawer */}
+      {!selected && !filtersOpen && (
+        <Legend nodes={nodes} colors={colors} open={legendShown} onToggle={() => setLegendOpen(!legendShown)} />
+      )}
+
       {/* list view over the canvas (keyboard-accessible selection) */}
       {listOpen && webgl !== false && (
-        <div className="hud absolute bottom-[4.5rem] left-3 top-14 z-20 w-[min(20rem,calc(100%-1.5rem))] overflow-y-auto">
-          <div className="flex items-center justify-between border-b border-line px-3 py-2">
-            <span className="text-[13px] font-semibold text-ink">All records</span>
-            <button type="button" className="icon-btn h-7 w-7" onClick={() => setListOpen(false)} aria-label="Close list"><CloseIcon size={14} /></button>
+        <div data-map-inset="auto" className="hud absolute bottom-24 left-3 top-[4.25rem] z-20 w-[min(22rem,calc(100%-1.5rem))] overflow-y-auto sm:left-4 sm:top-[4.5rem]">
+          <div className="flex items-center justify-between border-b border-line px-4 py-2">
+            <span className="text-[15px] font-semibold text-ink">All records</span>
+            <button type="button" className="icon-btn h-9 w-9" onClick={() => setListOpen(false)} aria-label="Close list"><CloseIcon size={16} /></button>
           </div>
           <MapList nodes={nodes} colors={colors} selectedId={state.focus} query={q} onSelect={select} />
         </div>
       )}
 
       {/* view controls: a column under the search on phones, bottom-left on larger screens */}
-      <div className="absolute left-3 top-14 z-20 flex flex-col items-start gap-2 sm:bottom-3 sm:top-auto sm:flex-row sm:items-end">
+      <div className="absolute left-3 top-[4.25rem] z-20 flex flex-col items-start gap-2 sm:bottom-4 sm:left-4 sm:top-auto sm:flex-row sm:items-end">
         {webgl !== false && (
           <div className="hud flex flex-col p-0.5" role="group" aria-label="Camera">
-            <button type="button" className="icon-btn" aria-label="Zoom in" onClick={() => canvasRef.current?.zoom(0.7)}><PlusIcon /></button>
-            <button type="button" className="icon-btn" aria-label="Zoom out" onClick={() => canvasRef.current?.zoom(1.4)}><MinusIcon /></button>
-            <button type="button" className="icon-btn" aria-label="Reset view" onClick={() => canvasRef.current?.reset()}><ResetIcon /></button>
+            <button type="button" className="icon-btn" aria-label="Zoom in" onClick={() => canvasRef.current?.zoom(0.7)}><PlusIcon size={18} /></button>
+            <button type="button" className="icon-btn" aria-label="Zoom out" onClick={() => canvasRef.current?.zoom(1.4)}><MinusIcon size={18} /></button>
+            <button type="button" className="icon-btn" aria-label="Reset view" onClick={() => canvasRef.current?.reset()}><ResetIcon size={18} /></button>
           </div>
         )}
         <div className="flex flex-col gap-2">
           {isAxes && (
-            <button type="button" className={`hud flex h-9 items-center gap-1.5 px-2.5 text-[13px] font-medium ${valuesOpen ? "text-brand" : "text-ink-soft"}`}
+            <button type="button" className={`hud flex h-10 items-center gap-2 px-3 text-sm font-medium ${valuesOpen ? "text-brand" : "text-ink-soft"}`}
               aria-expanded={valuesOpen} aria-label={`Values: ${axes.values.size} of ${nodes.length} plotted`} onClick={() => setValuesOpen((v) => !v)}>
-              <TableIcon /> <span className="hidden sm:inline">Values</span> <span className="num text-ink-muted">{axes.values.size}/{nodes.length}</span>
+              <TableIcon size={18} /> <span className="hidden sm:inline">Values</span> <span className="num text-ink-muted">{axes.values.size}/{nodes.length}</span>
             </button>
           )}
           {webgl !== false && (
-            <button type="button" className={`hud flex h-9 items-center gap-1.5 px-2.5 text-[13px] font-medium ${listOpen ? "text-brand" : "text-ink-soft"}`}
+            <button type="button" className={`hud flex h-10 items-center gap-2 px-3 text-sm font-medium ${listOpen ? "text-brand" : "text-ink-soft"}`}
               aria-pressed={listOpen} aria-label="List" onClick={() => setListOpen((v) => !v)}>
-              <ListIcon /> <span className="hidden sm:inline">List</span>
+              <ListIcon size={18} /> <span className="hidden sm:inline">List</span>
             </button>
           )}
         </div>
       </div>
       {isAxes && valuesOpen && (
-        <div className="absolute bottom-[3.75rem] left-1/2 z-30 -translate-x-1/2 sm:left-16 sm:translate-x-0">
+        <div data-map-inset="bottom" className="absolute bottom-[4.5rem] left-1/2 z-30 -translate-x-1/2 sm:bottom-4 sm:left-[4.5rem] sm:translate-x-0">
           <MapValuesPanel nodes={nodes} axes={axes} selectedId={state.focus} onSelect={select} onClose={() => setValuesOpen(false)} />
         </div>
       )}
 
       {/* bottom-center: axis selectors above the mode switcher */}
-      <div className="pointer-events-none absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 flex-col items-center gap-2">
+      <div data-map-inset="bottom" className="pointer-events-none absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 flex-col items-center gap-2 sm:bottom-4">
         {isAxes && !valuesOpen && (
           <AxisPanel x={state.x} y={state.y} z={state.z} options={metrics} onChange={(patch) => update(patch)} />
         )}
-        <div className="hud pointer-events-auto flex p-0.5" role="group" aria-label="Map mode">
+        <div className="hud pointer-events-auto flex p-1" role="group" aria-label="Map mode">
           {([["graph", "Relationships"], ["axes", "Custom Axes"]] as const).map(([v, label]) => (
             <button
               key={v}
               type="button"
               aria-pressed={state.view === v}
               onClick={() => { update({ view: v }); if (v === "graph") setValuesOpen(false); }}
-              className={`flex h-8 items-center gap-1.5 whitespace-nowrap rounded-[5px] px-3.5 text-[13px] font-semibold transition-colors ${state.view === v ? "bg-ink text-white" : "text-ink-soft hover:bg-neutral-wash"}`}
+              className={`flex h-10 items-center gap-2 whitespace-nowrap rounded-md px-4 text-[15px] font-semibold transition-colors sm:px-5 ${state.view === v ? "bg-ink text-white" : "text-ink-soft hover:bg-neutral-wash"}`}
             >
-              {label}{v === "axes" && <SlidersIcon size={14} />}
+              {label}{v === "axes" && <SlidersIcon size={16} />}
             </button>
           ))}
         </div>
       </div>
 
-      <p className={`pointer-events-none absolute bottom-4 right-4 z-10 hidden text-[11px] uppercase tracking-[0.08em] text-ink-muted xl:block ${selected ? "xl:hidden" : ""}`}>
+      <p className={`pointer-events-none absolute bottom-6 right-4 z-10 hidden text-xs uppercase tracking-[0.08em] text-ink-muted 2xl:block ${selected ? "2xl:hidden" : ""}`}>
         Drag orbit · Right-drag pan · Scroll zoom · Click focus
       </p>
 
@@ -322,13 +334,13 @@ function OpportunityMap() {
         />
       )}
       {state.focus != null && !selected && (
-        <div className="hud absolute bottom-16 right-3 z-30 max-w-xs px-3 py-2 text-xs text-ink-muted sm:top-14 sm:bottom-auto" data-testid="map-node-panel-empty">
+        <div className="hud absolute bottom-20 right-4 z-30 max-w-xs px-4 py-3 text-sm text-ink-muted sm:top-[4.5rem] sm:bottom-auto" data-testid="map-node-panel-empty">
           Opportunity #{state.focus} isn&apos;t on the map — it may have been removed, or it isn&apos;t a founder lead or active deal.
           <button className="btn-ghost btn-sm ml-1" onClick={() => select(null)}>Dismiss</button>
         </div>
       )}
       {!data!.has_thesis && (
-        <p className="hud absolute bottom-16 right-3 z-10 max-w-xs px-3 py-2 text-xs text-caution">
+        <p className="hud absolute bottom-20 right-4 z-10 max-w-xs px-4 py-3 text-sm text-caution">
           No active thesis — thesis fit can&apos;t be plotted. <Link href="/vc/fund" className="underline">Set up the fund thesis</Link>.
         </p>
       )}
@@ -336,24 +348,44 @@ function OpportunityMap() {
   );
 }
 
-function Legend({ nodes, colors }: { nodes: MapNode[]; colors: Map<string, string> }) {
+function Legend({ nodes, colors, open, onToggle }: {
+  nodes: MapNode[]; colors: Map<string, string>; open: boolean; onToggle: () => void;
+}) {
   const groups = groupNodes(nodes);
   return (
-    <div className="pointer-events-none hidden flex-col items-end gap-1 text-[10.5px] font-medium uppercase tracking-[0.08em] text-ink-soft sm:flex" aria-label="Legend">
-      {groups.slice(0, 10).map((g) => (
-        <span key={g.key} className="flex items-center gap-1.5">
-          {g.label}
-          <i className="inline-block h-[7px] w-[7px] rounded-full" style={{ background: colors.get(g.key) }} />
-        </span>
-      ))}
-      <span className="mt-1 flex items-center gap-3 normal-case tracking-normal text-ink-muted">
-        <span className="flex items-center gap-1"><i className="inline-block h-2.5 w-2.5 rounded-full border-[2.5px] border-ink-muted" /> Lead</span>
-        <span className="flex items-center gap-1"><i className="inline-block h-2.5 w-2.5 rounded-full bg-ink-muted" /> Active deal</span>
-      </span>
-      {nodes.some((n) => n.new_evidence_count) && (
-        <span className="flex items-center gap-1 normal-case tracking-normal text-ink-muted" data-testid="legend-new-evidence">
-          <i className="inline-block h-3 w-3 rounded-full border-2 border-signal bg-signal-wash" /> New evidence
-        </span>
+    <div className="pointer-events-none absolute right-4 top-[4.5rem] z-20 hidden flex-col items-end gap-2 sm:flex">
+      <button
+        type="button"
+        className="hud pointer-events-auto flex h-9 items-center gap-2 px-3 text-sm font-medium text-ink-soft hover:text-ink"
+        aria-expanded={open}
+        aria-controls="map-legend"
+        onClick={onToggle}
+      >
+        Legend <ChevronDownIcon size={16} className={`transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div id="map-legend" data-map-inset="right" aria-label="Legend" className="hud pointer-events-auto max-h-[calc(100vh-14rem)] w-60 overflow-y-auto px-4 py-3 text-[13px] text-ink-soft">
+          <p className="label mb-1.5">Groups</p>
+          <ul className="space-y-1">
+            {groups.slice(0, 12).map((g) => (
+              <li key={g.key} className="flex items-center gap-2">
+                <i className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colors.get(g.key) }} />
+                <span className="truncate">{g.label}</span>
+                <span className="num ml-auto text-ink-muted">{g.ids.length}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-3 space-y-1 border-t border-line pt-2.5 text-ink-muted">
+            <p className="flex items-center gap-2"><i className="inline-block h-3 w-3 rounded-full border-[2.5px] border-ink-muted" /> Lead · in Sourcing</p>
+            <p className="flex items-center gap-2"><i className="inline-block h-3 w-3 rounded-full bg-ink-muted" /> Deal · in Pipeline</p>
+            <p className="pt-1 text-xs">Colors group by company sector, or by GitHub language when there&apos;s no company yet.</p>
+            {nodes.some((n) => n.new_evidence_count) && (
+              <p className="flex items-center gap-2" data-testid="legend-new-evidence">
+                <i className="inline-block h-3.5 w-3.5 rounded-full border-2 border-signal bg-signal-wash" /> New evidence
+              </p>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
@@ -365,12 +397,12 @@ function AxisPanel({ x, y, z, options, onChange }: {
 }) {
   const choices: { axis: "x" | "y" | "z"; value: AxisChoice }[] = [{ axis: "x", value: x }, { axis: "y", value: y }, { axis: "z", value: z }];
   return (
-    <div className="hud pointer-events-auto grid w-[min(30rem,calc(100vw-1.5rem))] grid-cols-3 gap-2 p-2.5" data-testid="axis-panel" aria-label="Custom axes">
+    <div className="hud pointer-events-auto grid w-[min(36rem,calc(100vw-1.5rem))] grid-cols-3 gap-2 p-3 sm:gap-3" data-testid="axis-panel" aria-label="Custom axes">
       {choices.map(({ axis, value }) => (
         <label key={axis} className="min-w-0">
-          <span className="mb-0.5 block text-[11px] font-semibold text-ink">{axis.toUpperCase()} axis</span>
+          <span className="mb-1 block text-[13px] font-semibold text-ink">{axis.toUpperCase()} axis</span>
           <select
-            className="select h-8 px-1.5 text-[11px] sm:px-2.5 sm:text-xs"
+            className="select px-2 text-[13px] sm:px-3 sm:text-sm"
             value={value}
             aria-label={`${axis.toUpperCase()} axis metric`}
             onChange={(e) => {

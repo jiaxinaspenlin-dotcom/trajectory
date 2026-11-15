@@ -46,23 +46,23 @@ export default function ApplicationStatus() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-semibold text-ink">{data.company_name}</h1>
+            <h1 className="text-2xl font-semibold tracking-[-0.015em] text-ink">{data.company_name}</h1>
             <Badge tone="bg-brand-wash text-brand">Under review</Badge>
           </div>
-          <p className="mt-0.5 text-[13px] text-ink-muted">{data.sector || "Sector not set"} · {data.geography || "Location not set"}</p>
+          <p className="mt-0.5 text-sm text-ink-muted">{data.sector || "Sector not set"} · {data.geography || "Location not set"}</p>
         </div>
         {!deckReady && <Link href="/founder" className="btn-primary">Finish your application</Link>}
       </div>
 
       {/* status timeline */}
-      <ol className="grid grid-cols-3 overflow-hidden rounded-lg border border-line bg-white text-[13px]" aria-label="Application status">
+      <ol className="grid grid-cols-3 overflow-hidden rounded-lg border border-line bg-white text-sm" aria-label="Application status">
         {[
           ["Application received", true],
           ["Pitch deck read", !!deckReady],
           ["Human review", false],
         ].map(([label, done], i) => (
           <li key={String(label)} className={`flex items-center gap-2 px-4 py-2.5 ${i > 0 ? "border-l border-line" : ""}`}>
-            <span className={`grid h-5 w-5 place-items-center rounded-full text-[11px] font-semibold ${done ? "bg-positive text-white" : i === 2 ? "bg-brand-wash text-brand" : "bg-line text-ink-muted"}`}>{done ? "✓" : i + 1}</span>
+            <span className={`grid h-5 w-5 place-items-center rounded-full text-xs font-semibold ${done ? "bg-positive text-white" : i === 2 ? "bg-brand-wash text-brand" : "bg-line text-ink-muted"}`}>{done ? "✓" : i + 1}</span>
             <span className={done ? "text-ink" : "text-ink-muted"}>{label}</span>
           </li>
         ))}
@@ -75,7 +75,7 @@ export default function ApplicationStatus() {
       </div>
 
       <Section title="First-pass screen" subtitle="Automated, before human review">
-        <p className="text-[13px] leading-6 text-ink-soft">{data.screen_summary || "Your application is queued for screening."}</p>
+        <p className="text-sm leading-6 text-ink-soft">{data.screen_summary || "Your application is queued for screening."}</p>
       </Section>
 
       <ProvideInfo app={data} onSaved={reload} />
@@ -154,7 +154,7 @@ function ProvideInfo({ app, onSaved }: { app: ApplicationDetail; onSaved: () => 
       subtitle={app.missing_fields.length ? `${app.missing_fields.length} item${app.missing_fields.length === 1 ? "" : "s"} outstanding — fill in what you can` : "Everything requested has been provided"}
     >
       {done && (
-        <p className="mb-3 text-[13px] text-positive">You&rsquo;ve provided everything the fund asked for. You can still update details below.</p>
+        <p className="mb-3 text-sm text-positive">You&rsquo;ve provided everything the fund asked for. You can still update details below.</p>
       )}
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -176,8 +176,8 @@ function ProvideInfo({ app, onSaved }: { app: ApplicationDetail; onSaved: () => 
         />
       </label>
 
-      {error && <p className="mt-2 text-[13px] text-negative">{error}</p>}
-      {saved && !error && <p className="mt-2 text-[13px] text-positive">Saved — sent to the fund. Thank you!</p>}
+      {error && <p className="mt-2 text-sm text-negative">{error}</p>}
+      {saved && !error && <p className="mt-2 text-sm text-positive">Saved — sent to the fund. Thank you!</p>}
 
       <div className="mt-3 flex items-center gap-2">
         <button className="btn-primary" onClick={submit} disabled={saving}>

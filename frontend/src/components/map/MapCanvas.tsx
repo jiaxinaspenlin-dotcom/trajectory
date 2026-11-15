@@ -34,6 +34,8 @@ export function MapCanvas(props: {
   onSelect: (id: number | null) => void;
   onUnavailable: () => void;
   apiRef?: MutableRefObject<MapCanvasHandle | null>;
+  // changes whenever HUD panels open/close, so their footprint is re-measured
+  insetsKey?: string;
 }) {
   const { nodes, links, colors, mode, relationships, axes, selectedId, highlight } = props;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -133,6 +135,45 @@ export function MapCanvas(props: {
   useEffect(() => {
     sceneRef.current?.setHighlight(highlight);
   }, [highlight]);
+
+  // Measure the controls drawn over the canvas (elements marked data-map-inset
+  // in the same workspace) and hand the covered edges to the scene for framing.
+  const firstInsets = useRef(true);
+  useEffect(() => {
+    const container = containerRef.current;
+    const root = container?.closest("main") ?? document.body;
+    if (!container) return;
+    let raf = 0;
+    const measure = () => {
+      const scene = sceneRef.current;
+      if (!scene) return;
+      const c = container.getBoundingClientRect();
+      const ins = { top: 0, right: 0, bottom: 0, left: 0 };
+      root.querySelectorAll<HTMLElement>("[data-map-inset]").forEach((el) => {
+        const r = el.getBoundingClientRect();
+        if (!r.width || !r.height) return;
+        let side = el.dataset.mapInset;
+        if (side === "auto") {
+          // tall panels cover a side; wide sheets (phone drawer) cover the bottom
+          side = r.height > c.height * 0.6
+            ? (r.left + r.width / 2 > c.left + c.width / 2 ? "right" : "left")
+            : (r.top + r.height / 2 > c.top + c.height / 2 ? "bottom" : "top");
+        }
+        if (side === "top") ins.top = Math.max(ins.top, r.bottom - c.top);
+        else if (side === "bottom") ins.bottom = Math.max(ins.bottom, c.bottom - r.top);
+        else if (side === "right") ins.right = Math.max(ins.right, c.right - r.left);
+        else if (side === "left") ins.left = Math.max(ins.left, r.right - c.left);
+      });
+      scene.setInsets(ins, { animate: !firstInsets.current });
+      firstInsets.current = false;
+    };
+    const schedule = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(measure); };
+    schedule();
+    const ro = new ResizeObserver(schedule);
+    ro.observe(container);
+    root.querySelectorAll("[data-map-inset]").forEach((el) => ro.observe(el));
+    return () => { cancelAnimationFrame(raf); ro.disconnect(); };
+  }, [props.insetsKey]);
 
   return (
     <div className="absolute inset-0" data-testid="map-canvas">

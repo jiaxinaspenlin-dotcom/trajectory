@@ -30,7 +30,7 @@ export function MemoView({ memo }: { memo: Memo }) {
             <p className="whitespace-pre-line text-sm text-ink-soft">{s.body}</p>
           )}
           {s.evidence_ids.length > 0 && (
-            <p className="mt-2 text-[11px] text-ink-muted">
+            <p className="mt-2 text-xs text-ink-muted">
               Evidence:{" "}
               {s.evidence_ids.map((e) => (
                 <span key={e} className="mr-1 rounded bg-surface-sunken px-1 font-mono">E{e}</span>

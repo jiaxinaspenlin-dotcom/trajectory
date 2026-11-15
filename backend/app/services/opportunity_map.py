@@ -16,7 +16,7 @@ from app.models.assessment import Opportunity
 from app.models.entities import Company, Founder
 from app.models.enums import EntryType, OpportunityStatus, WorkflowStage
 from app.models.sources import Evidence
-from app.services.action_queue import next_action_for
+from app.services.action_queue import next_action_info
 from app.services.founder import latest_founder_score, momentum_for
 from app.services.web_sourcing import new_evidence_count
 
@@ -128,7 +128,7 @@ def build_map(db: Session) -> dict:
             mom = {"value": None if insufficient else m["change_30d"], "current_score": m["current_score"],
                    "trajectory": m["trajectory"], "history_days": span, "reason": reason}
 
-        nxt = next_action_for(db, o)
+        nxt = next_action_info(db, o)
         items.append({
             "id": o.id,
             "name": (company.name if company else None) or (founder.full_name if founder else None) or f"Opportunity #{o.id}",
@@ -148,7 +148,8 @@ def build_map(db: Session) -> dict:
             "group": group,
             "thesis_fit": fit,
             "momentum": mom,
-            "next_action": nxt[0] if nxt else None,
+            "next_action": nxt["label"] if nxt else None,
+            "next_action_key": nxt["key"] if nxt else None,
             "is_demo": o.is_demo,
         })
 

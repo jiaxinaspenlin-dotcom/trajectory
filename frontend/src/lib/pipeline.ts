@@ -42,9 +42,9 @@ export function opportunityName(o: { id: number; company: { name: string } | nul
 export type FounderView = "active" | "pinned" | "in_pipeline" | "dismissed" | "all";
 
 export const FOUNDER_VIEWS: { key: FounderView; label: string }[] = [
-  { key: "active", label: "Active leads" },
-  { key: "pinned", label: "Saved & monitoring" },
-  { key: "in_pipeline", label: "In pipeline" },
+  { key: "active", label: "All active" },
+  { key: "pinned", label: "Shortlisted" },
+  { key: "in_pipeline", label: "In Pipeline" },
   { key: "dismissed", label: "Dismissed" },
   { key: "all", label: "All" },
 ];
@@ -109,4 +109,42 @@ export function parseStage(v: string | null): string {
 
 export function parseSource(v: string | null): SourceFilter {
   return v === "inbound" || v === "outbound" ? v : "all";
+}
+
+// ---- Shared vocabulary ----------------------------------------------------
+// Two separate ideas, named the same way everywhere:
+//  • Stage (shared): Sourcing → Screening → Diligence → Decision. Moving a lead
+//    to Screening puts it in Pipeline for the whole fund.
+//  • Shortlist (personal, this browser): Saved / Monitoring / Dismissed.
+
+export type Shortlist = "saved" | "monitoring" | "dismissed";
+
+export const SHORTLIST_LABEL: Record<Shortlist, string> = {
+  saved: "Saved",
+  monitoring: "Monitoring",
+  dismissed: "Dismissed",
+};
+
+// This browser's shortlist, else a shortlist status saved on the shared record
+// (e.g. a web-sourced lead saved as "monitoring"); null when not shortlisted.
+export function shortlistOf(lead: { status: string }, overlay: PipelineStatus | null): Shortlist | null {
+  if (overlay) return overlay;
+  return lead.status === "saved" || lead.status === "monitoring" || lead.status === "dismissed" ? lead.status : null;
+}
+
+// ---- Next actions ---------------------------------------------------------
+// The backend names one next action per open opportunity with a stable key;
+// this is where each one is done.
+export type NextActionKey = "review_recommendation" | "review_application" | "resolve_diligence" | "run_analysis" | "generate_memo";
+
+export function nextActionHref(opportunityId: number, key: string | null | undefined): string {
+  const base = `/vc/opportunities/${opportunityId}`;
+  switch (key) {
+    case "review_recommendation": return `${base}#decision`;
+    case "resolve_diligence": return `${base}/diligence`;
+    case "generate_memo": return `${base}#arena`;
+    case "run_analysis":
+    case "review_application":
+    default: return `${base}#next-step`;
+  }
 }

@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { useFetch } from "@/lib/useFetch";
 import { Badge, Drawer, EmptyState, ErrorState, PageHeader, Segmented, Spinner, Toolbar } from "@/components/ui";
 import { FoundersTable } from "@/components/FoundersTable";
+import { useToast } from "@/components/Toast";
 import { WebSourcing } from "@/components/WebSourcing";
 import { SearchIcon } from "@/components/icons";
 import { FounderLead } from "@/lib/types";
@@ -65,7 +66,9 @@ function Founders() {
     <div className="space-y-4">
       <PageHeader
         title="Founders"
-        subtitle={leads.data ? `${all.length} founder leads sourced from public evidence · ${pipelineCount} moved into the pipeline` : "Founder leads sourced from public evidence"}
+        subtitle={leads.data
+          ? `${all.length} sourced ${all.length === 1 ? "lead" : "leads"} · ${pipelineCount} moved to Pipeline. Review a lead's evidence, shortlist it, and move it to Screening when it's worth evaluating.`
+          : "Leads you've sourced from public evidence"}
         actions={<button className="btn-primary" onClick={() => setSourcingOpen(true)}>+ Source founders</button>}
       />
       <FounderLeads leads={leads} onOpenSourcing={() => setSourcingOpen(true)} />
@@ -211,7 +214,7 @@ function AiDiscovery({ onSourced }: { onSourced: () => void }) {
               </tbody>
             </table>
           ) : (
-            <p className="text-[13px] text-ink-muted">No candidates surfaced this run — try refining the brief or your thesis.</p>
+            <p className="text-sm text-ink-muted">No candidates surfaced this run — try refining the brief or your thesis.</p>
           )}
           <p className="text-xs text-ink-muted">{result.disclaimer}</p>
         </div>
@@ -257,7 +260,7 @@ function ManualAdd({ onSourced }: { onSourced: () => void }) {
       {loading && <Spinner label="Syncing…" />}
       {error && <ErrorState message={error} />}
       {result && (
-        <div className="rounded-md border border-line bg-surface-sunken p-3 text-[13px]">
+        <div className="rounded-md border border-line bg-surface-sunken p-3 text-sm">
           <p className="font-medium text-ink">Sync {result.sync?.status}: {result.sync?.message}</p>
           {result.opportunity_id && <Link href={`/vc/opportunities/${result.opportunity_id}`} className="btn-secondary btn-sm mt-2">Open Founder Profile →</Link>}
         </div>
@@ -274,16 +277,27 @@ function FounderLeads({
   onOpenSourcing: () => void;
 }) {
   const [overlay, setOverlay] = useState<Record<number, PipelineStatus>>({});
+  const notify = useToast();
   const [view, setView] = useState<FounderView>("active");
   const [query, setQuery] = useState("");
   useEffect(() => setOverlay(getPipeline()), []);
 
   // Save / Monitor / Dismiss are this investor's personal shortlist — kept in
   // this browser, exactly like the opportunity detail page.
+  const leadName = (id: number) => {
+    const l = (leads.data?.items ?? []).find((x) => x.id === id);
+    return l ? l.founder?.full_name || l.company?.name || `Opportunity #${id}` : `Opportunity #${id}`;
+  };
+
   function setStatus(id: number, status: PipelineStatus | null) {
     if (status) setPipelineStatus(id, status);
     else clearPipelineStatus(id);
     setOverlay(getPipeline());
+    notify({
+      message: !status ? `${leadName(id)} removed from your shortlist.`
+        : status === "dismissed" ? `${leadName(id)} dismissed — hidden from All active.`
+        : `${leadName(id)} shortlisted as ${status === "saved" ? "Saved" : "Monitoring"}.`,
+    });
   }
 
   async function moveToScreening(id: number) {
@@ -291,6 +305,7 @@ function FounderLeads({
     // moves the same opportunity into Screening. Nothing is sent to the founder.
     await api.post(`/api/sourcing/prospects/${id}/action`, { action: "invite_to_apply" });
     await leads.reload();
+    notify({ message: `${leadName(id)} moved to Screening. No outreach was sent.`, href: "/vc/pipeline?stage=screening", linkLabel: "View in Pipeline" });
   }
 
   if (leads.loading && !leads.data) return <Spinner label="Loading founders…" />;
@@ -324,7 +339,7 @@ function FounderLeads({
             options={FOUNDER_VIEWS.map((v) => ({ value: v.key, label: <>{v.label} <span className="opacity-60">{count(v.key)}</span></> }))}
           />
         </div>
-        <label className="relative">
+        <label className="relative w-full sm:w-auto">
           <span className="sr-only">Search founders</span>
           <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-muted" />
           <input
@@ -347,8 +362,8 @@ function FounderLeads({
         />
       )}
       <p className="text-xs text-ink-muted">
-        Saved / Monitoring / Dismissed is your personal shortlist in this browser. Moving to Screening is a shared, investor-approved
-        pipeline step — no outreach is ever sent automatically.
+        <strong className="font-medium text-ink-soft">Stage</strong> is shared with the fund: moving a lead to Screening puts it in Pipeline. Your{" "}
+        <strong className="font-medium text-ink-soft">shortlist</strong> (Saved, Monitoring, Dismissed) is personal and kept in this browser. No outreach is ever sent automatically.
       </p>
     </div>
   );
