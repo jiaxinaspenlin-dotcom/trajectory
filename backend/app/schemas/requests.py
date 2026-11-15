@@ -117,6 +117,14 @@ class DiscoverIn(BaseModel):
     limit: int = Field(default=8, ge=1, le=15)
 
 
+class WebSearchIn(BaseModel):
+    request: str = Field(min_length=3, max_length=1000)
+
+
+class WebSaveIn(BaseModel):
+    status: Literal["saved", "monitoring"] = "saved"
+
+
 class SearchApplyIn(BaseModel):
     filters: dict
 

@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     github_token: str = Field(default="", alias="GITHUB_TOKEN")
     http_timeout_seconds: float = Field(default=30.0, alias="HTTP_TIMEOUT_SECONDS")
 
+    # Web search (server-side only; the key never reaches the browser)
+    web_search_provider: str = Field(default="tavily", alias="WEB_SEARCH_PROVIDER")
+    tavily_api_key: str = Field(default="", alias="TAVILY_API_KEY")
+
     # Database
     database_url: str = Field(default="", alias="DATABASE_URL")
 
@@ -91,6 +95,10 @@ class Settings(BaseSettings):
     @property
     def ai_enabled(self) -> bool:
         return bool(self.openai_api_key.strip())
+
+    @property
+    def web_search_enabled(self) -> bool:
+        return self.web_search_provider == "tavily" and bool(self.tavily_api_key.strip())
 
     @property
     def max_upload_bytes(self) -> int:

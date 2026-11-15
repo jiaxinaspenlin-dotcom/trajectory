@@ -15,7 +15,13 @@ export interface SceneNode {
   color: string;
   kind: "lead" | "deal";
   size: number; // px at the framing distance
+  flagged?: boolean; // new evidence since last review: amber halo + always-on name
 }
+
+// Amber halo for flagged nodes (Trajectory's signal color). The sprite grows by
+// FLAG_SCALE to make room for it; the node itself keeps its size.
+const FLAG_COLOR = "#e8950c";
+const FLAG_SCALE = 1.55;
 
 export interface SceneLink {
   source: number;
@@ -150,31 +156,48 @@ export class MapScene {
     this.pMat = new THREE.ShaderMaterial({
       transparent: true,
       depthWrite: false,
-      uniforms: { uScale: { value: this.renderer.getPixelRatio() }, uRef: { value: 900 } },
+      uniforms: {
+        uScale: { value: this.renderer.getPixelRatio() },
+        uRef: { value: 900 },
+        uFlagColor: { value: srgb(FLAG_COLOR) },
+        uPulse: { value: 1 },
+      },
       vertexShader: /* glsl */ `
         attribute vec3 aColor;
-        attribute float aSize, aKind, aAlpha;
+        attribute float aSize, aKind, aAlpha, aFlag;
         uniform float uScale, uRef;
         varying vec3 vColor;
-        varying float vKind, vAlpha;
+        varying float vKind, vAlpha, vFlag;
         void main() {
-          vColor = aColor; vKind = aKind; vAlpha = aAlpha;
+          vColor = aColor; vKind = aKind; vAlpha = aAlpha; vFlag = aFlag;
           vec4 mv = modelViewMatrix * vec4(position, 1.0);
           // sub-linear growth: nodes get bigger as you zoom in, but never balloon
-          gl_PointSize = aAlpha < 0.01 ? 0.0 : clamp(aSize * uScale * pow(uRef / -mv.z, 0.7), 3.0, 72.0);
+          float px = clamp(aSize * uScale * pow(uRef / -mv.z, 0.7), 3.0, 72.0);
+          gl_PointSize = aAlpha < 0.01 ? 0.0 : px * (aFlag > 0.5 ? ${FLAG_SCALE.toFixed(2)} : 1.0);
           gl_Position = projectionMatrix * mv;
         }`,
       fragmentShader: /* glsl */ `
+        uniform vec3 uFlagColor;
+        uniform float uPulse;
         varying vec3 vColor;
-        varying float vKind, vAlpha;
+        varying float vKind, vAlpha, vFlag;
         void main() {
           vec2 p = 2.0 * gl_PointCoord - 1.0;
           float r = length(p);
-          float edge = 1.0 - smoothstep(0.84, 1.0, r);
-          if (edge <= 0.0) discard;
+          // flagged sprites are larger; the node occupies the inner part
+          float rn = vFlag > 0.5 ? r * ${FLAG_SCALE.toFixed(2)} : r;
+          float edge = 1.0 - smoothstep(0.84, 1.0, rn);
           vec3 col = vColor;
-          if (vKind < 0.5) col = mix(vec3(1.0), vColor, smoothstep(0.46, 0.58, r));
-          gl_FragColor = vec4(col, edge * vAlpha);
+          if (vKind < 0.5) col = mix(vec3(1.0), vColor, smoothstep(0.46, 0.58, rn));
+          float a = edge;
+          if (vFlag > 0.5) {
+            float ring = smoothstep(0.72, 0.8, r) * (1.0 - smoothstep(0.9, 0.98, r));
+            float halo = (1.0 - smoothstep(0.6, 0.98, r)) * 0.22 * uPulse;
+            col = mix(uFlagColor, col, edge);
+            a = max(edge, max(ring * (0.65 + 0.35 * uPulse), halo));
+          }
+          if (a <= 0.0) discard;
+          gl_FragColor = vec4(col, a * vAlpha);
         }`,
     });
     this.points = new THREE.Points(this.pGeo, this.pMat);
@@ -265,16 +288,19 @@ export class MapScene {
     const col = new Float32Array(N * 3);
     const size = new Float32Array(N);
     const kind = new Float32Array(N);
+    const flag = new Float32Array(N);
     this.order.forEach((s, i) => {
       const c = srgb(s.node.color);
       col.set([c.r, c.g, c.b], i * 3);
       size[i] = s.node.size;
       kind[i] = s.node.kind === "deal" ? 1 : 0;
+      flag[i] = s.node.flagged ? 1 : 0;
     });
     this.pGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(N * 3), 3).setUsage(THREE.DynamicDrawUsage));
     this.pGeo.setAttribute("aColor", new THREE.BufferAttribute(col, 3));
     this.pGeo.setAttribute("aSize", new THREE.BufferAttribute(size, 1));
     this.pGeo.setAttribute("aKind", new THREE.BufferAttribute(kind, 1));
+    this.pGeo.setAttribute("aFlag", new THREE.BufferAttribute(flag, 1));
     this.pGeo.setAttribute("aAlpha", new THREE.BufferAttribute(new Float32Array(N), 1).setUsage(THREE.DynamicDrawUsage));
     const L = links.length;
     this.lGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(L * 6), 3).setUsage(THREE.DynamicDrawUsage));
@@ -631,6 +657,8 @@ export class MapScene {
         s.alpha = THREE.MathUtils.lerp(s.fromAlpha, s.visible ? 1 : 0, e);
       }
     }
+    // flagged nodes breathe gently (held steady under reduced motion)
+    this.pMat.uniforms.uPulse.value = this.reducedMotion ? 1 : 0.6 + 0.4 * Math.sin(performance.now() / 420);
     // axes fade with the mode
     this.axesAlpha += (this.axesTarget - this.axesAlpha) * (this.reducedMotion ? 1 : Math.min(1, dt * 6));
     if (this.axesMats.length) {
@@ -770,11 +798,12 @@ export class MapScene {
     const placed: { x: number; y: number; w: number; h: number; node?: boolean }[] = [];
     for (const s of this.order) {
       const el = this.nodeLabelEls.get(s.node.id)!;
-      const show = s.alpha > 0.5 && (s.node.id === this.selected || s.node.id === this.hovered || !!this.highlight?.has(s.node.id));
+      const show = s.alpha > 0.5 && (s.node.id === this.selected || s.node.id === this.hovered || !!this.highlight?.has(s.node.id)
+        || (!!s.node.flagged && !this.highlight));
       if (!show) { el.style.display = "none"; continue; }
       el.style.display = "block";
       el.style.fontWeight = s.node.id === this.selected ? "700" : "500";
-      const dy = -(this.pixelSize(s) / 2 + 12);
+      const dy = -(this.pixelSize(s) * (s.node.flagged ? FLAG_SCALE : 1) / 2 + 12);
       place(el, s.pos, 1, dy);
       const p = this.project(s.pos);
       placed.push({ x: p.x, y: p.y + dy, w: el.offsetWidth || 60, h: el.offsetHeight || 14, node: true });

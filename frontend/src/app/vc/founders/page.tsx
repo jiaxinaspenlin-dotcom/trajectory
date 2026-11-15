@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { useFetch } from "@/lib/useFetch";
 import { Badge, Drawer, EmptyState, ErrorState, PageHeader, Segmented, Spinner, Toolbar } from "@/components/ui";
 import { FoundersTable } from "@/components/FoundersTable";
+import { WebSourcing } from "@/components/WebSourcing";
 import { SearchIcon } from "@/components/icons";
 import { FounderLead } from "@/lib/types";
 import { clearPipelineStatus, getPipeline, PipelineStatus, setPipelineStatus } from "@/lib/myWorkspace";
@@ -72,7 +73,7 @@ function Founders() {
         open={sourcingOpen}
         onClose={() => setSourcingOpen(false)}
         title="Source founders"
-        subtitle="Search public GitHub with AI, or sync a profile you already know. Nothing is sent to founders."
+        subtitle="Search the web or public GitHub for leads, review the evidence, then save the ones worth tracking. Nothing is sent to founders."
         width="max-w-2xl"
       >
         <SourcingTabs onSourced={leads.reload} />
@@ -82,16 +83,20 @@ function Founders() {
 }
 
 function SourcingTabs({ onSourced }: { onSourced: () => void }) {
-  const [tab, setTab] = useState<"ai" | "github">("ai");
+  const [tab, setTab] = useState<"web" | "ai" | "github">("web");
   return (
     <div className="space-y-4">
       <Segmented
         label="Sourcing method"
         value={tab}
         onChange={setTab}
-        options={[{ value: "ai", label: "AI Discovery" }, { value: "github", label: "GitHub profile" }]}
+        options={[
+          { value: "web", label: "Web search" },
+          { value: "ai", label: "GitHub discovery" },
+          { value: "github", label: "GitHub profile" },
+        ]}
       />
-      {tab === "ai" ? <AiDiscovery onSourced={onSourced} /> : <ManualAdd onSourced={onSourced} />}
+      {tab === "web" ? <WebSourcing onSourced={onSourced} /> : tab === "ai" ? <AiDiscovery onSourced={onSourced} /> : <ManualAdd onSourced={onSourced} />}
     </div>
   );
 }
@@ -143,7 +148,7 @@ function AiDiscovery({ onSourced }: { onSourced: () => void }) {
     } catch (e) {
       setError(
         e instanceof Error && (e.message.toLowerCase().includes("ai provider") || e.message.includes("OPENAI"))
-          ? "AI is not configured — set OPENAI_API_KEY to run AI Discovery."
+          ? "AI is not configured — set OPENAI_API_KEY to run GitHub discovery."
           : e instanceof Error ? e.message : "Discovery failed."
       );
     } finally {
@@ -164,7 +169,7 @@ function AiDiscovery({ onSourced }: { onSourced: () => void }) {
         />
       </label>
       <div className="flex items-center gap-3">
-        <button className="btn-primary" onClick={run} disabled={loading}>{loading ? "Discovering…" : "Run AI Discovery"}</button>
+        <button className="btn-primary" onClick={run} disabled={loading}>{loading ? "Discovering…" : "Run GitHub discovery"}</button>
         {loading && <Spinner label="Planning the search, querying GitHub, scoring candidates…" />}
       </div>
       {error && <ErrorState message={error} />}
@@ -295,7 +300,7 @@ function FounderLeads({
     return (
       <EmptyState
         title="No founders sourced yet"
-        hint="Run AI Discovery or sync a GitHub profile — sourced founders appear here with their score, momentum, and evidence."
+        hint="Search the web for launches and company sites, or source from GitHub. Saved leads appear here with their evidence."
         action={<button className="btn-primary" onClick={onOpenSourcing}>Source founders</button>}
       />
     );
@@ -310,12 +315,15 @@ function FounderLeads({
   return (
     <div className="space-y-3">
       <Toolbar>
-        <Segmented
-          label="Filter founders"
-          value={view}
-          onChange={setView}
-          options={FOUNDER_VIEWS.map((v) => ({ value: v.key, label: <>{v.label} <span className="opacity-60">{count(v.key)}</span></> }))}
-        />
+        {/* scrolls inside its own row on phones instead of widening the page */}
+        <div className="max-w-full overflow-x-auto">
+          <Segmented
+            label="Filter founders"
+            value={view}
+            onChange={setView}
+            options={FOUNDER_VIEWS.map((v) => ({ value: v.key, label: <>{v.label} <span className="opacity-60">{count(v.key)}</span></> }))}
+          />
+        </div>
         <label className="relative">
           <span className="sr-only">Search founders</span>
           <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-muted" />
@@ -323,7 +331,7 @@ function FounderLeads({
             type="search"
             aria-label="Search founders"
             placeholder="Search name, @handle, company, project"
-            className="input w-72 pl-8"
+            className="input w-full pl-8 sm:w-72"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />

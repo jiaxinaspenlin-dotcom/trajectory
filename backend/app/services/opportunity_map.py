@@ -18,6 +18,7 @@ from app.models.enums import EntryType, OpportunityStatus, WorkflowStage
 from app.models.sources import Evidence
 from app.services.action_queue import next_action_for
 from app.services.founder import latest_founder_score, momentum_for
+from app.services.web_sourcing import new_evidence_count
 
 # Stages that make an opportunity an active deal. Outbound leads still in
 # Sourcing live in Founders until an investor moves them to Screening; inbound
@@ -78,6 +79,12 @@ def build_map(db: Session) -> dict:
     if founder_ids:
         for e in db.scalars(select(Evidence).where(Evidence.founder_id.in_(founder_ids))).all():
             evidence_by_founder[e.founder_id].append(e)  # type: ignore[index]
+    # Company-scoped evidence (web sources, decks, org repos) counts too.
+    company_ids = {o.company_id for o in opps if o.company_id}
+    company_evidence: Counter[int] = Counter()
+    if company_ids:
+        for e in db.scalars(select(Evidence).where(Evidence.company_id.in_(company_ids))).all():
+            company_evidence[e.company_id] += 1  # type: ignore[index]
 
     items: list[dict] = []
     for o in opps:
@@ -134,7 +141,8 @@ def build_map(db: Session) -> dict:
             "company": {"id": company.id, "name": company.name, "sector": company.sector,
                         "one_liner": company.one_liner} if company else None,
             "founder_score": fs.score if fs else None,
-            "evidence_count": len(evidence),
+            "evidence_count": len(evidence) + (company_evidence[o.company_id] if o.company_id else 0),
+            "new_evidence_count": new_evidence_count(db, o),
             "top_project": project,
             "topics": topics,
             "group": group,

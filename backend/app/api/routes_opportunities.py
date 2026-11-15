@@ -25,7 +25,7 @@ from app.models.workflow import (
     WorkflowEvent,
 )
 from app.schemas.requests import DiligenceResponseIn, DiligenceStatusIn, HumanDecisionIn
-from app.services import analysis
+from app.services import analysis, web_sourcing
 from app.services.action_queue import next_action_for, opportunity_age_days
 from app.services.opportunity_map import PIPELINE_STAGES, build_map
 from app.services.serializers import (
@@ -120,7 +120,17 @@ def get_opportunity(opp_id: int, db: Session = Depends(get_db)) -> dict:
             ev[e.id] = e
     ordered = sorted(ev.values(), key=lambda e: (e.event_date or e.collected_at), reverse=True)
     base["evidence"] = [evidence_out(e) for e in ordered]
+    base["new_evidence_ids"] = web_sourcing.new_evidence_ids(db, o)
+    base["identity"] = web_sourcing.lead_identity(db, o)
     return base
+
+
+@router.post("/opportunities/{opp_id}/evidence/reviewed")
+def mark_evidence_reviewed(opp_id: int, db: Session = Depends(get_db)) -> dict:
+    """The investor has reviewed this lead's new evidence; clears New evidence."""
+    o = _get_opp(db, opp_id)
+    web_sourcing.mark_evidence_reviewed(db, o)
+    return {"ok": True, "new_evidence_count": 0}
 
 
 # ---- analysis (AI, rate-limited) -----------------------------------------

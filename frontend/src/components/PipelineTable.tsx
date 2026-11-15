@@ -9,7 +9,9 @@ import { SourceBadge, StageBadge } from "./DealBadges";
 export function PipelineTable({ deals }: { deals: PipelineDeal[] }) {
   const router = useRouter();
   return (
-    <div className="card overflow-x-auto">
+    // `relative` makes this the containing block for absolutely positioned
+    // children (e.g. sr-only headers), so they scroll here instead of widening the page
+    <div className="card relative overflow-x-auto">
       <table className="table min-w-[860px]">
         <thead>
           <tr>

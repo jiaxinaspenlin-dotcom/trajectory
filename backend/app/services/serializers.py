@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.models.assessment import Opportunity, OpportunityAssessment
@@ -152,13 +152,18 @@ def diligence_out(q: DiligenceQuestion) -> dict:
     }
 
 
-def founder_signals_out(db: Session, founder_id: int | None) -> dict:
-    """List-level evidence signals for a founder: how much evidence exists and
-    their most-starred public repo (a 'project' when there's no company yet).
-    Stars are external interest only, never commercial traction."""
-    if not founder_id:
+def founder_signals_out(db: Session, founder_id: int | None, company_id: int | None = None) -> dict:
+    """List-level evidence signals for a lead: how much evidence exists (founder
+    and company) and the founder's most-starred public repo (a 'project' when
+    there's no company yet). Stars are external interest only, never traction."""
+    conds = []
+    if founder_id:
+        conds.append(Evidence.founder_id == founder_id)
+    if company_id:
+        conds.append(Evidence.company_id == company_id)
+    if not conds:
         return {"evidence_count": 0, "top_project": None}
-    evidence = db.scalars(select(Evidence).where(Evidence.founder_id == founder_id)).all()
+    evidence = db.scalars(select(Evidence).where(or_(*conds))).all()
     repos = [e for e in evidence if e.kind == "github_repo"]
     top = max(repos, key=lambda e: (e.structured_value or {}).get("stars") or 0, default=None)
     return {

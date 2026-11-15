@@ -123,14 +123,14 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-5 xl:grid-cols-3">
-        <div className="space-y-5 xl:col-span-2">
+        <div className="min-w-0 space-y-5 xl:col-span-2">
           <Section
             title="Next actions"
             subtitle="One concrete step per opportunity — act-now items first"
             flush
             right={<Link href="/vc/pipeline" className="btn-ghost btn-sm">Pipeline →</Link>}
           >
-            <div data-tour="action-queue" className="overflow-x-auto">
+            <div data-tour="action-queue" className="relative overflow-x-auto">
               {actionQueue.length ? (
                 <table className="table min-w-[640px]">
                   <thead>
@@ -160,7 +160,7 @@ export default function DashboardPage() {
             </div>
           </Section>
 
-          <div className="grid gap-5 lg:grid-cols-2">
+          <div className="grid gap-5 lg:grid-cols-2 [&>*]:min-w-0">
             <Section title="Top outbound prospects" subtitle="Surfaced before they apply" flush right={<Link href="/vc/founders" className="btn-ghost btn-sm">Founders →</Link>}>
               <div data-tour="sourcing">
                 {outboundProspects.length ? (

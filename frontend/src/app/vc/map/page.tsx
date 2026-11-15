@@ -350,6 +350,11 @@ function Legend({ nodes, colors }: { nodes: MapNode[]; colors: Map<string, strin
         <span className="flex items-center gap-1"><i className="inline-block h-2.5 w-2.5 rounded-full border-[2.5px] border-ink-muted" /> Lead</span>
         <span className="flex items-center gap-1"><i className="inline-block h-2.5 w-2.5 rounded-full bg-ink-muted" /> Active deal</span>
       </span>
+      {nodes.some((n) => n.new_evidence_count) && (
+        <span className="flex items-center gap-1 normal-case tracking-normal text-ink-muted" data-testid="legend-new-evidence">
+          <i className="inline-block h-3 w-3 rounded-full border-2 border-signal bg-signal-wash" /> New evidence
+        </span>
+      )}
     </div>
   );
 }

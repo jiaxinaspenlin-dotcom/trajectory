@@ -15,7 +15,7 @@ export function ClaimsTable({ claims }: { claims: Claim[] }) {
     return <p className="text-sm text-ink-muted">No claims recorded yet.</p>;
   }
   return (
-    <div className="overflow-x-auto" data-testid="claims-table">
+    <div className="relative overflow-x-auto" data-testid="claims-table">
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left text-xs text-ink-muted">

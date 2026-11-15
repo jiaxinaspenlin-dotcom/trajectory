@@ -46,7 +46,10 @@ export function MapList({
                       style={n.kind === "deal" ? { background: color } : { border: `3px solid ${color}` }}
                     />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[13px] font-medium text-ink">{n.name}</span>
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <span className="truncate text-[13px] font-medium text-ink">{n.name}</span>
+                        {!!n.new_evidence_count && <span className="chip shrink-0 bg-signal-wash text-caution">New evidence · {n.new_evidence_count}</span>}
+                      </span>
                       <span className="block truncate text-[11px] text-ink-muted">
                         {nodeKindLabel(n)} · {humanStatus(n.entry_type)}
                         {n.founder_score != null ? ` · score ${Math.round(n.founder_score)}` : " · not scored"}

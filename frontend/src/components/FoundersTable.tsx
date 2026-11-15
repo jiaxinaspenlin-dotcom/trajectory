@@ -94,7 +94,9 @@ export function FoundersTable({
   const rows = sortFounderLeads(leads, sort, overlay);
 
   return (
-    <div className="card overflow-x-auto">
+    // `relative` makes this the containing block for absolutely positioned
+    // children (e.g. sr-only headers), so they scroll here instead of widening the page
+    <div className="card relative overflow-x-auto">
       <table className="table min-w-[980px]">
         <thead>
           <tr>
@@ -115,9 +117,23 @@ export function FoundersTable({
             return (
               <tr key={l.id} data-testid={`founder-row-${l.id}`} onClick={() => router.push(href)} className="table-row-link">
                 <td>
-                  <Link href={href} onClick={stop} className="font-medium text-ink hover:text-brand">
-                    {l.founder?.full_name || l.company?.name || `Opportunity #${l.id}`}
-                  </Link>
+                  <span className="flex flex-wrap items-center gap-1.5">
+                    <Link href={href} onClick={stop} className="font-medium text-ink hover:text-brand">
+                      {l.founder?.full_name || l.company?.name || `Opportunity #${l.id}`}
+                    </Link>
+                    {!!l.new_evidence_count && (
+                      <Link
+                        href={`${href}#evidence`}
+                        onClick={stop}
+                        data-testid={`new-evidence-${l.id}`}
+                        title="Web evidence found since you last reviewed this lead"
+                        className="chip bg-signal-wash text-caution hover:ring-1 hover:ring-signal"
+                      >
+                        <span className="h-1.5 w-1.5 rounded-full bg-signal" aria-hidden />
+                        New evidence · {l.new_evidence_count}
+                      </Link>
+                    )}
+                  </span>
                   <div className="flex flex-wrap items-center gap-x-2 text-xs text-ink-muted">
                     {l.founder?.github_username && (
                       <a href={`https://github.com/${l.founder.github_username}`} target="_blank" rel="noreferrer" onClick={stop} className="hover:text-brand">
@@ -125,7 +141,16 @@ export function FoundersTable({
                       </a>
                     )}
                     {l.founder?.location && <span>{l.founder.location}</span>}
-                    {!l.founder && <span>Founder not linked yet</span>}
+                    {!l.founder && (l.identity?.founder_named ? (
+                      <span title="Named on a retrieved page; not matched to a verified profile">
+                        Named on source: {l.identity.founder_named} · unverified
+                      </span>
+                    ) : <span>Founder not linked yet</span>)}
+                    {!l.founder && l.company?.website && (
+                      <a href={l.company.website} target="_blank" rel="noreferrer" onClick={stop} className="hover:text-brand">
+                        {l.company.website.replace(/^https?:\/\/(www\.)?/, "")} ↗
+                      </a>
+                    )}
                   </div>
                 </td>
 

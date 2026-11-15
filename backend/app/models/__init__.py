@@ -23,6 +23,7 @@ from app.models.sources import (
     DataSource,
     Evidence,
 )
+from app.models.web_sourcing import LeadEvidenceReview, LeadIdentifier, WebSearch
 from app.models.workflow import (
     Debate,
     DebateArgument,
@@ -45,4 +46,5 @@ __all__ = [
     "Opportunity", "OpportunityAssessment", "AxisAssessment",
     "DiligenceQuestion", "DiligenceResponse", "Debate", "DebateArgument", "RefereeDecision",
     "InvestmentMemo", "RecommendedAction", "HumanDecision", "WorkflowEvent", "TourProgress",
+    "WebSearch", "LeadIdentifier", "LeadEvidenceReview",
 ]

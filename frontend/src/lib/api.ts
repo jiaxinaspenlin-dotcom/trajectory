@@ -7,9 +7,12 @@ export const API_BASE =
 
 export class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  // machine-readable reason when the backend sends {detail: {code, message}}
+  code: string | null;
+  constructor(status: number, message: string, code: string | null = null) {
     super(message);
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -24,13 +27,20 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     let detail = res.statusText;
+    let code: string | null = null;
     try {
       const body = await res.json();
-      detail = body.detail || JSON.stringify(body);
+      if (body.detail && typeof body.detail === "object" && !Array.isArray(body.detail)) {
+        detail = body.detail.message || JSON.stringify(body.detail);
+        code = body.detail.code ?? null;
+      } else {
+        detail = body.detail || JSON.stringify(body);
+        if (body.ai_unavailable) code = "ai_unavailable";
+      }
     } catch {
       /* ignore */
     }
-    throw new ApiError(res.status, detail);
+    throw new ApiError(res.status, detail, code);
   }
   return res.json() as Promise<T>;
 }

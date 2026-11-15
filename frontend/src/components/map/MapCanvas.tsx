@@ -81,7 +81,9 @@ export function MapCanvas(props: {
   }, []);
 
   const sceneNodes: SceneNode[] = useMemo(
-    () => nodes.map((n) => ({ id: n.id, label: n.name, color: nodeColor(n, colors), kind: n.kind, size: nodeSize(n) })),
+    () => nodes.map((n) => ({
+      id: n.id, label: n.name, color: nodeColor(n, colors), kind: n.kind, size: nodeSize(n), flagged: !!n.new_evidence_count,
+    })),
     [nodes, colors]
   );
   const sceneLinks: SceneLink[] = useMemo(
@@ -145,6 +147,7 @@ function describe(id: number, p: { nodes: MapNode[]; mode: "graph" | "axes"; axe
   const n = p.nodes.find((x) => x.id === id);
   if (!n) return { title: "", lines: [] };
   const lines = [`${nodeKindLabel(n)} · ${humanStatus(n.entry_type)}`, n.group.label];
+  if (n.new_evidence_count) lines.unshift(`New evidence · ${n.new_evidence_count}`);
   if (p.mode === "axes") {
     const vals = p.axes.values.get(id) ?? {};
     lines.push(p.axes.domains.map((d) => `${METRICS[d.key].label}: ${formatMetric(d.key as MetricKey, vals[d.key]!)}`).join(" · "));

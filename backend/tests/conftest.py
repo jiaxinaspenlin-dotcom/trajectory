@@ -12,6 +12,7 @@ _tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
 os.environ["DATABASE_URL"] = f"sqlite+pysqlite:///{_tmp.name}"
 os.environ["OPENAI_API_KEY"] = ""  # AI disabled by default; use the mock_ai fixture to enable
 os.environ["AI_RATE_LIMIT_PER_MINUTE"] = "1000"
+os.environ["TAVILY_API_KEY"] = ""  # web search off by default; tests replace the provider
 
 from app.core.config import get_settings  # noqa: E402
 

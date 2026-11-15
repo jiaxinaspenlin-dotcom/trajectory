@@ -14,6 +14,7 @@ import { ClaimsTable } from "@/components/ClaimsTable";
 import { FounderScoreBreakdown } from "@/components/FounderScoreBreakdown";
 import { HumanDecisionPanel } from "@/components/HumanDecisionPanel";
 import { Claim, Evidence, Opportunity } from "@/lib/types";
+import { LeadWebCheck } from "@/components/WebSourcing";
 import { humanStatus, verificationTone } from "@/lib/format";
 import { leadStatus } from "@/lib/pipeline";
 import {
@@ -62,6 +63,11 @@ export default function OpportunityPage() {
     await reload();
   }
 
+  async function markReviewed() {
+    await api.post(`/api/opportunities/${id}/evidence/reviewed`);
+    await reload();
+  }
+
   async function moveToScreening() {
     setScreeningError(null);
     try {
@@ -103,11 +109,16 @@ export default function OpportunityPage() {
     }
   }
 
-  if (loading) return <Spinner label="Loading opportunity…" />;
+  // reloads keep the page (and in-flight messages) mounted; only the first load shows a spinner
+  if (loading && !o) return <Spinner label="Loading opportunity…" />;
   if (error) return <ErrorState message={error} onRetry={reload} />;
   if (!o) return null;
 
-  const founderEvidence: Evidence[] = o.evidence || o.founder?.evidence || [];
+  const newIds = new Set(o.new_evidence_ids ?? []);
+  // new web evidence first, so it's never cut off below the fold
+  const founderEvidence: Evidence[] = [...(o.evidence || o.founder?.evidence || [])].sort(
+    (a, b) => Number(newIds.has(b.id)) - Number(newIds.has(a.id))
+  );
   const notAnalyzed = !o.assessment && !o.debate;
   const inPipeline = o.stage !== "sourcing";
   const shownStatus = leadStatus(o, myStatus);
@@ -139,7 +150,19 @@ export default function OpportunityPage() {
           </div>
           {o.company?.one_liner && <p className="mt-1 text-[13px] text-ink-soft">{o.company.one_liner}</p>}
           <p className="mt-0.5 text-xs text-ink-muted">
-            {[o.founder?.full_name, o.founder?.headline, o.founder?.location].filter(Boolean).join(" · ") || "Founder not linked yet"}
+            {o.founder
+              ? [o.founder.full_name, o.founder.headline, o.founder.location].filter(Boolean).join(" · ")
+              : o.identity?.founder_named
+              ? <>Founder named on <a href={o.identity.founder_named_source ?? undefined} target="_blank" rel="noreferrer" className="hover:text-brand">source</a>: {o.identity.founder_named} · <span className="text-caution">unverified</span></>
+              : "Founder not linked yet"}
+            {o.company?.website && (
+              <>
+                {" · "}
+                <a href={o.company.website} target="_blank" rel="noreferrer" className="hover:text-brand">
+                  {o.company.website.replace(/^https?:\/\/(www\.)?/, "")} ↗
+                </a>
+              </>
+            )}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -287,24 +310,37 @@ export default function OpportunityPage() {
             <Section
               title="Evidence"
               subtitle={`${founderEvidence.length} normalized, timestamped, attributed items`}
-              right={o.is_demo ? <DemoBadge /> : undefined}
+              right={
+                <span className="flex flex-wrap items-center justify-end gap-2">
+                  {newIds.size ? (
+                    <span className="flex items-center gap-2" data-testid="evidence-new-summary">
+                      <Badge tone="bg-signal-wash text-caution">{newIds.size} new from web search</Badge>
+                      <button className="btn-secondary btn-sm" onClick={markReviewed}>Mark reviewed</button>
+                    </span>
+                  ) : o.is_demo ? <DemoBadge /> : null}
+                  {!o.is_demo && (o.company || o.founder) && <LeadWebCheck opportunityId={o.id} onUpdated={reload} />}
+                </span>
+              }
               flush
             >
               {founderEvidence.length ? (
-                <div className="overflow-x-auto">
+                <div className="relative overflow-x-auto">
                   <table className="table min-w-[620px]">
                     <thead><tr><th>Evidence</th><th>Source</th><th>Status</th><th className="text-right">Date</th><th className="text-right">ID</th></tr></thead>
                     <tbody>
                       {founderEvidence.slice(0, 25).map((e) => (
-                        <tr key={e.id}>
+                        <tr key={e.id} className={newIds.has(e.id) ? "bg-signal-wash/60" : undefined} data-testid={newIds.has(e.id) ? "evidence-new-row" : undefined}>
                           <td className="max-w-[320px]">
+                            {newIds.has(e.id) && <Badge tone="mr-1.5 bg-signal-wash text-caution">New</Badge>}
                             {e.source_url
                               ? <a href={e.source_url} target="_blank" rel="noreferrer" className="text-ink hover:text-brand">{e.title}</a>
                               : <span className="text-ink">{e.title}</span>}
                           </td>
                           <td className="text-xs text-ink-muted">{e.source_name}</td>
                           <td><Badge tone={verificationTone(e.verification_status)}>{humanStatus(e.verification_status)}</Badge></td>
-                          <td className="num text-right text-xs text-ink-muted">{e.event_date ? new Date(e.event_date).toLocaleDateString() : "—"}</td>
+                          <td className="num text-right text-xs text-ink-muted">
+                            <EvidenceDate e={e} />
+                          </td>
                           <td className="text-right font-mono text-[11px] text-ink-faint">E{e.id}</td>
                         </tr>
                       ))}
@@ -340,4 +376,18 @@ export default function OpportunityPage() {
       </div>
     </div>
   );
+}
+
+// Web evidence carries how its date was established; anything unsupported is
+// shown as unknown rather than guessed.
+function EvidenceDate({ e }: { e: Evidence }) {
+  const sv = (e.structured_value ?? {}) as { date_basis?: string | null; date_precision?: string | null; date_text?: string | null };
+  if (!e.event_date) return e.kind.startsWith("web_") ? <span className="italic">Date unknown</span> : <>—</>;
+  const d = new Date(e.event_date);
+  const text = d.toLocaleDateString("en-US", {
+    timeZone: "UTC", month: "short", year: "numeric", ...(sv.date_precision === "month" ? {} : { day: "numeric" }),
+  });
+  const title = sv.date_basis === "stated_in_source" ? `Stated in the source: “${sv.date_text}”`
+    : sv.date_basis === "search_provider" ? "Published date reported by the search provider" : undefined;
+  return <span title={title}>{text}{sv.date_basis === "search_provider" && " *"}</span>;
 }
