@@ -142,10 +142,12 @@ def mark_evidence_reviewed(opp_id: int, db: Session = Depends(get_db)) -> dict:
 def analyze(opp_id: int, db: Session = Depends(get_db)) -> dict:
     o = _get_opp(db, opp_id)
     result = analysis.run_full_pipeline(db, o)
-    if str(o.stage) in ("sourcing", "screening"):
+    # Only a Screening deal advances. A Sourcing lead stays put: Move to Screening
+    # (invite_to_apply) is the only way into the Pipeline.
+    if str(o.stage) == "screening":
         o.stage = WorkflowStage.DILIGENCE
     db.commit()
-    return {"ok": True, **result}
+    return {"ok": True, **result, "stage": str(o.stage)}
 
 
 @router.post("/opportunities/{opp_id}/assessment", dependencies=[Depends(ai_rate_limit)])

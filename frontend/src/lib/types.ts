@@ -61,6 +61,9 @@ export interface Momentum {
   previous_score: number | null;
   change_30d: number | null;
   change_90d: number | null;
+  // days the 30/90-day figures really span; shorter when history is young
+  change_30d_window_days?: number | null;
+  change_90d_window_days?: number | null;
   trajectory: string;
   signal_trends: SignalTrend[];
   explanation: string;
@@ -236,6 +239,8 @@ export interface Opportunity {
   founder: Founder | null;
   company: Company | null;
   thesis_fit_score: number;
+  // stored fit differs from what the active thesis would score now
+  thesis_fit_stale?: boolean;
   surfaced_reason: string;
   first_signal_at: string;
   recommendation_at: string | null;

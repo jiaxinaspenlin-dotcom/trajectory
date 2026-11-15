@@ -11,6 +11,7 @@ from app.models.entities import Company, Founder
 from app.models.sources import Claim, Evidence
 from app.models.workflow import Debate, DiligenceQuestion, InvestmentMemo, RecommendedAction
 from app.services.founder import latest_founder_score, momentum_for
+from app.services.thesis import fit_is_stale
 
 
 def iso(dt):
@@ -176,6 +177,14 @@ def founder_signals_out(db: Session, founder_id: int | None, company_id: int | N
     }
 
 
+def _active_thesis(db: Session, fund_id: int) -> InvestmentThesis | None:
+    return db.scalar(
+        select(InvestmentThesis)
+        .where(InvestmentThesis.fund_id == fund_id, InvestmentThesis.is_active == True)  # noqa: E712
+        .order_by(InvestmentThesis.id.desc())
+    )
+
+
 def opportunity_out(db: Session, o: Opportunity, *, detail: bool = False) -> dict:
     founder = db.get(Founder, o.founder_id) if o.founder_id else None
     company = db.get(Company, o.company_id) if o.company_id else None
@@ -188,6 +197,7 @@ def opportunity_out(db: Session, o: Opportunity, *, detail: bool = False) -> dic
         "thesis_fit_score": o.thesis_fit_score, "surfaced_reason": o.surfaced_reason,
         "first_signal_at": iso(o.first_signal_at), "recommendation_at": iso(o.recommendation_at),
         "founder_score": founder_score_out(fs), "is_demo": o.is_demo,
+        "thesis_fit_stale": fit_is_stale(_active_thesis(db, o.fund_id), company, o.thesis_fit_score),
     }
     if o.founder_id:
         base["momentum"] = momentum_for(db, o.founder_id)

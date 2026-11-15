@@ -10,7 +10,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Resolve repo-relative paths so the app runs from any working directory.
@@ -57,6 +57,25 @@ class Settings(BaseSettings):
     # Security / runtime
     secret_key: str = Field(default="change-me-in-production", alias="SECRET_KEY")
     environment: str = Field(default="development", alias="ENVIRONMENT")
+
+    # Demo data. Unset: seed an empty database unless ENVIRONMENT=production.
+    seed_demo_data: bool | None = Field(default=None, alias="SEED_DEMO_DATA")
+
+    @field_validator("seed_demo_data", mode="before")
+    @classmethod
+    def _blank_is_unset(cls, v: object) -> object:
+        return None if isinstance(v, str) and not v.strip() else v
+
+    @property
+    def is_production(self) -> bool:
+        return self.environment.strip().lower() == "production"
+
+    @property
+    def should_seed_demo(self) -> bool:
+        """An explicit SEED_DEMO_DATA wins; otherwise seed outside production only."""
+        if self.seed_demo_data is not None:
+            return self.seed_demo_data
+        return not self.is_production
 
     @property
     def resolved_database_url(self) -> str:

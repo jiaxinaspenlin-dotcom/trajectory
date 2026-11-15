@@ -21,17 +21,24 @@ PY
 echo "[entrypoint] running migrations…"
 alembic upgrade head
 
-echo "[entrypoint] seeding demo data if empty…"
+echo "[entrypoint] checking whether to seed demo data…"
 python - <<'PY'
+from app.core.config import settings
 from app.db.base import SessionLocal
 from app.models.core import Fund
-db = SessionLocal()
-if db.query(Fund).count() == 0:
-    from app.seed.seed import run_seed
-    print("[entrypoint] seeding…", run_seed())
+if not settings.should_seed_demo:
+    reason = "SEED_DEMO_DATA=false" if settings.seed_demo_data is False else "ENVIRONMENT=production"
+    print(f"[entrypoint] {reason}: skipping demo seed; the workspace starts empty")
 else:
-    print("[entrypoint] data already present, skipping seed")
-db.close()
+    db = SessionLocal()
+    try:
+        if db.query(Fund).count() == 0:
+            from app.seed.seed import run_seed
+            print("[entrypoint] seeding…", run_seed(force=True))
+        else:
+            print("[entrypoint] data already present, skipping seed")
+    finally:
+        db.close()
 PY
 
 echo "[entrypoint] starting: $*"

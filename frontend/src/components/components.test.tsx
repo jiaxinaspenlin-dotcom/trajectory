@@ -29,6 +29,17 @@ describe("MomentumChart", () => {
     expect(screen.getByText("Accelerating")).toBeInTheDocument();
     expect(screen.getByText(/release frequency increased/i)).toBeInTheDocument();
   });
+
+  it("names a short history's real window instead of calling it 30-day", () => {
+    render(<MomentumChart momentum={{ ...momentum, change_30d_window_days: 3, change_90d_window_days: 3 }} />);
+    expect(screen.getByText("3-day")).toBeInTheDocument();
+    expect(screen.queryByText("30-day")).not.toBeInTheDocument();
+    // the 90-day figure is the same partial change, so it isn't shown
+    expect(screen.queryByText("+25")).not.toBeInTheDocument();
+    expect(screen.getByTestId("momentum-short-history")).toHaveTextContent(
+      "Score history covers 3 days, so this is the change since the first sync, not a 30-day trend."
+    );
+  });
 });
 
 describe("GuidedTour", () => {

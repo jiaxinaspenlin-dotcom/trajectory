@@ -7,11 +7,13 @@ create is_demo=False evidence attributed to live sources.
 
 from __future__ import annotations
 
+import sys
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.db.base import SessionLocal, init_db
 from app.models.assessment import AxisAssessment, Opportunity, OpportunityAssessment
 from app.models.core import Fund, InvestmentThesis, User
@@ -347,7 +349,13 @@ def _seed_static_analysis(db: Session, opp: Opportunity) -> None:
     db.flush()
 
 
-def run_seed() -> dict:
+def run_seed(force: bool = False) -> dict:
+    """Replace ALL data with the demo dataset. Refuses in production unless forced."""
+    if get_settings().is_production and not force:
+        raise RuntimeError(
+            "Refusing to seed: ENVIRONMENT=production and seeding empties every table. "
+            "Run `python -m app.seed.seed --force` if you really mean it."
+        )
     init_db()
     db = SessionLocal()
     try:
@@ -460,5 +468,5 @@ def run_seed() -> dict:
 
 
 if __name__ == "__main__":
-    result = run_seed()
+    result = run_seed(force="--force" in sys.argv[1:])
     print("Seed complete:", result)

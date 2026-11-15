@@ -58,6 +58,9 @@ function Fund() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [impact, setImpact] = useState<string | null>(null);
+  // stored fit scores that no longer match the active thesis
+  const [staleFits, setStaleFits] = useState(0);
+  const [recalculating, setRecalculating] = useState(false);
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -72,12 +75,23 @@ function Fund() {
   const load = useCallback(() => {
     setLoading(true);
     setLoadError(null);
-    api.get<{ thesis: Thesis | null }>("/api/thesis")
-      .then((r) => setThesis(r.thesis))
+    api.get<{ thesis: Thesis | null; stale_fit_count?: number }>("/api/thesis")
+      .then((r) => { setThesis(r.thesis); setStaleFits(r.stale_fit_count ?? 0); })
       .catch((e) => setLoadError(e instanceof Error ? e.message : "Couldn't load the fund"))
       .finally(() => setLoading(false));
   }, []);
   useEffect(load, [load]);
+
+  async function recalculate() {
+    setRecalculating(true);
+    try {
+      const r = await api.post<{ updated: number; stale_fit_count: number }>("/api/thesis/recalculate-fit", {});
+      setStaleFits(r.stale_fit_count);
+      notify({ message: `Recalculated ${r.updated} thesis fit score${r.updated === 1 ? "" : "s"}. Stages and shortlists didn't change.` });
+    } catch (e) {
+      notify({ message: e instanceof Error ? `Couldn't recalculate: ${e.message}` : "Couldn't recalculate.", tone: "error" });
+    } finally { setRecalculating(false); }
+  }
 
   const header = (
     <PageHeader
@@ -102,6 +116,16 @@ function Fund() {
           </span>
         </div>
       )}
+      {staleFits > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-caution/30 bg-caution-wash px-4 py-3 text-[15px] text-caution" data-testid="stale-fit">
+          <span>
+            {staleFits === 1 ? "1 thesis fit score was" : `${staleFits} thesis fit scores were`} calculated with an earlier thesis. They stay as they are until you recalculate.
+          </span>
+          <button className="btn-secondary btn-sm" onClick={recalculate} disabled={recalculating}>
+            {recalculating ? "Recalculating…" : `Recalculate ${staleFits} score${staleFits === 1 ? "" : "s"}`}
+          </button>
+        </div>
+      )}
       {loading ? <Spinner label="Loading fund…" /> : loadError ? <ErrorState message={loadError} onRetry={load} /> : thesis ? (
         <Profile t={thesis} />
       ) : (
@@ -115,11 +139,12 @@ function Fund() {
         open={editing}
         existing={thesis}
         onClose={() => setEditing(false)}
-        onSaved={(t, created) => {
+        onSaved={(t, created, stale) => {
           setThesis(t);
+          setStaleFits(stale);
           setImpact(created
             ? "New leads and applications get a thesis fit score against it."
-            : "New leads and applications are scored against these changes; existing fit scores update when a record is re-scored.");
+            : "New leads and applications are scored against these changes; existing fit scores stay as they are until you recalculate.");
           setEditing(false);
           notify({ message: created ? "Thesis created." : "Thesis saved." });
         }}
@@ -245,7 +270,7 @@ function ThesisEditor({ open, existing, onClose, onSaved }: {
   open: boolean;
   existing: Thesis | null;
   onClose: () => void;
-  onSaved: (t: Thesis, created: boolean) => void;
+  onSaved: (t: Thesis, created: boolean, staleFitCount: number) => void;
 }) {
   const [form, setForm] = useState<Form>(EMPTY);
   const [saving, setSaving] = useState(false);
@@ -288,9 +313,9 @@ function ThesisEditor({ open, existing, onClose, onSaved }: {
     };
     try {
       const r = existing
-        ? await api.put<{ thesis: Thesis }>(`/api/thesis/${existing.id}`, payload)
-        : await api.post<{ thesis: Thesis }>("/api/thesis", payload);
-      onSaved(r.thesis, !existing);
+        ? await api.put<{ thesis: Thesis; stale_fit_count?: number }>(`/api/thesis/${existing.id}`, payload)
+        : await api.post<{ thesis: Thesis; stale_fit_count?: number }>("/api/thesis", payload);
+      onSaved(r.thesis, !existing, r.stale_fit_count ?? 0);
     } catch (e) {
       setError(e instanceof Error ? `Couldn't save the thesis: ${e.message}` : "Couldn't save the thesis.");
     } finally {

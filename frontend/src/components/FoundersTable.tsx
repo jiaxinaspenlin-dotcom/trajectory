@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { humanStatus, trajectoryTone } from "@/lib/format";
+import { humanStatus, momentumWindow, trajectoryTone } from "@/lib/format";
 import { PipelineStatus } from "@/lib/myWorkspace";
 import { inPipeline, leadStatus, shortlistOf } from "@/lib/pipeline";
 import { FounderLead } from "@/lib/types";
@@ -358,7 +358,7 @@ function MomentumCell({ l }: { l: FounderLead }) {
       <Badge tone={trajectoryTone(m.trajectory)}>{humanStatus(m.trajectory)}</Badge>
       {m.change_30d != null && (
         <span className={`num text-xs ${m.change_30d >= 0 ? "text-positive" : "text-negative"}`}>
-          {m.change_30d >= 0 ? "+" : ""}{Math.round(m.change_30d)} / 30d
+          {m.change_30d >= 0 ? "+" : ""}{Math.round(m.change_30d)} / {momentumWindow(m.change_30d_window_days).short}
         </span>
       )}
     </span>

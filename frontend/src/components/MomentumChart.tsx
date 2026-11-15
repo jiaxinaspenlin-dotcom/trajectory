@@ -3,13 +3,18 @@
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Momentum } from "@/lib/types";
 import { Badge } from "./ui";
-import { trajectoryTone, humanStatus } from "@/lib/format";
+import { momentumWindow, trajectoryTone, humanStatus } from "@/lib/format";
 
 export function MomentumChart({ momentum }: { momentum: Momentum }) {
   const data = momentum.series.map((s) => ({
     date: new Date(s.date).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
     score: s.score,
   }));
+  const days30 = momentum.change_30d_window_days;
+  const w30 = momentumWindow(days30, 30);
+  const w90 = momentumWindow(momentum.change_90d_window_days, 90);
+  // With under 30 days of history the 90-day figure is the same partial change.
+  const change90 = w30.partial && w90.partial ? null : momentum.change_90d;
 
   return (
     <div data-tour="momentum" data-testid="momentum-chart">
@@ -19,15 +24,15 @@ export function MomentumChart({ momentum }: { momentum: Momentum }) {
           <div className="text-2xl font-semibold text-ink">{momentum.current_score}</div>
         </div>
         <div>
-          <div className="label">30-day</div>
+          <div className="label">{w30.long}</div>
           <div className={`text-lg font-semibold ${(momentum.change_30d ?? 0) >= 0 ? "text-positive" : "text-negative"}`}>
             {momentum.change_30d === null ? "—" : `${momentum.change_30d >= 0 ? "+" : ""}${momentum.change_30d}`}
           </div>
         </div>
         <div>
           <div className="label">90-day</div>
-          <div className={`text-lg font-semibold ${(momentum.change_90d ?? 0) >= 0 ? "text-positive" : "text-negative"}`}>
-            {momentum.change_90d === null ? "—" : `${momentum.change_90d >= 0 ? "+" : ""}${momentum.change_90d}`}
+          <div className={`text-lg font-semibold ${change90 === null ? "text-ink-muted" : change90 >= 0 ? "text-positive" : "text-negative"}`}>
+            {change90 === null ? "—" : `${change90 >= 0 ? "+" : ""}${change90}`}
           </div>
         </div>
         <Badge tone={trajectoryTone(momentum.trajectory)}>{humanStatus(momentum.trajectory)}</Badge>
@@ -49,6 +54,11 @@ export function MomentumChart({ momentum }: { momentum: Momentum }) {
       </div>
 
       <p className="mt-2 text-sm text-ink-soft">{momentum.explanation}</p>
+      {w30.partial && momentum.change_30d !== null && (
+        <p className="mt-1 text-[13px] text-ink-muted" data-testid="momentum-short-history">
+          Score history covers {days30 ? `${days30} day${days30 === 1 ? "" : "s"}` : "less than a day"}, so this is the change since the first sync, not a 30-day trend.
+        </p>
+      )}
 
       {momentum.signal_trends.length > 0 && (
         <div className="mt-3">

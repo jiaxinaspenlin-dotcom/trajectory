@@ -164,7 +164,9 @@ docker compose up --build
 # postgres: localhost:5432 (trajectory/trajectory)
 ```
 
-The backend container waits for Postgres, runs migrations, and seeds demo data if the DB is empty.
+The backend container waits for Postgres, runs migrations, and seeds demo data if the DB is empty
+and seeding is enabled (see `SEED_DEMO_DATA` below). With `ENVIRONMENT=production` it skips the
+seed by default, so a production deployment starts with an empty workspace.
 
 ## Environment variables
 
@@ -184,6 +186,7 @@ Copy `.env.example` to `.env`. **Never commit `.env` or put real values in `.env
 | `AI_RATE_LIMIT_PER_MINUTE` | Per-IP throttle on AI endpoints | `20` |
 | `SECRET_KEY` | Internal signing seed | set your own in prod |
 | `ENVIRONMENT` | `development` / `production` / `test` | `development` |
+| `SEED_DEMO_DATA` | Seed fictional demo data into an empty DB on container start | unset → seed unless `ENVIRONMENT=production`; `true`/`false` always wins |
 
 The OpenAI key is only ever read on the backend and is **never** included in the client bundle.
 The `GET /api/settings` endpoint returns only a masked hint (last 4 chars) — never the full key.
@@ -238,6 +241,12 @@ credits, plus 1 per result whose company site has to be looked up (at most 5).
   (8 fictional founders + companies, multiple historical score/momentum snapshots, mixed-status
   claims, contradictions, three-axis assessments, diligence questions, ≥2 completed Arena debates,
   an inbound application, and completed memos — all flagged as demo).
+  Seeding **empties every table first**, real records included. With `ENVIRONMENT=production` it
+  refuses to run unless you pass `--force` (`python -m app.seed.seed --force`).
+- **Remove demo data:** `./.venv/bin/python -m app.seed.clear_demo` removes the demo records but
+  keeps one fully analyzed example (Inferra). `python -m app.seed.clear_demo --all` removes every
+  demo record, deletes the demo thesis if it is still named "Northstar Ventures (Demo)", and
+  renames the demo fund to "My fund". Real founders, leads and evidence are never touched.
 - **Dev fallback:** if `DATABASE_URL` is unset the app uses SQLite and auto-creates tables on
   startup, so the app also runs without Alembic. Postgres uses migrations.
 

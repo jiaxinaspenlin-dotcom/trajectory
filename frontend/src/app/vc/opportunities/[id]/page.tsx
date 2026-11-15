@@ -71,6 +71,7 @@ function OpportunityRecord() {
   const [confirmRegen, setConfirmRegen] = useState(false);
   const [regenError, setRegenError] = useState<string | null>(null);
   const [memoBusy, setMemoBusy] = useState(false);
+  const [fitBusy, setFitBusy] = useState(false);
   const [confirmScreening, setConfirmScreening] = useState(false);
   const [screeningError, setScreeningError] = useState<string | null>(null);
   const notify = useToast();
@@ -115,6 +116,19 @@ function OpportunityRecord() {
       notify({ message: "Outreach suggested — it's now the next step, awaiting your review. Nothing was sent.", href: `${pathname}?tab=decision`, linkLabel: "Review it" });
     } catch (e) {
       notify({ tone: "error", message: e instanceof Error ? e.message : "Couldn't suggest outreach." });
+    }
+  }
+
+  async function recalculateFit() {
+    setFitBusy(true);
+    try {
+      await api.post(`/api/thesis/recalculate-fit?opportunity_id=${id}`);
+      await reload();
+      notify({ message: "Thesis fit recalculated. Stage and shortlist didn't change." });
+    } catch (e) {
+      notify({ tone: "error", message: e instanceof Error ? `Couldn't recalculate: ${e.message}` : "Couldn't recalculate the fit." });
+    } finally {
+      setFitBusy(false);
     }
   }
 
@@ -286,7 +300,7 @@ function OpportunityRecord() {
               </Section>
               <Section title="At a glance" flush>
                 <dl className="divide-y divide-line">
-                  <Fact label="Thesis fit" value={o.company ? `${Math.round(o.thesis_fit_score)} / 100` : "Needs a company"} tab="screening" pathname={pathname} />
+                  <Fact label="Thesis fit" value={o.company ? `${Math.round(o.thesis_fit_score)} / 100${o.thesis_fit_stale ? " · earlier thesis" : ""}` : "Needs a company"} tab="screening" pathname={pathname} />
                   <Fact label="Founder score" value={o.founder_score ? `${Math.round(o.founder_score.score)}` : "Not scored"} tab="founder" pathname={pathname} />
                   <Fact label="Evidence" value={`${evidence.length} ${evidence.length === 1 ? "item" : "items"}${newIds.size ? ` · ${newIds.size} new` : ""}`} tab="evidence" pathname={pathname} />
                   <Fact label="Claims" value={claims.data ? `${claimCount}` : "…"} tab="claims" pathname={pathname} />
@@ -357,6 +371,14 @@ function OpportunityRecord() {
                 {o.company ? (
                   <div className="num text-3xl font-semibold text-ink">{Math.round(o.thesis_fit_score)}<span className="text-base font-normal text-ink-muted"> / 100</span></div>
                 ) : <p className="text-sm text-ink-muted">Not computed — fit is evaluated from a company, and this lead has none yet.</p>}
+                {o.company && o.thesis_fit_stale && (
+                  <div className="mt-3 rounded-md bg-caution-wash px-3 py-2 text-sm text-caution" data-testid="fit-stale">
+                    <p>Scored against an earlier version of your thesis.</p>
+                    <button className="btn-secondary btn-sm mt-2" onClick={recalculateFit} disabled={fitBusy}>
+                      {fitBusy ? "Recalculating…" : "Recalculate fit"}
+                    </button>
+                  </div>
+                )}
                 <Link href="/vc/fund" className="mt-3 inline-block text-sm text-brand hover:underline">View thesis →</Link>
               </Section>
               <Section title="Gaps to investigate" subtitle="Missing information and contradictions, most important first">
