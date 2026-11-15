@@ -8,6 +8,7 @@ import { Thesis } from "@/lib/types";
 import Link from "next/link";
 import { Badge, Drawer, EmptyState, ErrorState, PageHeader, Section, Spinner } from "@/components/ui";
 import { useToast } from "@/components/Toast";
+import { Tabs, tabPanelProps } from "@/components/Tabs";
 
 const EMPTY = {
   fund_name: "", sectors: "", stages: "", geographies: "",
@@ -213,6 +214,21 @@ function Term({ label, value }: { label: string; value: string }) {
 
 type Errors = Partial<Record<keyof Form, string>>;
 
+// The editor's three sections share one draft and one Save button.
+type ThesisSection = "focus" | "terms" | "exclusions";
+const SECTIONS: { key: ThesisSection; label: string }[] = [
+  { key: "focus", label: "Investment focus" },
+  { key: "terms", label: "Terms" },
+  { key: "exclusions", label: "Exclusions" },
+];
+// field order matches the on-screen order, so "first invalid field" means what you'd expect
+const FIELD_SECTION: [keyof Form, ThesisSection][] = [
+  ["fund_name", "focus"], ["sectors", "focus"], ["stages", "focus"], ["geographies", "focus"],
+  ["risk_tolerance", "focus"], ["custom_description", "focus"], ["founder_preferences", "focus"], ["traction_preferences", "focus"],
+  ["min_check_size", "terms"], ["max_check_size", "terms"], ["target_ownership", "terms"],
+  ["excluded_sectors", "exclusions"], ["excluded_geographies", "exclusions"], ["excluded_business_models", "exclusions"],
+];
+
 function validate(f: Form): Errors {
   const e: Errors = {};
   const num = (v: number | string) => Number(v);
@@ -235,18 +251,28 @@ function ThesisEditor({ open, existing, onClose, onSaved }: {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tried, setTried] = useState(false);
+  const [section, setSection] = useState<ThesisSection>("focus");
+  const [pendingFocus, setPendingFocus] = useState<string | null>(null);
   useEffect(() => {
-    if (open) { setForm(existing ? toForm(existing) : EMPTY); setError(null); setTried(false); }
+    if (open) { setForm(existing ? toForm(existing) : EMPTY); setError(null); setTried(false); setSection("focus"); }
   }, [open, existing]);
+  // focus a field once its section is on screen
+  useEffect(() => {
+    if (!pendingFocus) return;
+    document.getElementById(pendingFocus)?.focus();
+    setPendingFocus(null);
+  }, [pendingFocus, section]);
   const errors = validate(form);
   const shown: Errors = tried ? errors : {};
+  const sectionErrors = (k: ThesisSection) => FIELD_SECTION.filter(([f, sec]) => sec === k && shown[f]).length;
 
   async function save() {
     setTried(true);
-    if (Object.keys(errors).length) {
-      // move focus to the first field that needs attention
-      const first = Object.keys(errors)[0];
-      document.getElementById(`thesis-${first}`)?.focus();
+    const first = FIELD_SECTION.find(([f]) => errors[f]);
+    if (first) {
+      // open the section with the first field that needs attention, then focus it
+      setSection(first[1]);
+      setPendingFocus(`thesis-${first[0]}`);
       return;
     }
     setSaving(true);
@@ -305,7 +331,7 @@ function ThesisEditor({ open, existing, onClose, onSaved }: {
       open={open}
       onClose={onClose}
       title={existing ? "Edit thesis" : "Create thesis"}
-      subtitle="Sectors, stages, and geographies drive each company's thesis fit score. Separate lists with commas."
+      subtitle="One draft across all three sections — switch freely, then save once. Separate lists with commas."
       footer={
         <>
           {errorCount > 0 && <span className="mr-auto text-[13px] text-negative" role="alert">Fix {errorCount} {errorCount === 1 ? "field" : "fields"} to save.</span>}
@@ -316,9 +342,22 @@ function ThesisEditor({ open, existing, onClose, onSaved }: {
     >
       <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); save(); }} noValidate>
         {error && <ErrorState message={error} onRetry={save} />}
-        <p className="text-[13px] text-ink-muted"><span className="text-negative">*</span> Required</p>
+        <Tabs
+          label="Thesis sections"
+          idPrefix="thesis"
+          size="sm"
+          value={section}
+          onChange={setSection}
+          tabs={SECTIONS.map((sec) => {
+            const n = sectionErrors(sec.key);
+            return { key: sec.key, label: sec.label, badge: n ? <span className="chip bg-negative-wash text-negative" aria-label={`${n} to fix`}>{n}</span> : undefined };
+          })}
+        />
+        <div {...tabPanelProps("thesis", section)}>
+        {section === "focus" && (
         <fieldset className="space-y-4">
-          <legend className="text-base font-semibold text-ink">Investment focus</legend>
+          <legend className="sr-only">Investment focus</legend>
+          <p className="text-[13px] text-ink-muted"><span className="text-negative">*</span> Required. Matches on sectors, stages, and geographies raise a company&apos;s thesis fit.</p>
           {field("fund_name", "Fund name", { ph: "Northstar Ventures", required: true })}
           <div className="grid gap-4 sm:grid-cols-2">
             {field("sectors", "Sectors", { ph: "fintech, ai/ml, devtools", hint: "A matching sector adds the most to thesis fit. Also used to plan lead searches." })}
@@ -343,28 +382,30 @@ function ThesisEditor({ open, existing, onClose, onSaved }: {
           {field("founder_preferences", "Founders we look for", { ph: "Technical founders with repeated execution", hint: "Used to plan lead searches." })}
           {field("traction_preferences", "Traction we look for", { ph: "Evidence of product adoption", hint: "Shown on your fund profile." })}
         </fieldset>
-        <fieldset className="space-y-4 border-t border-line pt-5">
-          <legend className="text-base font-semibold text-ink">
-            Terms
-            <span className="mt-0.5 block text-[13px] font-normal text-ink-muted">For your reference on the fund profile; not used in scoring.</span>
-          </legend>
+        )}
+        {section === "terms" && (
+        <fieldset className="space-y-4">
+          <legend className="sr-only">Terms</legend>
+          <p className="text-[13px] text-ink-muted">For your reference on the fund profile; not used in scoring.</p>
           <div className="grid gap-4 sm:grid-cols-3">
             {field("min_check_size", "Min check ($)", { ph: "250000", type: "number" })}
             {field("max_check_size", "Max check ($)", { ph: "1500000", type: "number" })}
             {field("target_ownership", "Target ownership (%)", { ph: "8", type: "number" })}
           </div>
         </fieldset>
-        <fieldset className="space-y-4 border-t border-line pt-5">
-          <legend className="text-base font-semibold text-ink">
-            Exclusions
-            <span className="mt-0.5 block text-[13px] font-normal text-ink-muted">A company matching any exclusion gets a fit score of 5–8 out of 100, whatever else matches.</span>
-          </legend>
+        )}
+        {section === "exclusions" && (
+        <fieldset className="space-y-4">
+          <legend className="sr-only">Exclusions</legend>
+          <p className="text-[13px] text-ink-muted">A company matching any exclusion gets a fit score of 5–8 out of 100, whatever else matches. Separate entries with commas.</p>
           <div className="grid gap-4 sm:grid-cols-3">
             {field("excluded_sectors", "Sectors", { ph: "gambling" })}
             {field("excluded_geographies", "Geographies")}
             {field("excluded_business_models", "Business models", { ph: "services agency" })}
           </div>
         </fieldset>
+        )}
+        </div>
         {/* lets Enter in a field submit the form */}
         <button type="submit" hidden aria-hidden tabIndex={-1} />
       </form>

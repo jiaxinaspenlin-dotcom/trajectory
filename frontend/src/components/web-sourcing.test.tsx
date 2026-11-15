@@ -171,7 +171,7 @@ describe("FoundersTable web leads", () => {
     render(<FoundersTable leads={[webLead]} overlay={{}} onSetStatus={() => {}} onMoveToScreening={async () => {}} />);
     const row = screen.getByTestId("founder-row-42");
     expect(within(row).getByTestId("new-evidence-42")).toHaveTextContent("New evidence · 1");
-    expect(within(row).getByTestId("new-evidence-42")).toHaveAttribute("href", "/vc/opportunities/42#evidence");
+    expect(within(row).getByTestId("new-evidence-42")).toHaveAttribute("href", "/vc/opportunities/42?tab=evidence");
     expect(within(row).getByText("Named on source: Maya Chen · unverified")).toBeInTheDocument();
     expect(within(row).getByText("ledgerly.dev ↗")).toHaveAttribute("href", "https://ledgerly.dev");
   });

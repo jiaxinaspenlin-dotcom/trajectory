@@ -140,11 +140,22 @@ export type NextActionKey = "review_recommendation" | "review_application" | "re
 export function nextActionHref(opportunityId: number, key: string | null | undefined): string {
   const base = `/vc/opportunities/${opportunityId}`;
   switch (key) {
-    case "review_recommendation": return `${base}#decision`;
+    case "review_recommendation": return `${base}?tab=decision`;
     case "resolve_diligence": return `${base}/diligence`;
-    case "generate_memo": return `${base}#arena`;
-    case "run_analysis":
-    case "review_application":
-    default: return `${base}#next-step`;
+    case "generate_memo": return `${base}?tab=arena`;
+    // run analysis / review an application: the record's header holds the action
+    default: return base;
   }
+}
+
+// Tabs of an opportunity record, in order; the URL (?tab=) selects one.
+export const OPPORTUNITY_TABS = ["overview", "founder", "screening", "arena", "claims", "evidence", "decision"] as const;
+export type OpportunityTab = (typeof OPPORTUNITY_TABS)[number];
+
+export function parseOpportunityTab(v: string | null | undefined): OpportunityTab {
+  return (OPPORTUNITY_TABS as readonly string[]).includes(v ?? "") ? (v as OpportunityTab) : "overview";
+}
+
+export function evidenceHref(opportunityId: number, evidenceId: number): string {
+  return `/vc/opportunities/${opportunityId}?tab=evidence&evidence=${evidenceId}`;
 }

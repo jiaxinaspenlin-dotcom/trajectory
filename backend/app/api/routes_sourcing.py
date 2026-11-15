@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -306,6 +307,19 @@ def prospect_action(opp_id: int, body: ProspectActionIn, db: Session = Depends(g
             "note": "No automated outreach is ever sent; consequential actions require human approval."}
 
 
+def _evidence_owner(opps: Sequence[Opportunity], e: Evidence, db: Session) -> dict:
+    """The opportunity a piece of evidence belongs to (company first, then
+    founder), so the Dashboard can link straight to it."""
+    o = next((o for o in opps if e.company_id and o.company_id == e.company_id), None) or next(
+        (o for o in opps if e.founder_id and o.founder_id == e.founder_id), None)
+    if not o:
+        return {"opportunity_id": None, "opportunity_name": None}
+    company = db.get(Company, o.company_id) if o.company_id else None
+    founder = db.get(Founder, o.founder_id) if o.founder_id else None
+    return {"opportunity_id": o.id,
+            "opportunity_name": (company.name if company else None) or (founder.full_name if founder else None)}
+
+
 @router.get("/dashboard")
 def dashboard(db: Session = Depends(get_db)) -> dict:
     fund = default_fund(db)
@@ -366,7 +380,7 @@ def dashboard(db: Session = Depends(get_db)) -> dict:
         "action_queue": action_queue,
         "recent_evidence": [
             {"id": e.id, "kind": e.kind, "title": e.title, "source_name": e.source_name,
-             "collected_at": e.collected_at.isoformat()}
+             "collected_at": e.collected_at.isoformat(), **_evidence_owner(opps, e, db)}
             for e in recent_evidence
         ],
         "connectors": {"live": ["github", *(["web"] if settings.web_search_enabled else [])],

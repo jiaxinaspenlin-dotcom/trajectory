@@ -127,7 +127,7 @@ export function MapDrawer({
               <span className="flex flex-wrap items-center gap-1.5">
                 <span className="num">{node.evidence_count} items</span>
                 {!!node.new_evidence_count && (
-                  <Link href={`/vc/opportunities/${node.id}#evidence`} className="chip bg-signal-wash text-caution" data-testid="drawer-new-evidence">
+                  <Link href={`/vc/opportunities/${node.id}?tab=evidence`} className="chip bg-signal-wash text-caution" data-testid="drawer-new-evidence">
                     <span className="h-1.5 w-1.5 rounded-full bg-signal" aria-hidden /> {node.new_evidence_count} new
                   </Link>
                 )}

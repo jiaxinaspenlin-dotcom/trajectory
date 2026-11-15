@@ -282,7 +282,7 @@ function FounderCell({ l }: { l: FounderLead }) {
         </Link>
         {!!l.new_evidence_count && (
           <Link
-            href={`${href}#evidence`}
+            href={`${href}?tab=evidence`}
             onClick={stop}
             data-testid={`new-evidence-${l.id}`}
             title="Web evidence found since you last reviewed this lead"

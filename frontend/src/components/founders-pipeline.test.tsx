@@ -115,14 +115,14 @@ describe("PipelineTable", () => {
     expect(within(row).getByText("Outbound")).toBeInTheDocument();
     expect(within(row).getByText("Screening")).toBeInTheDocument();
     // the next action is a link to where it's done
-    expect(within(row).getByRole("link", { name: "Run analysis →" })).toHaveAttribute("href", "/vc/opportunities/11#next-step");
+    expect(within(row).getByRole("link", { name: "Run analysis →" })).toHaveAttribute("href", "/vc/opportunities/11");
     expect(within(row).getByText("No company")).toBeInTheDocument();
     expect(within(row).getByText("Ada Builder")).toHaveAttribute("href", "/vc/opportunities/11");
   });
 
   it("links a recommendation awaiting review to the decision panel", () => {
     render(<PipelineTable deals={[deal({ next_action: "Review recommendation", next_action_key: "review_recommendation", next_action_detail: "Recommended: Continue Diligence", priority: 1 })]} />);
-    expect(screen.getByRole("link", { name: /Review recommendation/ })).toHaveAttribute("href", "/vc/opportunities/11#decision");
+    expect(screen.getByRole("link", { name: /Review recommendation/ })).toHaveAttribute("href", "/vc/opportunities/11?tab=decision");
     expect(screen.getByText("Recommended: Continue Diligence")).toBeInTheDocument();
     expect(screen.getByLabelText("Awaiting your review")).toBeInTheDocument();
   });

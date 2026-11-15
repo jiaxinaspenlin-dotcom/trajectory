@@ -166,7 +166,8 @@ function OpportunityMap() {
             <span className="text-ink-muted" title="Leads in Sourcing (not yet in Pipeline)">Leads</span>
             <span className="num font-semibold text-ink">{leadCount}</span>
           </div>
-          <Link href="/vc/founders?source=open" className="btn-primary shadow-raised">+ Source</Link>
+          {/* primary until a record is open — then the drawer's Open opportunity is the main action */}
+          <Link href="/vc/founders?source=open" className={selected ? "btn-secondary shadow-raised" : "btn-primary shadow-raised"}>+ Source founders</Link>
         </div>
 
         <div className="pointer-events-auto relative mx-auto min-w-0 flex-1 lg:max-w-lg">
@@ -219,7 +220,8 @@ function OpportunityMap() {
         </div>
 
         <div className="pointer-events-auto relative flex shrink-0 gap-2">
-          <Link href="/vc/founders?source=open" className="hud grid h-10 w-10 place-items-center text-brand lg:hidden" aria-label="Source founders"><PlusIcon size={18} /></Link>
+          <Link href="/vc/founders?source=open" aria-label="Source founders"
+            className={`grid h-10 w-10 place-items-center lg:hidden ${selected ? "hud text-brand" : "btn-primary px-0 shadow-raised"}`}><PlusIcon size={18} /></Link>
           <button
             type="button"
             className={`hud flex h-10 items-center gap-2 px-3 text-sm font-medium sm:px-3.5 ${filtersActive ? "text-brand" : "text-ink-soft"}`}

@@ -1,16 +1,24 @@
 import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { nextActionHref, shortlistOf } from "@/lib/pipeline";
+import { evidenceHref, nextActionHref, parseOpportunityTab, shortlistOf } from "@/lib/pipeline";
 import { ToastProvider, useToast } from "./Toast";
 
 describe("next action links", () => {
   it("sends each next action to where it's done", () => {
-    expect(nextActionHref(7, "review_recommendation")).toBe("/vc/opportunities/7#decision");
+    expect(nextActionHref(7, "review_recommendation")).toBe("/vc/opportunities/7?tab=decision");
     expect(nextActionHref(7, "resolve_diligence")).toBe("/vc/opportunities/7/diligence");
-    expect(nextActionHref(7, "generate_memo")).toBe("/vc/opportunities/7#arena");
-    expect(nextActionHref(7, "run_analysis")).toBe("/vc/opportunities/7#next-step");
-    expect(nextActionHref(7, "review_application")).toBe("/vc/opportunities/7#next-step");
-    expect(nextActionHref(7, null)).toBe("/vc/opportunities/7#next-step");
+    expect(nextActionHref(7, "generate_memo")).toBe("/vc/opportunities/7?tab=arena");
+    expect(nextActionHref(7, "run_analysis")).toBe("/vc/opportunities/7");
+    expect(nextActionHref(7, "review_application")).toBe("/vc/opportunities/7");
+    expect(nextActionHref(7, null)).toBe("/vc/opportunities/7");
+  });
+
+  it("parses the record tab from the URL, defaulting to Overview", () => {
+    expect(parseOpportunityTab("decision")).toBe("decision");
+    expect(parseOpportunityTab("evidence")).toBe("evidence");
+    expect(parseOpportunityTab("nope")).toBe("overview");
+    expect(parseOpportunityTab(null)).toBe("overview");
+    expect(evidenceHref(7, 42)).toBe("/vc/opportunities/7?tab=evidence&evidence=42");
   });
 });
 

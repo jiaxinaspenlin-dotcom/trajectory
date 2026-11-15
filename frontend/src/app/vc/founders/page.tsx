@@ -69,7 +69,8 @@ function Founders() {
         subtitle={leads.data
           ? `${all.length} sourced ${all.length === 1 ? "lead" : "leads"} · ${pipelineCount} moved to Pipeline. Review a lead's evidence, shortlist it, and move it to Screening when it's worth evaluating.`
           : "Leads you've sourced from public evidence"}
-        actions={<button className="btn-primary" onClick={() => setSourcingOpen(true)}>+ Source founders</button>}
+        // with no leads yet, the empty state below carries this action
+        actions={all.length > 0 && <button className="btn-primary" onClick={() => setSourcingOpen(true)}>+ Source founders</button>}
       />
       <FounderLeads leads={leads} onOpenSourcing={() => setSourcingOpen(true)} />
       <Drawer

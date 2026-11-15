@@ -36,7 +36,8 @@ export default function MyApplications() {
           <h1 className="text-2xl font-semibold tracking-[-0.015em] text-ink">My applications</h1>
           <p className="mt-0.5 text-sm text-ink-muted">Applications you&rsquo;ve submitted from this device.</p>
         </div>
-        <Link href="/founder" className="btn-primary">New application</Link>
+        {/* with none yet, the empty state's "Start your application" is the action */}
+        {!!apps?.length && <Link href="/founder" className="btn-secondary">New application</Link>}
       </div>
 
       {apps === null ? (
@@ -51,7 +52,8 @@ export default function MyApplications() {
                     <p className="truncate text-sm font-semibold text-ink">{a.company_name}</p>
                     <p className="text-xs text-ink-muted">{a.sector || "Sector not set"}{a.missing_fields.length ? ` · ${a.missing_fields.length} item${a.missing_fields.length === 1 ? "" : "s"} would help` : ""}</p>
                   </div>
-                  <div className="flex shrink-0 items-center gap-1.5">
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+                    {a.missing_fields.length > 0 && <span className="text-sm font-medium text-brand">Add details →</span>}
                     {a.document?.status === "extracted" ? (
                       <Badge tone="bg-positive-wash text-positive">Deck received</Badge>
                     ) : (

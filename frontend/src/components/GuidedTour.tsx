@@ -191,9 +191,9 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
 }
 
 export const DASHBOARD_TOUR: TourStep[] = [
-  { target: "overview", title: "Your pipeline at a glance", body: "Welcome to your investor workspace. These are your deals by stage — Sourcing, Screening, Diligence, Decision. Click any stage to jump to those records. Here's a quick tour." },
-  { target: "action-queue", title: "Needs attention", body: "The five most urgent next steps, and on whom — deals you can act on now come first. Each row names the opportunity and one concrete step: run analysis, resolve diligence, or review a recommendation and decide. The full queue is in Pipeline." },
+  { target: "action-queue", title: "Start with what needs attention", body: "Welcome to your investor workspace. This is the short list of what to do next — the most urgent first. Each row's button opens the right part of that opportunity: its decision, its analysis, or its diligence." },
+  { target: "overview", title: "Your pipeline at a glance", body: "Deals by stage — Sourcing, Screening, Diligence, Decision. Click a stage to open those records." },
   { target: "evidence", title: "Recent evidence", body: "The latest sources collected from GitHub, the web, and pitch decks. Every claim in Trajectory links back to stored evidence like this, with its own verification status." },
   { target: "nav", title: "Everything else is one click away", body: "Map shows every lead and deal in one view. Founders ranks the leads you've sourced, Pipeline holds the full application queue, and Fund keeps your thesis — every score is evaluated against it." },
-  { target: "action-queue", title: "Open an opportunity to go deeper", body: "On any opportunity you get the full assessment — three independent screening axes, the Bull / Bear / Referee debate, an evidence-backed memo, and a recommended next step you approve or override. The Map shows every lead and deal in one view." },
+  { target: "action-queue", title: "Open an opportunity to go deeper", body: "Each opportunity has tabs — Overview, Founder, Screening, Arena, Claims, Evidence, and Decision. The button at the top of a record is always its next step; you approve or override every recommendation." },
 ];

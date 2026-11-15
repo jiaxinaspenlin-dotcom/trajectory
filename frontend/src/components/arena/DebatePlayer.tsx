@@ -5,6 +5,7 @@ import { Debate } from "@/lib/types";
 import { pct } from "@/lib/format";
 import { BullCharacter, BearCharacter, RefereeCharacter, CharState } from "./Characters";
 import { ArenaBackdrop } from "./stage";
+import { EvidenceRef } from "../EvidenceRef";
 
 type Role = "bull" | "bear" | "referee";
 
@@ -64,7 +65,7 @@ function Refs({ ids }: { ids?: number[] }) {
   return (
     <span className="ml-1 text-[11px] text-ink-muted">
       {ids.slice(0, 6).map((id) => (
-        <span key={id} className="mr-1 rounded bg-surface-sunken px-1 font-mono">E{id}</span>
+        <EvidenceRef key={id} id={id} />
       ))}
     </span>
   );

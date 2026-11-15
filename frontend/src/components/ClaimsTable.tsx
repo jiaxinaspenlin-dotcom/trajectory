@@ -3,6 +3,7 @@
 import { Claim } from "@/lib/types";
 import { Badge } from "./ui";
 import { humanStatus, verificationTone } from "@/lib/format";
+import { EvidenceRef } from "./EvidenceRef";
 
 function trustTone(score: number): string {
   if (score >= 70) return "text-positive";
@@ -39,7 +40,7 @@ export function ClaimsTable({ claims }: { claims: Claim[] }) {
               <td className={`pr-2 font-semibold ${trustTone(c.trust_score)}`}>{Math.round(c.trust_score)}</td>
               <td className="text-xs text-ink-muted">
                 {c.supporting_evidence_ids.length
-                  ? c.supporting_evidence_ids.map((id) => <span key={id} className="mr-1 rounded bg-surface-sunken px-1 font-mono">E{id}</span>)
+                  ? c.supporting_evidence_ids.map((id) => <EvidenceRef key={id} id={id} />)
                   : "—"}
               </td>
             </tr>

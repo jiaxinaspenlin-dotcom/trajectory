@@ -4,6 +4,7 @@ import { Assessment, AxisAssessment } from "@/lib/types";
 import { Badge, ConfidenceBar } from "./ui";
 import { InfoTip } from "./InfoTip";
 import { humanStatus, labelTone, pct, trajectoryTone } from "@/lib/format";
+import { EvidenceRef } from "./EvidenceRef";
 
 const AXIS_TITLES: Record<string, string> = {
   founder: "Founder",
@@ -63,7 +64,7 @@ function AxisCard({ axis }: { axis: AxisAssessment }) {
               • {p.text}
               {p.evidence_ids.length > 0 ? (
                 <span className="ml-1 text-xs text-ink-muted">
-                  {p.evidence_ids.slice(0, 4).map((id) => <span key={id} className="mr-1 inline-block rounded bg-surface-sunken px-1 font-mono">E{id}</span>)}
+                  {p.evidence_ids.slice(0, 4).map((id) => <EvidenceRef key={id} id={id} />)}
                 </span>
               ) : (
                 <span className="ml-1 text-xs text-caution">unverified</span>

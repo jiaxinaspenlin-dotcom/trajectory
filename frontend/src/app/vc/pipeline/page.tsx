@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useFetch } from "@/lib/useFetch";
 import { humanStatus } from "@/lib/format";
-import { filterDeals, parseSource, parseStage, PIPELINE_STAGES, SourceFilter, stageDot } from "@/lib/pipeline";
+import { filterDeals, nextActionHref, opportunityName, parseSource, parseStage, PIPELINE_STAGES, SourceFilter, stageDot } from "@/lib/pipeline";
 import { PipelineDeal } from "@/lib/types";
 import { PipelineTable } from "@/components/PipelineTable";
 import { EmptyState, ErrorState, PageHeader, Segmented, Spinner, Toolbar } from "@/components/ui";
@@ -44,13 +44,19 @@ function Deals() {
 
   const all = data?.items ?? [];
   const actNow = all.filter((d) => d.priority === 1).length;
+  const top = [...all].filter((d) => d.next_action).sort((a, b) => (a.priority ?? 9) - (b.priority ?? 9) || b.age_days - a.age_days)[0];
   const header = (
     <PageHeader
       title="Pipeline"
       subtitle={data
         ? `${all.length} active ${all.length === 1 ? "deal" : "deals"} in Screening, Diligence, and Decision${actNow ? ` · ${actNow} ${actNow === 1 ? "recommendation" : "recommendations"} awaiting your review` : ""}`
         : "Active deals in Screening, Diligence, and Decision"}
-      actions={<Link href="/vc/founders?source=open" className="btn-primary">+ Source founders</Link>}
+      actions={top && (
+        // the one primary action: the most urgent deal's next step
+        <Link href={nextActionHref(top.id, top.next_action_key)} className="btn-primary max-w-[22rem]" title={`${top.next_action} · ${opportunityName(top)}`}>
+          <span className="truncate">{top.next_action}: {opportunityName(top)}</span>
+        </Link>
+      )}
     />
   );
 
@@ -63,7 +69,7 @@ function Deals() {
         <EmptyState
           title="No active deals yet"
           hint="Inbound applications land here at Screening. Outbound founders join once you move them to Screening from Founders."
-          action={<Link href="/vc/founders" className="btn-primary">Go to Founders</Link>}
+          action={<><Link href="/vc/founders" className="btn-primary">Go to Founders</Link><Link href="/vc/founders?source=open" className="btn-secondary">Source founders</Link></>}
         />
       </div>
     );

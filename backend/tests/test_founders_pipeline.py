@@ -81,3 +81,22 @@ def test_pipeline_excludes_sourcing_and_dismissed(client, seeded):
 def test_pipeline_rejects_unknown_filters(client, seeded):
     assert client.get("/api/pipeline", params={"stage": "sourcing"}).status_code == 422
     assert client.get("/api/pipeline", params={"entry_type": "referral"}).status_code == 422
+
+
+def test_decision_requires_an_explicit_outcome_and_action(client, seeded):
+    opp_id = client.get("/api/pipeline").json()["items"][0]["id"]
+    url = f"/api/opportunities/{opp_id}/decision"
+    base = {"decided_by": "Investor", "decision": "approved", "chosen_action": "Continue Diligence"}
+    assert client.post(url, json={**base, "decision": ""}).status_code == 422
+    assert client.post(url, json={**base, "chosen_action": ""}).status_code == 422
+    assert client.post(url, json={**base, "decided_by": ""}).status_code == 422
+    assert client.post(url, json=base).status_code == 200
+    history = client.get(f"/api/opportunities/{opp_id}/decisions").json()["items"]
+    assert history[-1]["chosen_action"] == "Continue Diligence"
+
+
+def test_dashboard_recent_evidence_names_its_opportunity(client, seeded):
+    items = client.get("/api/dashboard").json()["recent_evidence"]
+    linked = [e for e in items if e["opportunity_id"]]
+    assert linked, "seeded evidence belongs to seeded opportunities"
+    assert all(e["opportunity_name"] for e in linked)

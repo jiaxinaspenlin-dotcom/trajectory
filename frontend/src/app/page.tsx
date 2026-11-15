@@ -2,21 +2,22 @@ import Link from "next/link";
 import { TrajectoryLogo } from "@/components/TrajectoryLogo";
 import { ArrowRightIcon } from "@/components/icons";
 
+// The same stages the workspace uses: Sourcing → Screening → Diligence → Decision.
 const STEPS = [
   {
     n: "01",
-    title: "Source from public evidence",
-    body: "Find builders on public GitHub before they fundraise. Every founder gets an evidence trail and a deterministic Founder Score.",
+    title: "Sourcing",
+    body: "Find founders from company sites, launch posts, and public GitHub — or receive applications. Every lead keeps its sources and a Founder Score.",
   },
   {
     n: "02",
-    title: "Screen and diligence",
-    body: "Three independent screening axes, a Bull / Bear / Referee debate, claims with trust scores, and diligence questions — all cited to stored evidence.",
+    title: "Screening & Diligence",
+    body: "Three independent screening axes, a Bull / Bear / Referee debate, claims checked against stored evidence, and the questions to ask next.",
   },
   {
     n: "03",
-    title: "Decide, with a human in charge",
-    body: "Trajectory recommends the next step. Investors approve every consequential action; nothing is sent or invested automatically.",
+    title: "Decision",
+    body: "Trajectory recommends the next step; an investor decides. Nothing is sent or invested automatically.",
   },
 ];
 
@@ -31,7 +32,7 @@ export default function Landing() {
           </Link>
           <nav className="flex items-center gap-1" aria-label="Primary">
             <Link href="/founder" className="btn-ghost hidden sm:inline-flex">For founders</Link>
-            <Link href="/vc" className="btn-secondary">Investor workspace</Link>
+            <Link href="/vc" className="btn-ghost">Investor workspace</Link>
           </nav>
         </div>
       </header>
@@ -72,10 +73,10 @@ export default function Landing() {
             <div className="rounded-lg border border-line p-6">
               <p className="label">For investors</p>
               <p className="mt-2 text-sm leading-6 text-ink-soft">
-                A map of every lead and deal, a founder table with evidence and momentum, a pipeline of next actions, and a fund
-                profile that every score is evaluated against.
+                A dashboard of what to do next, founders with their evidence, a pipeline from Screening to Decision, a map of every
+                lead and deal, and the fund thesis every score is measured against.
               </p>
-              <Link href="/vc" className="btn-secondary mt-4">Enter the workspace</Link>
+              <Link href="/vc" className="btn-secondary mt-4">Open investor workspace</Link>
             </div>
             <div className="rounded-lg border border-line p-6">
               <p className="label">For founders</p>

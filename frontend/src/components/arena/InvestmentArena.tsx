@@ -7,6 +7,7 @@ import { MemoView } from "@/components/MemoView";
 import { BullCharacter, BearCharacter, RefereeCharacter, CharState } from "./Characters";
 import { DebatePlayer } from "./DebatePlayer";
 import { ArenaBackdrop, Emblem, Flourish, Pedestal, RefereeBadge } from "./stage";
+import { EvidenceRef } from "../EvidenceRef";
 
 type Role = "bull" | "bear" | "referee";
 
@@ -21,7 +22,7 @@ function EvidenceRefs({ ids }: { ids: number[] }) {
   return (
     <span className="ml-1 text-xs text-ink-muted">
       {ids.slice(0, 6).map((id) => (
-        <span key={id} className="mr-1 rounded bg-surface-sunken px-1 font-mono">E{id}</span>
+        <EvidenceRef key={id} id={id} />
       ))}
     </span>
   );

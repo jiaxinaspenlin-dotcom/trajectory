@@ -1,15 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { humanStatus } from "@/lib/format";
 import { LocalDecision } from "@/lib/myWorkspace";
-import { Badge } from "./ui";
+import { useFetch } from "@/lib/useFetch";
+import { Badge, Spinner } from "./ui";
 
 const ACTIONS = [
   "Invite to Apply", "Schedule Interview", "Request Information",
   "Continue Diligence", "Monitor", "Invest", "Pass",
 ];
+
+// The outcome is always an explicit choice — nothing is preselected.
+const OUTCOMES: { value: string; label: string; hint: string }[] = [
+  { value: "approved", label: "Approve", hint: "Go ahead with the chosen action" },
+  { value: "rejected", label: "Reject", hint: "Don't take the recommended action" },
+  { value: "deferred", label: "Defer", hint: "Decide later" },
+  { value: "overridden", label: "Override", hint: "Take a different action than recommended" },
+];
+
+interface HistoryItem {
+  decision: string;
+  chosen_action: string;
+  system_recommended_action: string | null;
+  decided_by: string;
+  decided_at: string;
+  notes: string;
+}
 
 export function HumanDecisionPanel({
   opportunityId,
@@ -25,84 +43,153 @@ export function HumanDecisionPanel({
   savedLocal?: LocalDecision | null;
   onSavedLocal?: (d: LocalDecision) => void;
 }) {
-  const [decision, setDecision] = useState("approved");
-  const [action, setAction] = useState(recommendation?.action || "Continue Diligence");
+  const [decision, setDecision] = useState("");
+  const [action, setAction] = useState("");
   const [decidedBy, setDecidedBy] = useState("Demo Investor");
   const [notes, setNotes] = useState("");
   const [saved, setSaved] = useState<LocalDecision | null>(savedLocal);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tried, setTried] = useState(false);
+  const history = useFetch<{ items: HistoryItem[] }>(`/api/opportunities/${opportunityId}/decisions`);
+  const outcomeRef = useRef<HTMLInputElement>(null);
+  const actionRef = useRef<HTMLSelectElement>(null);
+  const byRef = useRef<HTMLInputElement>(null);
+
+  const errors = {
+    decision: decision ? null : "Choose an outcome.",
+    action: action ? null : "Choose the action you're taking.",
+    decidedBy: decidedBy.trim() ? null : "Enter who is deciding.",
+  };
 
   async function submit() {
+    setTried(true);
+    if (errors.decision) return outcomeRef.current?.focus();
+    if (errors.action) return actionRef.current?.focus();
+    if (errors.decidedBy) return byRef.current?.focus();
     setBusy(true); setError(null);
     try {
       const r = await api.post<{ human_decision: LocalDecision }>(`/api/opportunities/${opportunityId}/decision`, {
-        decided_by: decidedBy, decision, chosen_action: action, notes,
+        decided_by: decidedBy.trim(), decision, chosen_action: action, notes,
       });
       setSaved(r.human_decision);
       onSavedLocal?.(r.human_decision);
       onDecision();
-    } catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
+      history.reload();
+    } catch (e) { setError(e instanceof Error ? `Couldn't record the decision: ${e.message}` : "Couldn't record the decision."); }
     finally { setBusy(false); }
   }
 
   function amend() {
     setSaved(null);
+    setDecision("");
+    setAction("");
+    setTried(false);
   }
 
+  const err = (k: keyof typeof errors) => (tried ? errors[k] : null);
+
   return (
-    <div data-testid="human-decision">
-      <div className="rounded-lg bg-surface-sunken p-3">
+    <div data-testid="human-decision" className="space-y-5">
+      <div className="rounded-lg bg-surface-sunken p-4">
         <span className="label">System recommendation</span>
         {recommendation ? (
           <>
-            <p className="text-sm font-semibold text-ink">{recommendation.action}</p>
-            <p className="text-xs text-ink-muted">{recommendation.rationale}</p>
+            <p className="mt-1 text-base font-semibold text-ink">{recommendation.action}</p>
+            <p className="mt-0.5 text-sm text-ink-muted">{recommendation.rationale}</p>
           </>
-        ) : <p className="text-sm text-ink-muted">Not generated yet.</p>}
+        ) : <p className="mt-1 text-sm text-ink-muted">Not generated yet. Run analysis to get a recommendation, or record your own decision.</p>}
       </div>
 
       {saved ? (
-        <div className="mt-3 rounded-lg border border-positive/30 bg-positive-wash p-3 text-sm">
+        <div className="rounded-lg border border-positive/30 bg-positive-wash p-4 text-sm" role="status">
           <Badge tone="bg-white text-positive">Recorded</Badge>
-          <p className="mt-1 text-ink-soft">
+          <p className="mt-1.5 text-ink-soft">
             <strong>{saved.decided_by}</strong> chose <strong>{saved.chosen_action}</strong> ({humanStatus(saved.decision)}).
           </p>
-          <p className="text-xs text-ink-muted">System had recommended: {saved.system_recommended_action || "—"}. Recorded separately.</p>
-          {saved.notes && <p className="mt-1 text-xs text-ink-soft">Notes: {saved.notes}</p>}
-          <button className="btn-ghost mt-2 text-xs" onClick={amend}>Amend decision</button>
+          <p className="text-[13px] text-ink-muted">System had recommended: {saved.system_recommended_action || "—"}. Recorded separately.</p>
+          {saved.notes && <p className="mt-1 text-[13px] text-ink-soft">Notes: {saved.notes}</p>}
+          <button className="btn-secondary btn-sm mt-3" onClick={amend}>Record another decision</button>
         </div>
       ) : (
-        <div className="mt-3 space-y-2">
-          <p className="text-xs text-ink-muted">Your decision is recorded separately from the system recommendation. No outreach or investment is executed automatically.</p>
-          <label className="block">
-            <span className="label">Decision</span>
-            <select className="select mt-1" value={decision} onChange={(e) => setDecision(e.target.value)}>
-              {["approved", "rejected", "deferred", "overridden"].map((d) => (
-                <option key={d} value={d}>{humanStatus(d)}</option>
+        <form className="space-y-4" noValidate onSubmit={(e) => { e.preventDefault(); submit(); }}>
+          <p className="text-[13px] text-ink-muted">Your decision is recorded separately from the system recommendation. No outreach or investment is executed automatically.</p>
+          <fieldset aria-describedby={err("decision") ? "decision-error" : undefined}>
+            <legend className="label">Outcome <span className="text-negative" aria-hidden>*</span></legend>
+            <div className="mt-1.5 grid gap-2 sm:grid-cols-2">
+              {OUTCOMES.map((o, i) => (
+                <label key={o.value}
+                  className={`flex cursor-pointer items-start gap-2.5 rounded-md border px-3 py-2.5 ${
+                    decision === o.value ? "border-brand bg-brand-wash" : err("decision") ? "border-negative/50" : "border-line-strong hover:border-ink-faint"}`}>
+                  <input
+                    ref={i === 0 ? outcomeRef : undefined}
+                    type="radio"
+                    name={`outcome-${opportunityId}`}
+                    value={o.value}
+                    checked={decision === o.value}
+                    onChange={() => setDecision(o.value)}
+                    className="mt-1 accent-brand"
+                  />
+                  <span>
+                    <span className="block text-[15px] font-medium text-ink">{o.label}</span>
+                    <span className="block text-[13px] text-ink-muted">{o.hint}</span>
+                  </span>
+                </label>
               ))}
-            </select>
-          </label>
-          <label className="block">
-            <span className="label">Chosen action</span>
-            <select className="select mt-1" value={action} onChange={(e) => setAction(e.target.value)}>
-              {ACTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
-            </select>
-          </label>
-          <label className="block">
-            <span className="label">Decided by</span>
-            <input className="input mt-1" value={decidedBy} onChange={(e) => setDecidedBy(e.target.value)} />
-          </label>
-          <label className="block">
-            <span className="label">Notes</span>
-            <textarea className="textarea mt-1" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
-          </label>
-          {error && <p className="text-xs text-negative">{error}</p>}
-          <button className="btn-primary w-full" onClick={submit} disabled={busy}>
-            {busy ? "Recording…" : "Record human decision"}
+            </div>
+            {err("decision") && <p id="decision-error" className="mt-1 text-[13px] text-negative">{err("decision")}</p>}
+          </fieldset>
+          <div>
+            <label htmlFor={`action-${opportunityId}`} className="label">Chosen action <span className="text-negative" aria-hidden>*</span></label>
+            <div className="mt-1 flex flex-wrap gap-2">
+              <select
+                id={`action-${opportunityId}`}
+                ref={actionRef}
+                className={`select min-w-0 flex-1 ${err("action") ? "border-negative" : ""}`}
+                value={action}
+                aria-invalid={!!err("action")}
+                onChange={(e) => setAction(e.target.value)}
+              >
+                <option value="" disabled>Choose an action…</option>
+                {ACTIONS.map((a) => <option key={a} value={a}>{a}{recommendation?.action === a ? " (recommended)" : ""}</option>)}
+              </select>
+              {recommendation && action !== recommendation.action && (
+                <button type="button" className="btn-ghost btn-sm self-center" onClick={() => setAction(recommendation.action)}>Use recommendation</button>
+              )}
+            </div>
+            {err("action") && <p className="mt-1 text-[13px] text-negative">{err("action")}</p>}
+          </div>
+          <div>
+            <label htmlFor={`by-${opportunityId}`} className="label">Decided by <span className="text-negative" aria-hidden>*</span></label>
+            <input id={`by-${opportunityId}`} ref={byRef} className="input mt-1" value={decidedBy} onChange={(e) => setDecidedBy(e.target.value)} />
+            {err("decidedBy") && <p className="mt-1 text-[13px] text-negative">{err("decidedBy")}</p>}
+          </div>
+          <div>
+            <label htmlFor={`notes-${opportunityId}`} className="label">Notes</label>
+            <textarea id={`notes-${opportunityId}`} className="textarea mt-1" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+          </div>
+          {error && <p className="text-[13px] text-negative" role="alert">{error}</p>}
+          <button type="submit" className="btn-primary" disabled={busy}>
+            {busy ? "Recording…" : "Record decision"}
           </button>
-        </div>
+        </form>
       )}
+
+      <section aria-labelledby={`history-${opportunityId}`} className="border-t border-line pt-4">
+        <h3 id={`history-${opportunityId}`} className="text-[15px] font-semibold text-ink">Decision history</h3>
+        {history.loading && !history.data ? <div className="mt-2"><Spinner label="Loading history…" /></div>
+          : history.data?.items.length ? (
+          <ol className="mt-2 divide-y divide-line" data-testid="decision-history">
+            {[...history.data.items].reverse().map((h, i) => (
+              <li key={i} className="py-2.5 text-sm">
+                <span className="font-medium text-ink">{humanStatus(h.decision)}: {h.chosen_action}</span>
+                <span className="text-ink-muted"> · {h.decided_by} · {new Date(h.decided_at).toLocaleDateString()}</span>
+                <span className="block text-[13px] text-ink-muted">System had recommended: {h.system_recommended_action || "—"}{h.notes ? ` · ${h.notes}` : ""}</span>
+              </li>
+            ))}
+          </ol>
+        ) : <p className="mt-1 text-sm text-ink-muted">No decisions recorded yet.</p>}
+      </section>
     </div>
   );
 }
