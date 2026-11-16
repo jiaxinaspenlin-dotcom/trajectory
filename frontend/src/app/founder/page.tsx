@@ -55,9 +55,9 @@ export default function ApplyFlow() {
   }
 
   const OPTIONAL: [keyof typeof optional, string, string][] = [
-    ["github_profile", "GitHub Username", "yourhandle"], ["website", "Website", "https://"],
+    ["github_profile", "GitHub Username", "e.g. yourhandle"], ["website", "Website", "https://"],
     ["sector", "Sector", "e.g. fintech"], ["geography", "Location", "e.g. Boston"],
-    ["num_users", "Current Users", "e.g. 1200"], ["team_info", "Team", "Founders and roles"],
+    ["num_users", "Current Users", "e.g. 1200"], ["team_info", "Team", "Founders and Roles"],
   ];
 
   return (
@@ -138,7 +138,7 @@ export default function ApplyFlow() {
               <input type="file" accept="application/pdf" className="sr-only" onChange={(e) => setFile(e.target.files?.[0] || null)} />
               {file ? "Change File" : "Choose PDF"}
             </label>
-            <span className="text-sm text-ink-muted">{file ? file.name : "No File Selected"}</span>
+            <span className="text-sm text-ink-muted">{file ? <span data-content>{file.name}</span> : "No File Selected"}</span>
           </div>
           <button className="btn-primary mt-4" onClick={uploadDeck} disabled={!file || status === "uploading"}>
             {status === "uploading" ? "Uploading & Reading…" : "Submit Application"}

@@ -61,7 +61,8 @@ export interface SceneLayout {
 
 export interface SceneCallbacks {
   onSelect: (id: number | null) => void;
-  describe: (id: number) => { title: string; lines: string[] };
+  // a line marked content (a sector name) is shown as typed and skipped by copy checks
+  describe: (id: number) => { title: string; lines: (string | { text: string; content: true })[] };
 }
 
 const ACCENT = "#1f4fd8";
@@ -842,11 +843,13 @@ export class MapScene {
       const title = document.createElement("div");
       title.className = "text-sm font-semibold text-ink";
       title.textContent = d.title;
+      title.dataset.content = "";
       t.append(title);
       for (const line of d.lines) {
         const el = document.createElement("div");
         el.className = "text-xs text-ink-muted";
-        el.textContent = line;
+        el.textContent = typeof line === "string" ? line : line.text;
+        if (typeof line !== "string") el.dataset.content = "";
         t.append(el);
       }
       t.dataset.id = String(this.hovered);

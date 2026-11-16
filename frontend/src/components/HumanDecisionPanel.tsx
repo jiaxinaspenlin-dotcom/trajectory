@@ -105,10 +105,10 @@ export function HumanDecisionPanel({
         <div className="rounded-lg border border-positive/30 bg-positive-wash p-4 text-sm" role="status">
           <Badge tone="bg-white text-positive">Recorded</Badge>
           <p className="mt-1.5 text-ink-soft">
-            <strong>{saved.decided_by}</strong> chose <strong>{humanStatus(saved.chosen_action)}</strong> ({humanStatus(saved.decision)}).
+            <strong data-content>{saved.decided_by}</strong> chose <strong>{humanStatus(saved.chosen_action)}</strong> ({humanStatus(saved.decision)}).
           </p>
           <p className="text-[13px] text-ink-muted">System had recommended: {saved.system_recommended_action ? humanStatus(saved.system_recommended_action) : "—"}. Recorded separately.</p>
-          {saved.notes && <p className="mt-1 text-[13px] text-ink-soft">Notes: {saved.notes}</p>}
+          {saved.notes && <p className="mt-1 text-[13px] text-ink-soft">Notes: <span data-content>{saved.notes}</span></p>}
           <button className="btn-secondary btn-sm mt-3" onClick={amend}>Record Another Decision</button>
         </div>
       ) : (
@@ -183,8 +183,8 @@ export function HumanDecisionPanel({
             {[...history.data.items].reverse().map((h, i) => (
               <li key={i} className="py-2.5 text-sm">
                 <span className="font-medium text-ink">{humanStatus(h.decision)}: {humanStatus(h.chosen_action)}</span>
-                <span className="text-ink-muted"> · {h.decided_by} · {new Date(h.decided_at).toLocaleDateString()}</span>
-                <span className="block text-[13px] text-ink-muted">System had recommended: {h.system_recommended_action ? humanStatus(h.system_recommended_action) : "—"}{h.notes ? ` · ${h.notes}` : ""}</span>
+                <span className="text-ink-muted"> · <span data-content>{h.decided_by}</span> · {new Date(h.decided_at).toLocaleDateString()}</span>
+                <span className="block text-[13px] text-ink-muted">System Had Recommended: {h.system_recommended_action ? humanStatus(h.system_recommended_action) : "—"}{h.notes && <> · <span data-content>{h.notes}</span></>}</span>
               </li>
             ))}
           </ol>

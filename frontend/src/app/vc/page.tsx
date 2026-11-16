@@ -7,7 +7,7 @@ import { useFetch } from "@/lib/useFetch";
 import { ErrorState, PageHeader, Spinner } from "@/components/ui";
 import { DASHBOARD_TOUR, GuidedTour } from "@/components/GuidedTour";
 import { SourceBadge, StageBadge } from "@/components/DealBadges";
-import { humanStatus } from "@/lib/format";
+import { humanStatus, sourceName } from "@/lib/format";
 import { evidenceHref, nextActionHref, stageDot } from "@/lib/pipeline";
 import { accountScope } from "@/lib/auth";
 import { getMyDecisions, getPipeline, LocalDecision, PipelineStatus } from "@/lib/myWorkspace";
@@ -88,7 +88,7 @@ export default function DashboardPage() {
     />
   );
 
-  if (loading) return <div className={`${COLUMN} space-y-6`}>{header}<Spinner label="Loading dashboard…" /></div>;
+  if (loading) return <div className={`${COLUMN} space-y-6`}>{header}<Spinner label="Loading Dashboard…" /></div>;
   if (error) return <div className={`${COLUMN} space-y-6`}>{header}<ErrorState message={error} onRetry={reload} /></div>;
   if (!data) return null;
 
@@ -220,7 +220,7 @@ export default function DashboardPage() {
                     {e.opportunity_name && <span aria-hidden>·</span>}
                     <span className="shrink-0">{humanStatus(e.kind)}</span>
                     <span aria-hidden>·</span>
-                    <span className="truncate" data-content>{e.source_name}</span>
+                    <span className="truncate" data-content>{sourceName(e.source_name)}</span>
                   </span>
                 </span>
                 <span className="num shrink-0 text-meta text-ink-muted">{relativeDay(e.collected_at)}</span>
@@ -274,7 +274,7 @@ function NextUp({ a, onOpen }: { a: ActionItem; onOpen: () => void }) {
       <div className="mt-2 flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
         <div className="min-w-0">
           <Link href={`/vc/opportunities/${a.opportunity_id}`} onClick={(e) => e.stopPropagation()}
-            className="block truncate text-[1.25rem] font-semibold leading-7 text-ink hover:text-brand">{a.name}</Link>
+            className="block truncate text-[1.25rem] font-semibold leading-7 text-ink hover:text-brand" data-content>{a.name}</Link>
           <p className="mt-1 text-body text-ink-soft">{a.next_action_detail ?? a.next_action}</p>
           <p className="mt-2 flex flex-wrap items-center gap-1.5 text-meta text-ink-muted">
             <StageBadge stage={a.stage} />
@@ -297,7 +297,7 @@ function AttentionRow({ a, onOpen }: { a: ActionItem; onOpen: () => void }) {
     <li className="table-row-link grid grid-cols-1 items-center gap-x-4 gap-y-2.5 px-5 py-3.5 sm:grid-cols-[minmax(0,1fr)_auto]" onClick={onOpen}>
       <span className="min-w-0">
         <span className="flex min-w-0 items-center gap-2">
-          <Link href={`/vc/opportunities/${a.opportunity_id}`} onClick={(e) => e.stopPropagation()} className="truncate text-body font-medium text-ink hover:text-brand">{a.name}</Link>
+          <Link href={`/vc/opportunities/${a.opportunity_id}`} onClick={(e) => e.stopPropagation()} className="truncate text-body font-medium text-ink hover:text-brand" data-content>{a.name}</Link>
           <StageBadge stage={a.stage} />
         </span>
         <span className="mt-0.5 block text-meta text-ink-muted">

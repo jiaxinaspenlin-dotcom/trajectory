@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { humanStatus, titleCase, trajectoryTone } from "@/lib/format";
 import {
-  AxesLayout, formatMetric, groupFieldLabel, linksFor, METRICS, nodeColor, nodeKindLabel,
+  AxesLayout, formatMetric, groupFieldLabel, isContentGroup, linksFor, METRICS, nodeColor, nodeKindLabel,
 } from "@/lib/opportunityMap";
 import { nextActionHref } from "@/lib/pipeline";
 import { MapLink, MapNode } from "@/lib/types";
@@ -56,7 +56,7 @@ export function MapDrawer({
   return (
     <aside
       data-testid="map-node-panel"
-      aria-label={`Selected Opportunity: ${node.name}`}
+      aria-labelledby="map-drawer-name"
       data-map-inset="auto"
       className="hud pointer-events-auto absolute inset-x-3 bottom-3 z-30 flex max-h-[58%] flex-col sm:inset-x-auto sm:bottom-4 sm:right-4 sm:top-4 sm:max-h-none sm:w-[400px]"
     >
@@ -66,9 +66,9 @@ export function MapDrawer({
             <span aria-hidden className="inline-block h-2 w-2 rounded-full" style={{ background: nodeColor(node, colors) }} />
             {nodeKindLabel(node)}
           </p>
-          <h2 className="mt-0.5 truncate text-base font-semibold text-ink">{node.name}</h2>
-          {node.company?.one_liner && <p className="mt-0.5 line-clamp-2 text-xs text-ink-muted">{node.company.one_liner}</p>}
-          {node.founder && node.company && <p className="text-xs text-ink-muted">Founder · {node.founder.full_name}</p>}
+          <h2 id="map-drawer-name" className="mt-0.5 truncate text-base font-semibold text-ink" data-content>{node.name}</h2>
+          {node.company?.one_liner && <p className="mt-0.5 line-clamp-2 text-xs text-ink-muted" data-content>{node.company.one_liner}</p>}
+          {node.founder && node.company && <p className="text-xs text-ink-muted">Founder · <span data-content>{node.founder.full_name}</span></p>}
         </div>
         <button ref={closeRef} type="button" className="icon-btn -mr-1.5 -mt-0.5" onClick={onClose} aria-label="Close and Return to Overview">
           <CloseIcon />
@@ -107,7 +107,7 @@ export function MapDrawer({
 
         <dl className="mt-3 divide-y divide-line text-sm">
           <Row label="Group">
-            {node.group.label}
+            <span data-content={isContentGroup(node.group.field) || undefined}>{node.group.label}</span>
             <span className="block text-xs text-ink-muted">{groupFieldLabel(node.group.field)}</span>
           </Row>
           <Row label="Founder Score">{node.founder_score != null ? <span className="num">{Math.round(node.founder_score)}</span> : <Muted>Not Scored</Muted>}</Row>
@@ -138,11 +138,11 @@ export function MapDrawer({
             <Row label="Top Project">
               {node.top_project.url
                 ? <a href={node.top_project.url} target="_blank" rel="noreferrer" className="text-brand hover:underline" data-content>{node.top_project.name} ↗</a>
-                : node.top_project.name}
+                : <span data-content>{node.top_project.name}</span>}
               {node.top_project.stars != null && <span className="num ml-1 text-xs text-ink-muted">★ {node.top_project.stars}</span>}
             </Row>
           )}
-          {node.topics.length > 0 && <Row label="Repo Topics"><span className="text-xs">{node.topics.slice(0, 8).join(", ")}</span></Row>}
+          {node.topics.length > 0 && <Row label="Repo Topics"><span className="text-xs" data-content>{node.topics.slice(0, 8).join(", ")}</span></Row>}
           <Row label="Next Action">
             {node.next_action
               ? <Link href={nextActionHref(node.id, node.next_action_key)} className="font-medium text-brand hover:underline">{node.next_action} →</Link>
@@ -157,14 +157,17 @@ export function MapDrawer({
               {related.map(({ other, link }) => (
                 <li key={`${link.kind}-${other}`} className="text-xs">
                   <button type="button" className="font-medium text-brand hover:underline" onClick={() => onSelect(other)}>
-                    {nodesById.get(other)!.name}
+                    <span data-content>{nodesById.get(other)!.name}</span>
                   </button>
                   <span className="text-ink-muted"> — {link.label}</span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="mt-1 text-xs text-ink-muted">No named relationships yet. Clustered with its {node.group.label} group.</p>
+            <p className="mt-1 text-xs text-ink-muted">
+              No named relationships yet.
+              {node.group.field && <> Clustered with its <span data-content={isContentGroup(node.group.field) || undefined}>{node.group.label}</span> group.</>}
+            </p>
           )}
         </div>
       </div>

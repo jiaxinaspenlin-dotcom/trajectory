@@ -3,7 +3,7 @@
 import { MutableRefObject, useEffect, useMemo, useRef } from "react";
 import { humanStatus } from "@/lib/format";
 import {
-  AxesLayout, AXIS_LENGTH, formatMetric, MetricKey, METRICS, nodeColor, nodeKindLabel, nodeSize, RelationshipLayout,
+  AxesLayout, AXIS_LENGTH, formatMetric, isContentGroup, MetricKey, METRICS, nodeColor, nodeKindLabel, nodeSize, RelationshipLayout,
 } from "@/lib/opportunityMap";
 import { MapLink, MapNode } from "@/lib/types";
 import { MapScene, SceneLayout, SceneLink, SceneNode } from "./mapScene";
@@ -187,7 +187,10 @@ export function MapCanvas(props: {
 function describe(id: number, p: { nodes: MapNode[]; mode: "graph" | "axes"; axes: AxesLayout }) {
   const n = p.nodes.find((x) => x.id === id);
   if (!n) return { title: "", lines: [] };
-  const lines = [`${nodeKindLabel(n)} · ${humanStatus(n.entry_type)}`, n.group.label];
+  const lines: (string | { text: string; content: true })[] = [
+    `${nodeKindLabel(n)} · ${humanStatus(n.entry_type)}`,
+    isContentGroup(n.group.field) ? { text: n.group.label, content: true } : n.group.label,
+  ];
   if (n.new_evidence_count) lines.unshift(`New Evidence · ${n.new_evidence_count}`);
   if (p.mode === "axes") {
     const vals = p.axes.values.get(id) ?? {};

@@ -30,7 +30,7 @@ export default function ApplicationStatus() {
   const { id } = useParams<{ id: string }>();
   const { data, loading, error, reload } = useFetch<ApplicationDetail>(`/api/applications/${id}`);
 
-  if (loading) return <Spinner label="Loading application…" />;
+  if (loading) return <Spinner label="Loading Application…" />;
   if (error) return <ErrorState message={error} onRetry={reload} />;
   if (!data) return null;
 
@@ -41,15 +41,15 @@ export default function ApplicationStatus() {
       <nav aria-label="Breadcrumb" className="text-xs text-ink-muted">
         <Link href="/founder/applications" className="hover:text-brand">My Applications</Link>
         <span className="mx-1.5 text-ink-faint">/</span>
-        <span className="text-ink-soft">{data.company_name}</span>
+        <span className="text-ink-soft" data-content>{data.company_name}</span>
       </nav>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold tracking-[-0.015em] text-ink">{data.company_name}</h1>
+            <h1 className="text-2xl font-semibold tracking-[-0.015em] text-ink" data-content>{data.company_name}</h1>
             <Badge tone="bg-brand-wash text-brand">Under Review</Badge>
           </div>
-          <p className="mt-0.5 text-sm text-ink-muted">{data.sector || "Sector Not Set"} · {data.geography || "Location Not Set"}</p>
+          <p className="mt-0.5 text-sm text-ink-muted">{data.sector ? <span data-content>{data.sector}</span> : "Sector Not Set"} · {data.geography ? <span data-content>{data.geography}</span> : "Location Not Set"}</p>
         </div>
         {!deckReady && <Link href="/founder" className="btn-primary">Finish Your Application</Link>}
       </div>
@@ -170,7 +170,7 @@ function ProvideInfo({ app, onSaved }: { app: ApplicationDetail; onSaved: () => 
         <textarea
           className="textarea mt-1"
           rows={2}
-          placeholder="Founders, roles, relevant background…"
+          placeholder="Founders, Roles, Relevant Background…"
           value={form.team_info}
           onChange={(e) => setForm({ ...form, team_info: e.target.value })}
         />

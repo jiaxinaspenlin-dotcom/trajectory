@@ -383,11 +383,11 @@ function ThesisEditor({ open, existing, onClose, onSaved }: {
         <fieldset className="space-y-4">
           <legend className="sr-only">Investment Focus</legend>
           <p className="text-[13px] text-ink-muted"><span className="text-negative">*</span> Required. Matches on sectors, stages, and geographies raise a company&apos;s thesis fit.</p>
-          {field("fund_name", "Fund Name", { ph: "Northstar Ventures", required: true })}
+          {field("fund_name", "Fund Name", { ph: "e.g. Northstar Ventures", required: true })}
           <div className="grid gap-4 sm:grid-cols-2">
-            {field("sectors", "Sectors", { ph: "fintech, ai/ml, devtools", hint: "A matching sector adds the most to thesis fit. Also used to plan lead searches." })}
-            {field("stages", "Stages", { ph: "pre-seed, seed", hint: "Matching stage adds to thesis fit." })}
-            {field("geographies", "Geographies", { ph: "Boston, San Francisco", hint: "Matching location adds to thesis fit." })}
+            {field("sectors", "Sectors", { ph: "e.g. fintech, ai/ml, devtools", hint: "A matching sector adds the most to thesis fit. Also used to plan lead searches." })}
+            {field("stages", "Stages", { ph: "e.g. pre-seed, seed", hint: "Matching stage adds to thesis fit." })}
+            {field("geographies", "Geographies", { ph: "e.g. Boston, San Francisco", hint: "Matching location adds to thesis fit." })}
             <div>
               <label htmlFor="thesis-risk" className="label">Risk Tolerance</label>
               <select id="thesis-risk" className="select mt-1" value={form.risk_tolerance} aria-describedby="thesis-risk-hint" onChange={(e) => setForm({ ...form, risk_tolerance: e.target.value })}>
@@ -404,8 +404,8 @@ function ThesisEditor({ open, existing, onClose, onSaved }: {
               onChange={(e) => setForm({ ...form, custom_description: e.target.value })} />
             <p id="thesis-description-hint" className="mt-1 text-[13px] text-ink-muted">Used to plan web searches and as context for AI analysis.</p>
           </div>
-          {field("founder_preferences", "Founders We Look For", { ph: "Technical founders with repeated execution", hint: "Used to plan lead searches." })}
-          {field("traction_preferences", "Traction We Look For", { ph: "Evidence of product adoption", hint: "Shown on your fund profile." })}
+          {field("founder_preferences", "Founders We Look For", { ph: "e.g. Technical founders with repeated execution", hint: "Used to plan lead searches." })}
+          {field("traction_preferences", "Traction We Look For", { ph: "e.g. Evidence of product adoption", hint: "Shown on your fund profile." })}
         </fieldset>
         )}
         {section === "terms" && (
@@ -424,9 +424,9 @@ function ThesisEditor({ open, existing, onClose, onSaved }: {
           <legend className="sr-only">Exclusions</legend>
           <p className="text-[13px] text-ink-muted">A company matching any exclusion gets a fit score of 5–8 out of 100, whatever else matches. Separate entries with commas.</p>
           <div className="grid gap-4 sm:grid-cols-3">
-            {field("excluded_sectors", "Sectors", { ph: "gambling" })}
+            {field("excluded_sectors", "Sectors", { ph: "e.g. gambling" })}
             {field("excluded_geographies", "Geographies")}
-            {field("excluded_business_models", "Business Models", { ph: "services agency" })}
+            {field("excluded_business_models", "Business Models", { ph: "e.g. services agency" })}
           </div>
         </fieldset>
         )}

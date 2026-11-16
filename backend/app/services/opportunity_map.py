@@ -98,9 +98,9 @@ def build_map(db: Session) -> dict:
         if company and company.sector:
             group = {"key": f"sector:{company.sector.lower()}", "label": company.sector, "field": "company.sector"}
         elif language:
-            group = {"key": f"language:{language.lower()}", "label": f"{language} projects", "field": "github_repo.language"}
+            group = {"key": f"language:{language.lower()}", "label": f"{language} Projects", "field": "github_repo.language"}
         else:
-            group = {"key": "ungrouped", "label": "Not enough data to group", "field": None}
+            group = {"key": "ungrouped", "label": "Not Enough Data to Group", "field": None}
 
         # Thesis fit is only computed from a company; GitHub-sourced founders
         # without one carry a 0.0 placeholder that must not be plotted.

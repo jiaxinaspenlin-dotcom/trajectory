@@ -15,7 +15,7 @@ function node(o: Partial<MapNode> = {}): MapNode {
     in_founders: true, in_pipeline: false,
     founder: { id: 7, full_name: "Ada Builder", github_username: "ada" }, company: null,
     founder_score: 40, evidence_count: 3, top_project: { name: "ledgerkit", url: "https://github.com/ada/ledgerkit", stars: 42 },
-    topics: ["payments"], group: { key: "language:rust", label: "Rust projects", field: "github_repo.language" },
+    topics: ["payments"], group: { key: "language:rust", label: "Rust Projects", field: "github_repo.language" },
     thesis_fit: { value: null, reason: "No company yet — thesis fit is a placeholder" },
     momentum: { value: null, current_score: 40, trajectory: "insufficient_history", reason: "Insufficient momentum history (needs 30+ days of score snapshots; has 1 spanning 0 days)" },
     next_action: "Run analysis", is_demo: false, ...o,
@@ -114,7 +114,7 @@ describe("Relationships layout", () => {
 
   it("anchors one labelled cluster per group, above its members, with stable distinct colors", () => {
     const { clusters, positions } = relationshipLayout([node(), inbound, plotted]);
-    expect(clusters.map((c) => c.label).sort()).toEqual(["Rust projects", "fintech"]);
+    expect(clusters.map((c) => c.label).sort()).toEqual(["Rust Projects", "fintech"]);
     const fintech = clusters.find((c) => c.key === "sector:fintech")!;
     expect(fintech.labelAt[1]).toBeGreaterThan(Math.max(positions.get(2)![1], positions.get(3)![1]));
     const colors = clusterColors([node(), inbound, plotted]);
@@ -160,7 +160,7 @@ describe("MapValuesPanel", () => {
     render(<MapValuesPanel nodes={nodes} axes={axes} selectedId={3} onSelect={onSelect} onClose={() => {}} />);
     const table = screen.getByTestId("plotted-list");
     expect(within(table).getAllByText("88/100")).toHaveLength(2);
-    expect(within(table).getByText("Same Point as ForgeTools")).toBeInTheDocument();
+    expect(within(table).getByText((_, el) => el?.textContent === "Same Point as ForgeTools" && el.tagName === "SPAN" && !!el.firstElementChild)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Not Plotted 1/ }));
     const ex = screen.getByTestId("excluded-list");
     expect(within(ex).getByText(/Insufficient Momentum History/)).toBeInTheDocument();
@@ -172,9 +172,9 @@ describe("MapValuesPanel", () => {
 describe("MapList (WebGL fallback)", () => {
   it("lists every node by group, including sparse records, and selects by ID", () => {
     const onSelect = vi.fn();
-    const sparse = node({ founder_score: null, evidence_count: 0, top_project: null, topics: [], group: { key: "ungrouped", label: "Not enough data to group", field: null } });
+    const sparse = node({ founder_score: null, evidence_count: 0, top_project: null, topics: [], group: { key: "ungrouped", label: "Not Enough Data to Group", field: null } });
     render(<MapList nodes={[sparse, inbound]} colors={clusterColors([sparse, inbound])} selectedId={null} query="" onSelect={onSelect} />);
-    expect(screen.getByText("Not enough data to group · 1")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Not Enough Data to Group · 1" })).toBeInTheDocument();
     expect(screen.getAllByText(/Not Scored/).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByText("LedgerLoop"));
     expect(onSelect).toHaveBeenCalledWith(2);

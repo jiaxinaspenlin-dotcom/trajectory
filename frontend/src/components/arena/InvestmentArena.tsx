@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Debate, Memo } from "@/lib/types";
-import { humanStatus, pct } from "@/lib/format";
+import { asSentence, humanStatus, labelPhrase, pct } from "@/lib/format";
 import { MemoView } from "@/components/MemoView";
 import { BullCharacter, BearCharacter, RefereeCharacter, CharState } from "./Characters";
 import { DebatePlayer } from "./DebatePlayer";
@@ -236,11 +236,11 @@ function SideDetail({ title, tone, argument }: { title: string; tone: string; ar
   return (
     <div>
       <h4 className={`text-sm font-semibold ${tone}`}>{title}</h4>
-      <p className="mt-1 text-sm font-medium text-ink">{argument.headline}</p>
+      <p className="mt-1 text-sm font-medium text-ink">{labelPhrase(argument.headline)}</p>
       <ul className="mt-2 space-y-2">
         {argument.points.map((p, i) => (
           <li key={i} className="text-sm text-ink-soft">
-            • {p.text}
+            • {asSentence(p.text)}
             <EvidenceRefs ids={p.evidence_ids} />
           </li>
         ))}
@@ -257,18 +257,18 @@ function RefereeDetail({ referee }: { referee: NonNullable<Debate["referee"]> })
       <dl className="mt-3 grid gap-3 sm:grid-cols-2">
         <div>
           <dt className="label">Strongest Bull Point</dt>
-          <dd className="text-sm text-ink-soft">{referee.strongest_bull_point}</dd>
+          <dd className="text-sm text-ink-soft">{asSentence(referee.strongest_bull_point)}</dd>
         </div>
         <div>
           <dt className="label">Strongest Bear Point</dt>
-          <dd className="text-sm text-ink-soft">{referee.strongest_bear_point}</dd>
+          <dd className="text-sm text-ink-soft">{asSentence(referee.strongest_bear_point)}</dd>
         </div>
       </dl>
       {referee.unresolved_questions.length > 0 && (
         <div className="mt-3">
           <div className="label">Unresolved Questions</div>
           <ul className="mt-1 list-inside list-disc text-sm text-ink-soft">
-            {referee.unresolved_questions.map((q, i) => <li key={i}>{q}</li>)}
+            {referee.unresolved_questions.map((q, i) => <li key={i}>{asSentence(q)}</li>)}
           </ul>
         </div>
       )}
@@ -276,12 +276,12 @@ function RefereeDetail({ referee }: { referee: NonNullable<Debate["referee"]> })
         <div className="mt-3">
           <div className="label">Required Diligence</div>
           <ul className="mt-1 list-inside list-disc text-sm text-ink-soft">
-            {referee.required_diligence.map((q, i) => <li key={i}>{q}</li>)}
+            {referee.required_diligence.map((q, i) => <li key={i}>{labelPhrase(q)}</li>)}
           </ul>
         </div>
       )}
       <p className="mt-3 text-xs text-ink-muted">
-        Evidence that would change the call: {referee.evidence_that_would_change}
+        Evidence That Would Change the Call: <span data-content>{referee.evidence_that_would_change}</span>
       </p>
     </div>
   );

@@ -330,7 +330,7 @@ def _store_reported_evidence(db, company_id: int, body) -> None:
             existing.collected_at = now
             return
         db.add(Evidence(
-            company_id=company_id, source_name="Founder application",
+            company_id=company_id, source_name="Founder Application",
             source_type=SourceType.FOUNDER_SUBMITTED, source_url=None, kind=kind,
             title=title, raw_value=str(value), structured_value=structured,
             event_date=now, collected_at=now, provenance=Provenance.FOUNDER_REPORTED,

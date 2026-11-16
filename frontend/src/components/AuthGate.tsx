@@ -88,7 +88,7 @@ function AuthForm({ persona, onAuthed }: { persona: Persona; onAuthed: () => voi
                 className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-brand focus:outline-none"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder={isVC ? "Your name" : "Founder name"}
+                placeholder={isVC ? "Your Name" : "Founder Name"}
                 required
               />
             </label>
@@ -112,7 +112,7 @@ function AuthForm({ persona, onAuthed }: { persona: Persona; onAuthed: () => voi
               className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-brand focus:outline-none"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder={mode === "signup" ? "At least 8 characters" : "Your password"}
+              placeholder={mode === "signup" ? "At Least 8 Characters" : "Your Password"}
               autoComplete={mode === "signup" ? "new-password" : "current-password"}
               minLength={mode === "signup" ? 8 : undefined}
               required
@@ -122,7 +122,7 @@ function AuthForm({ persona, onAuthed }: { persona: Persona; onAuthed: () => voi
           {error && <p className="text-sm text-negative">{error}</p>}
 
           <button className="btn-primary w-full" disabled={busy}>
-            {busy ? "Please wait…" : mode === "login" ? "Sign In" : "Create Account"}
+            {busy ? "Please Wait…" : mode === "login" ? "Sign In" : "Create Account"}
           </button>
         </form>
 
@@ -136,7 +136,7 @@ function AuthForm({ persona, onAuthed }: { persona: Persona; onAuthed: () => voi
           </button>
         </p>
         <p className="mt-2 text-center text-xs text-ink-muted">
-          <Link href="/" className="hover:text-ink-soft">← Back to home</Link>
+          <Link href="/" className="hover:text-ink-soft">← Back to Home</Link>
         </p>
       </div>
     </div>

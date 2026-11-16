@@ -51,8 +51,8 @@ export default function MemoPage() {
         <div className="rounded-xl border border-line bg-surface p-5">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-ink">{opp.data.company?.name}</h2>
-              <p className="text-sm text-ink-muted">{opp.data.company?.one_liner}</p>
+              <h2 className="text-lg font-semibold text-ink" data-content>{opp.data.company?.name}</h2>
+              <p className="text-sm text-ink-muted" data-content>{opp.data.company?.one_liner}</p>
             </div>
             {memo.data && <Badge tone="bg-neutral-wash text-neutral">{`v${memo.data.version} · ${humanStatus(memo.data.generated_by)}`}</Badge>}
           </div>

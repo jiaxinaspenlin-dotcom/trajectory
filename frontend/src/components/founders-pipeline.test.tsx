@@ -41,13 +41,14 @@ describe("FoundersTable", () => {
       />
     );
     const row = screen.getByTestId("founder-row-11");
-    expect(within(row).getByText("Ada Builder")).toHaveAttribute("href", "/vc/opportunities/11");
+    expect(within(row).getByRole("link", { name: "Ada Builder" })).toHaveAttribute("href", "/vc/opportunities/11");
     expect(within(row).getByText(/No Company Yet/)).toBeInTheDocument();
     expect(within(row).getByText("ledgerkit ↗")).toBeInTheDocument();
     expect(within(row).getByText("61")).toBeInTheDocument();
     expect(within(row).getByText(/Accelerating/)).toBeInTheDocument();
     expect(within(row).getByText("4")).toBeInTheDocument();
-    expect(within(row).getByText("Review →")).toHaveAttribute("href", "/vc/opportunities/11");
+    // the founder is named in hidden text, not an aria-label
+    expect(within(row).getByRole("link", { name: "Review Ada Builder" })).toHaveAttribute("href", "/vc/opportunities/11");
   });
 
   it("says so honestly when there is no score, evidence, or project", () => {
@@ -117,7 +118,7 @@ describe("PipelineTable", () => {
     // the next action is a link to where it's done
     expect(within(row).getByRole("link", { name: "Run analysis →" })).toHaveAttribute("href", "/vc/opportunities/11");
     expect(within(row).getByText("No Company")).toBeInTheDocument();
-    expect(within(row).getByText("Ada Builder")).toHaveAttribute("href", "/vc/opportunities/11");
+    expect(within(row).getByRole("link", { name: "Ada Builder" })).toHaveAttribute("href", "/vc/opportunities/11");
   });
 
   it("links a recommendation awaiting review to the decision panel", () => {

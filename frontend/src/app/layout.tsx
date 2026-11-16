@@ -6,7 +6,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Trajectory — Venture research & deal workflow",
+  title: "Trajectory — Venture Research & Deal Workflow",
   description:
     "Source founders from public evidence, screen and diligence deals, and record investor decisions. Humans approve every consequential action.",
 };

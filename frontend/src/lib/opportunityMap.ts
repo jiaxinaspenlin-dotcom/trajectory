@@ -223,6 +223,12 @@ export function groupNodes(nodes: MapNode[]): MapGroup[] {
   );
 }
 
+// Sector groups are named by the companies themselves (content, shown as typed);
+// language and "ungrouped" group labels are generated, so they're labels.
+export function isContentGroup(field: string | null): boolean {
+  return field === "company.sector";
+}
+
 export function groupFieldLabel(field: string | null): string {
   if (field === "company.sector") return "Company Sector";
   if (field === "github_repo.language") return "GitHub Repo Language (No Company Yet)";

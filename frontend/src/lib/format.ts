@@ -58,6 +58,8 @@ const NAMES: Record<string, string> = {
   yc: "YC", hn: "HN", swot: "SWOT", kpi: "KPI", kpis: "KPIs", api: "API", mau: "MAU", id: "ID", ids: "IDs",
   tam: "TAM", vc: "VC",
 };
+// unit words, left lowercase like 3d or 30d ("+16.4 pts")
+const UNITS = new Set(["pt", "pts"]);
 // tokens that end one phrase and start the next ("Recommended: Continue Diligence · Waiting 3d")
 const BREAKS = new Set(["·", "—", "–", "/", "|", "→", "←"]);
 
@@ -66,6 +68,7 @@ function casePart(part: string, edge: boolean): string {
   if (!/[a-z]/i.test(part) || /\d/.test(part) || part.startsWith("@") || /\.[a-z]/i.test(part)) return part;
   const name = NAMES[part.toLowerCase()];
   if (name) return name;
+  if (UNITS.has(part)) return part;
   if (/[A-Z]/.test(part.slice(1))) return part; // mixed case or acronym: a name, keep it
   const lower = part.toLowerCase();
   if (!edge && MINOR.has(lower)) return lower;
@@ -76,6 +79,8 @@ function caseWord(word: string, edge: boolean): string {
   // keep surrounding punctuation: "(revenue", "users)", "next:"
   const m = word.match(/^([^A-Za-z0-9@$]*)(.*?)([^A-Za-z0-9%]*)$/);
   if (!m || !m[2]) return word;
+  // paths and slash pairs are values: ada/ledgerkit, ai/ml
+  if (m[2].includes("/")) return word;
   const [, lead, core, trail] = m;
   const parts = core.split("-");
   return lead + parts.map((p, i) => casePart(p, i === 0 ? edge || !!lead : true)).join("-") + trail;
@@ -100,6 +105,30 @@ export function titleCase(text: string): string {
     if (w === words.length - 1 || /[:]$/.test(words[w].t) || (next && BREAKS.has(next))) edges.add(k);
   }
   return tokens.map((t, k) => (t.trim() && !BREAKS.has(t) ? caseWord(t, edges.has(k)) : t)).join("");
+}
+
+// A generated phrase shown as a label (a gap, an unknown): Title Case, unless it
+// was written as a sentence.
+export function labelPhrase(text: string): string {
+  return /[.?!]["”)]?$/.test(text.trim()) ? text : titleCase(text);
+}
+
+// A piece of generated prose shown on its own (a SWOT quadrant, an explanation
+// tooltip): a capital first letter and closing punctuation, words untouched.
+export function asSentence(text: string): string {
+  const t = text.trim();
+  if (!t) return t;
+  const s = t.charAt(0).toUpperCase() + t.slice(1);
+  return /[.?!…]["”)]?$/.test(s) ? s : `${s}.`;
+}
+
+// A source name is content ("GitHub ada/ledgerkit", a page title). Only the names
+// Trajectory itself writes, as stored by older versions, are re-cased.
+const OWN_SOURCES: Record<string, string> = { "Pitch deck": "Pitch Deck", "Founder application": "Founder Application" };
+export function sourceName(name: string): string {
+  const demo = / \(demo\)$/i.test(name);
+  const base = demo ? name.slice(0, -" (demo)".length) : name;
+  return `${OWN_SOURCES[base] ?? base}${demo ? " (Demo)" : ""}`;
 }
 
 // Display text for stored values (enums, recommended actions, missing fields):

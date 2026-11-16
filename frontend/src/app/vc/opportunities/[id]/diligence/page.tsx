@@ -46,7 +46,7 @@ export default function DiligencePage() {
   return (
     <div className="space-y-5">
       <nav aria-label="Breadcrumb" className="text-xs text-ink-muted">
-        <Link href={`/vc/opportunities/${id}`} className="hover:text-brand">{opp.data?.company?.name || opp.data?.founder?.full_name || "Opportunity"}</Link>
+        <Link href={`/vc/opportunities/${id}`} className="hover:text-brand" data-content>{opp.data?.company?.name || opp.data?.founder?.full_name || "Opportunity"}</Link>
         <span className="mx-1.5 text-ink-faint">/</span>
         <span className="text-ink-soft">Diligence</span>
       </nav>

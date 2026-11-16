@@ -16,7 +16,7 @@ import { FounderScoreBreakdown } from "@/components/FounderScoreBreakdown";
 import { HumanDecisionPanel } from "@/components/HumanDecisionPanel";
 import { Claim, Evidence, Opportunity } from "@/lib/types";
 import { LeadWebCheck } from "@/components/WebSourcing";
-import { humanStatus, verificationTone } from "@/lib/format";
+import { humanStatus, labelPhrase, sourceName, verificationTone } from "@/lib/format";
 import { evidenceHref, OpportunityTab, parseOpportunityTab, SHORTLIST_LABEL, shortlistOf } from "@/lib/pipeline";
 import { Tabs, tabPanelProps } from "@/components/Tabs";
 import { EvidenceLinkProvider } from "@/components/EvidenceRef";
@@ -226,7 +226,7 @@ function OpportunityRecord() {
       <nav aria-label="Breadcrumb" className="flex items-center text-[13px] text-ink-muted">
         {o.entry_type === "outbound" && <><Link href="/vc/founders" className="hover:text-brand">Founders</Link><span className="mx-1.5 text-ink-faint">/</span></>}
         {inPipeline && <><Link href={`/vc/pipeline?stage=${o.stage}`} className="hover:text-brand">Pipeline</Link><span className="mx-1.5 text-ink-faint">/</span></>}
-        <span className="truncate text-ink-soft">{name}</span>
+        <span className="truncate text-ink-soft" data-content>{name}</span>
         <Link href={`/vc/map?focus=${o.id}`} className="ml-auto shrink-0 pl-3 hover:text-brand">View on Map →</Link>
       </nav>
 
@@ -234,13 +234,13 @@ function OpportunityRecord() {
       <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-1.5">
-            <h1 className="mr-1 text-2xl font-semibold tracking-[-0.015em] text-ink">{name}</h1>
+            <h1 className="mr-1 text-2xl font-semibold tracking-[-0.015em] text-ink" data-content>{name}</h1>
             <SourceBadge entryType={o.entry_type} />
             <StageBadge stage={o.stage} />
             {shortlist && <ShortlistBadge shortlist={shortlist} />}
             {o.is_demo && <DemoBadge />}
           </div>
-          {o.company?.one_liner && <p className="mt-1 max-w-3xl text-[15px] text-ink-soft">{o.company.one_liner}</p>}
+          {o.company?.one_liner && <p className="mt-1 max-w-3xl text-[15px] text-ink-soft" data-content>{o.company.one_liner}</p>}
           {step && <p className="mt-1 text-[13px] text-ink-muted">Next Step: <span className="font-medium text-ink-soft">{step.label}</span>{step.detail ? ` · ${step.detail}` : ""}</p>}
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -269,7 +269,7 @@ function OpportunityRecord() {
         </div>
       )}
 
-      <Tabs label={`${name} Sections`} idPrefix="opp" tabs={tabs} value={tab} onChange={setTab} />
+      <Tabs label="Record Sections" idPrefix="opp" tabs={tabs} value={tab} onChange={setTab} />
 
       <div {...tabPanelProps("opp", tab)}>
         {tab === "overview" && (
@@ -283,12 +283,14 @@ function OpportunityRecord() {
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] [&>*]:min-w-0">
               <Section title="Summary">
                 <div className="max-w-prose space-y-3 text-[15px] leading-7 text-ink-soft">
-                  <p>{o.company?.description || o.company?.one_liner || o.founder?.headline || "No description yet."}</p>
+                  {o.company?.description || o.company?.one_liner || o.founder?.headline
+                    ? <p data-content>{o.company?.description || o.company?.one_liner || o.founder?.headline}</p>
+                    : <p>No description yet.</p>}
                   <p className="text-sm text-ink-muted">
                     {o.founder
-                      ? [o.founder.full_name, o.founder.location].filter(Boolean).join(" · ")
-                      : o.identity?.founder_named ? <>Founder Named on a Source: {o.identity.founder_named} · <span className="text-caution">Unverified</span></> : "Founder Not Linked Yet"}
-                    {o.company?.website && <> · <a href={o.company.website} target="_blank" rel="noreferrer" className="hover:text-brand">{o.company.website.replace(/^https?:\/\/(www\.)?/, "")} ↗</a></>}
+                      ? <span data-content>{[o.founder.full_name, o.founder.location].filter(Boolean).join(" · ")}</span>
+                      : o.identity?.founder_named ? <>Founder Named on a Source: <span data-content>{o.identity.founder_named}</span> · <span className="text-caution">Unverified</span></> : "Founder Not Linked Yet"}
+                    {o.company?.website && <> · <a href={o.company.website} target="_blank" rel="noreferrer" className="hover:text-brand" data-content>{o.company.website.replace(/^https?:\/\/(www\.)?/, "")} ↗</a></>}
                   </p>
                   {o.surfaced_reason && (
                     <div>
@@ -317,8 +319,12 @@ function OpportunityRecord() {
               <Section title="Founder">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-lg font-semibold text-ink">{o.founder.full_name}</p>
-                    <p className="text-sm text-ink-muted">{[o.founder.headline, o.founder.location].filter(Boolean).join(" · ") || "No Headline or Location"}</p>
+                    <p className="text-lg font-semibold text-ink" data-content>{o.founder.full_name}</p>
+                    <p className="text-sm text-ink-muted">
+                      {o.founder.headline || o.founder.location
+                        ? <span data-content>{[o.founder.headline, o.founder.location].filter(Boolean).join(" · ")}</span>
+                        : "No Headline or Location"}
+                    </p>
                   </div>
                   {o.founder.github_username ? (
                     <span className="flex flex-col items-end gap-1 text-sm">
@@ -354,7 +360,7 @@ function OpportunityRecord() {
                 <p className="text-base font-semibold text-ink">No Founder Linked Yet</p>
                 <p className="text-[15px] leading-7 text-ink-soft">
                   {o.identity?.founder_named
-                    ? <>{o.identity.founder_named} {o.identity.founder_named.includes(" and ") ? "are" : "is"} named on a <a href={o.identity.founder_named_source ?? undefined} target="_blank" rel="noreferrer" className="text-brand hover:underline">source</a>, but not verified. </>
+                    ? <><span data-content>{o.identity.founder_named}</span> {o.identity.founder_named.includes(" and ") ? "are" : "is"} named on a <a href={o.identity.founder_named_source ?? undefined} target="_blank" rel="noreferrer" className="text-brand hover:underline">source</a>, but not verified. </>
                     : "None of this lead's sources name a founder. "}
                   Founder Score and Momentum need a founder with public GitHub activity — sync their GitHub profile to add one.
                 </p>
@@ -543,7 +549,7 @@ function Gaps({ assessment, contradictions }: { assessment: Opportunity["assessm
       ))}
       {unique.slice(0, Math.max(0, 6 - Math.min(3, contradictions.length))).map((m) => (
         <li key={m.text} className="flex items-start gap-2 text-sm text-ink-soft">
-          <Badge tone="bg-caution-wash text-caution">Missing · {m.axis}</Badge><span>{m.text}</span>
+          <Badge tone="bg-caution-wash text-caution">Missing · {m.axis}</Badge><span>{labelPhrase(m.text)}</span>
         </li>
       ))}
     </ul>
@@ -612,10 +618,10 @@ function EvidencePanel({
                       {newIds.has(e.id) && <Badge tone="mr-1.5 bg-signal-wash text-caution">New</Badge>}
                       {e.source_url
                         ? <a href={e.source_url} target="_blank" rel="noreferrer" className="text-ink hover:text-brand" data-content>{e.title} <span className="text-ink-faint">↗</span></a>
-                        : <span className="text-ink">{e.title}</span>}
-                      {quote && <span className="mt-1 block border-l-2 border-line pl-2 text-[13px] italic text-ink-muted">“{quote}”</span>}
+                        : <span className="text-ink" data-content>{e.title}</span>}
+                      {quote && <span className="mt-1 block border-l-2 border-line pl-2 text-[13px] italic text-ink-muted" data-content>“{quote}”</span>}
                     </td>
-                    <td className="text-[13px] text-ink-muted">{e.source_name}</td>
+                    <td className="text-[13px] text-ink-muted" data-content>{sourceName(e.source_name)}</td>
                     <td><Badge tone={verificationTone(e.verification_status)}>{humanStatus(e.verification_status)}</Badge></td>
                     <td className="num text-right text-[13px] text-ink-muted"><EvidenceDate e={e} /></td>
                     <td className="text-right font-mono text-xs text-ink-faint">E{e.id}</td>

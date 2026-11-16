@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
+import { asSentence, labelPhrase } from "@/lib/format";
 import { setPipelineStatus } from "@/lib/myWorkspace";
 import { WebEvidence, WebResult, WebSearchResponse, WebSearchStatus, WebSource } from "@/lib/types";
 import { useToast } from "./Toast";
@@ -210,7 +211,7 @@ function SearchResults({
           {search.updated_leads.map((u, i) => (
             <span key={u.opportunity_id}>
               {i > 0 && ", "}
-              <Link href={`/vc/opportunities/${u.opportunity_id}`} className="font-medium text-ink hover:text-brand">{u.name}</Link>{" "}
+              <Link href={`/vc/opportunities/${u.opportunity_id}`} className="font-medium text-ink hover:text-brand" data-content>{u.name}</Link>{" "}
               <span className="num">(+{u.evidence_added} {u.evidence_added === 1 ? "Source" : "Sources"})</span>
             </span>
           ))}
@@ -243,12 +244,12 @@ function SearchResults({
 function SourceList({ sources, queries }: { sources: WebSource[]; queries: string[] }) {
   return (
     <div className="rounded-md border border-line bg-surface-sunken p-3 text-xs">
-      <p className="text-ink-muted">Queries: {queries.map((q) => `“${q}”`).join(" · ")}</p>
+      <p className="text-ink-muted">Queries: <span data-content>{queries.map((q) => `“${q}”`).join(" · ")}</span></p>
       <ol className="mt-2 space-y-1">
         {sources.map((s) => (
           <li key={s.id} className="flex gap-2">
             <span className="num w-6 shrink-0 font-mono text-ink-faint">{s.id}</span>
-            <a href={s.url} target="_blank" rel="noreferrer" className="min-w-0 truncate text-ink-soft hover:text-brand">
+            <a href={s.url} target="_blank" rel="noreferrer" className="min-w-0 truncate text-ink-soft hover:text-brand" data-content>
               {s.title || s.url} <span className="text-ink-muted">· {s.domain} ↗</span>
             </a>
           </li>
@@ -284,13 +285,13 @@ function FounderLine({ r }: { r: WebResult }) {
     <p className="text-xs text-ink-muted">
       {f.status === "verified_github" ? (
         <>
-          Founder <a href={f.profile_url ?? undefined} target="_blank" rel="noreferrer" className="text-ink-soft hover:text-brand">{f.name} ↗</a>{" "}
-          <Badge tone="bg-positive-wash text-positive" title={r.github?.basis}>Verified via GitHub</Badge>
+          Founder <a href={f.profile_url ?? undefined} target="_blank" rel="noreferrer" className="text-ink-soft hover:text-brand" data-content>{f.name} ↗</a>{" "}
+          <Badge tone="bg-positive-wash text-positive" title={r.github?.basis ? asSentence(r.github.basis) : undefined}>Verified via GitHub</Badge>
         </>
       ) : f.status === "named_unverified" ? (
         <>
           Founder Named on <a href={f.source_url ?? undefined} target="_blank" rel="noreferrer" className="hover:text-brand">Source</a>:{" "}
-          <span className="text-ink-soft">{f.name}</span>{" "}
+          <span className="text-ink-soft" data-content>{f.name}</span>{" "}
           <Badge tone="bg-caution-wash text-caution" title="Named on a retrieved page; not matched to a verified profile.">Unverified</Badge>
         </>
       ) : (
@@ -300,8 +301,8 @@ function FounderLine({ r }: { r: WebResult }) {
         <span className="ml-2">
           · GitHub <a href={r.github.url ?? undefined} target="_blank" rel="noreferrer" className="text-ink-soft hover:text-brand">@{r.github.login} ↗</a>{" "}
           {r.github.verified
-            ? <Badge tone="bg-positive-wash text-positive" title={r.github.basis}>Verified Match</Badge>
-            : <span title={r.github.basis}>(Not Verified)</span>}
+            ? <Badge tone="bg-positive-wash text-positive" title={r.github.basis ? asSentence(r.github.basis) : undefined}>Verified Match</Badge>
+            : <span title={r.github.basis ? asSentence(r.github.basis) : undefined}>(Not Verified)</span>}
         </span>
       )}
     </p>
@@ -323,11 +324,11 @@ function EvidenceRow({ e, showStatus }: { e: WebEvidence; showStatus: boolean })
       </span>
       <span className="min-w-0 text-sm text-ink-soft">
         <span className="mr-1.5 text-xs font-medium text-ink-muted">{KIND_LABEL[e.kind]}</span>
-        {e.claim}
+        <span data-content>{e.claim}</span>
         {showStatus && e.status === "new" && <Badge tone="ml-1.5 bg-signal-wash text-caution">New</Badge>}
         {showStatus && e.status === "known" && <span className="ml-1.5 text-xs text-ink-faint">Already Saved</span>}
         {e.quote && (
-          <span className="mt-0.5 block border-l-2 border-line pl-2 text-[13px] italic text-ink-muted" title="Quoted from the Source">
+          <span className="mt-0.5 block border-l-2 border-line pl-2 text-[13px] italic text-ink-muted" title="Quoted from the Source" data-content>
             “{e.quote}”
           </span>
         )}
@@ -383,15 +384,15 @@ function ResultCard({
   const hasDated = r.evidence.some((e) => e.date_basis === "search_provider");
 
   return (
-    <article className="card p-4" data-testid={`web-result-${r.key}`} aria-label={r.company_name}>
+    <article className="card p-4" data-testid={`web-result-${r.key}`} aria-labelledby={`web-result-${r.key}-name`}>
       <header className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <h3 className="text-base font-semibold text-ink">{r.company_name}</h3>
+          <h3 id={`web-result-${r.key}-name`} className="text-base font-semibold text-ink" data-content>{r.company_name}</h3>
           <p className="flex flex-wrap items-center gap-x-2 text-xs text-ink-muted">
             {r.website
-              ? <a href={r.website} target="_blank" rel="noreferrer" title={r.website_basis ?? undefined} className="text-brand hover:underline" data-content>{r.domain} ↗</a>
+              ? <a href={r.website} target="_blank" rel="noreferrer" title={r.website_basis ? asSentence(r.website_basis) : undefined} className="text-brand hover:underline" data-content>{r.domain} ↗</a>
               : <span>Website Unknown</span>}
-            {r.sector && <span>· {r.sector}</span>}
+            {r.sector && <span>· <span data-content>{r.sector}</span></span>}
           </p>
         </div>
         {oppId != null && (
@@ -401,7 +402,7 @@ function ResultCard({
         )}
       </header>
 
-      <p className="mt-2 text-sm text-ink">
+      <p className="mt-2 text-sm text-ink" data-content>
         {r.building.text}
         <Cites ids={r.building.source_ids} sources={sources} />
       </p>
@@ -410,7 +411,7 @@ function ResultCard({
       <div className="mt-3 grid gap-3">
         <section>
           <h4 className="label">Why It Surfaced</h4>
-          <p className="mt-1 text-sm text-ink-soft">
+          <p className="mt-1 text-sm text-ink-soft" data-content>
             {r.why_matched.text}
             <Cites ids={r.why_matched.source_ids} sources={sources} />
           </p>
@@ -426,7 +427,7 @@ function ResultCard({
           <h4 className="label">What&apos;s Unknown</h4>
           {r.unknowns.length ? (
             <ul className="mt-1 list-disc space-y-0.5 pl-4 text-sm text-ink-muted">
-              {r.unknowns.map((u) => <li key={u}>{u}</li>)}
+              {r.unknowns.map((u) => <li key={u}>{labelPhrase(u)}</li>)}
             </ul>
           ) : <p className="mt-1 text-sm text-ink-muted">Nothing flagged.</p>}
         </section>

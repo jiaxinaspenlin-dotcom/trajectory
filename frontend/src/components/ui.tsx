@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ReactNode, useEffect, useId, useRef } from "react";
-import { scoreTone } from "@/lib/format";
+import { asSentence, scoreTone } from "@/lib/format";
 import { CloseIcon } from "./icons";
 
 export function Badge({ children, tone = "bg-neutral-wash text-neutral", title }: { children: ReactNode; tone?: string; title?: string }) {
@@ -110,10 +110,11 @@ export function EmptyState({ title, hint, action }: { title: string; hint?: stri
   );
 }
 
+// Error messages are sentences; API details ("Internal Server Error") get their period.
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-negative/25 bg-negative-wash px-4 py-3 text-sm text-negative" role="alert">
-      <span>{message}</span>
+      <span>{asSentence(message)}</span>
       {onRetry && <button className="btn-secondary btn-sm" onClick={onRetry}>Retry</button>}
     </div>
   );

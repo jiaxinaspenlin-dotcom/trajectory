@@ -49,8 +49,8 @@ export default function MyApplications() {
               <li key={a.id}>
                 <Link href={`/founder/application/${a.id}`} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-surface-sunken">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-ink">{a.company_name}</p>
-                    <p className="text-xs text-ink-muted">{a.sector || "Sector Not Set"}{a.missing_fields.length ? ` · ${a.missing_fields.length} Item${a.missing_fields.length === 1 ? "" : "s"} Would Help` : ""}</p>
+                    <p className="truncate text-sm font-semibold text-ink" data-content>{a.company_name}</p>
+                    <p className="text-xs text-ink-muted">{a.sector ? <span data-content>{a.sector}</span> : "Sector Not Set"}{a.missing_fields.length ? ` · ${a.missing_fields.length} Item${a.missing_fields.length === 1 ? "" : "s"} Would Help` : ""}</p>
                   </div>
                   <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
                     {a.missing_fields.length > 0 && <span className="text-sm font-medium text-brand">Add Details →</span>}

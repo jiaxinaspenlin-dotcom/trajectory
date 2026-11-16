@@ -205,8 +205,8 @@ function AiDiscovery({ onSourced }: { onSourced: () => void }) {
                   <tr key={p.opportunity_id}>
                     <td className="num text-ink-muted">{idx + 1}</td>
                     <td>
-                      <Link href={`/vc/opportunities/${p.opportunity_id}`} className="font-medium text-ink hover:text-brand">{p.name}</Link>
-                      <a href={p.github_url} target="_blank" rel="noreferrer" className="ml-1.5 text-xs text-ink-muted hover:text-brand">@{p.login} ↗</a>
+                      <Link href={`/vc/opportunities/${p.opportunity_id}`} className="font-medium text-ink hover:text-brand" data-content>{p.name}</Link>
+                      <a href={p.github_url} target="_blank" rel="noreferrer" className="ml-1.5 text-xs text-ink-muted hover:text-brand" data-content>@{p.login} ↗</a>
                     </td>
                     <td className="num text-right text-ink-soft">{p.evidence_added}</td>
                     <td className="num text-right font-semibold text-ink">{Math.round(p.founder_score)}</td>

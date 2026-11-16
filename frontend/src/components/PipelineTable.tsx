@@ -39,7 +39,7 @@ export function PipelineTable({ deals }: { deals: PipelineDeal[] }) {
                   </span>
                   <p className="truncate text-[13px] text-ink-muted">
                     {d.company
-                      ? [founderName, d.company.one_liner].filter(Boolean).join(" · ") || "Founder Not Linked Yet"
+                      ? (founderName || d.company.one_liner ? <span data-content>{[founderName, d.company.one_liner].filter(Boolean).join(" · ")}</span> : "Founder Not Linked Yet")
                       : "No Company Yet"}
                   </p>
                 </td>

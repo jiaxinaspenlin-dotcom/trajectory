@@ -45,7 +45,7 @@ def test_sourced_founder_node_updates_in_place_when_moved_to_screening(client, s
 
     node = _node(_map(client), opp_id)
     assert node["kind"] == "lead" and node["company"] is None
-    assert node["group"] == {"key": "language:rust", "label": "Rust projects", "field": "github_repo.language"}
+    assert node["group"] == {"key": "language:rust", "label": "Rust Projects", "field": "github_repo.language"}
     assert node["top_project"]["name"] == "ledgerkit"
     # placeholder fit and a single score snapshot are unavailable, with reasons
     assert node["thesis_fit"]["value"] is None and "placeholder" in node["thesis_fit"]["reason"]

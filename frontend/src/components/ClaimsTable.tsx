@@ -31,7 +31,7 @@ export function ClaimsTable({ claims }: { claims: Claim[] }) {
         <tbody>
           {claims.map((c) => (
             <tr key={c.id} className="border-t border-line align-top">
-              <td className="py-2 pr-2 text-ink-soft">{c.text}</td>
+              <td className="py-2 pr-2 text-ink-soft" data-content>{c.text}</td>
               <td className="pr-2 text-ink-muted">{humanStatus(c.category)}</td>
               <td className="pr-2 text-xs text-ink-muted">
                 {c.provenance === "independent" ? "Independent" : "Founder-Reported"}

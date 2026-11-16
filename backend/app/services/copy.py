@@ -18,6 +18,7 @@ NAMES = {
     "pdf": "PDF", "yc": "YC", "hn": "HN", "swot": "SWOT", "kpi": "KPI", "kpis": "KPIs", "api": "API",
     "mau": "MAU", "id": "ID", "ids": "IDs", "tam": "TAM", "vc": "VC",
 }
+UNITS = frozenset({"pt", "pts"})  # left lowercase like 3d or 30d
 BREAKS = frozenset({"·", "—", "–", "/", "|", "→", "←"})
 _WORD = re.compile(r"^([^A-Za-z0-9@$]*)(.*?)([^A-Za-z0-9%]*)$")
 
@@ -28,6 +29,8 @@ def _case_part(part: str, edge: bool) -> str:
         return part
     if part.lower() in NAMES:
         return NAMES[part.lower()]
+    if part in UNITS:
+        return part
     if re.search(r"[A-Z]", part[1:]):
         return part  # mixed case or an acronym: a name, keep it
     lower = part.lower()
@@ -41,6 +44,8 @@ def _case_word(word: str, edge: bool) -> str:
     if not m or not m.group(2):
         return word
     lead, core, trail = m.groups()
+    if "/" in core:
+        return word  # paths and slash pairs are values: ada/ledgerkit, ai/ml
     parts = core.split("-")
     return lead + "-".join(_case_part(p, (edge or bool(lead)) if i == 0 else True) for i, p in enumerate(parts)) + trail
 

@@ -3,7 +3,7 @@
 import { Assessment, AxisAssessment } from "@/lib/types";
 import { Badge, ConfidenceBar } from "./ui";
 import { InfoTip } from "./InfoTip";
-import { humanStatus, labelTone, pct, trajectoryTone } from "@/lib/format";
+import { asSentence, humanStatus, labelPhrase, labelTone, pct, trajectoryTone } from "@/lib/format";
 import { EvidenceRef } from "./EvidenceRef";
 
 const AXIS_TITLES: Record<string, string> = {
@@ -61,7 +61,7 @@ function AxisCard({ axis }: { axis: AxisAssessment }) {
         <ul className="mt-2 space-y-1 text-sm text-ink-soft">
           {axis.supporting_points.slice(0, 3).map((p, i) => (
             <li key={i} className="break-words">
-              • {p.text}
+              • {asSentence(p.text)}
               {p.evidence_ids.length > 0 ? (
                 <span className="ml-1 text-xs text-ink-muted">
                   {p.evidence_ids.slice(0, 4).map((id) => <EvidenceRef key={id} id={id} />)}
@@ -75,10 +75,10 @@ function AxisCard({ axis }: { axis: AxisAssessment }) {
       )}
 
       {axis.risks.length > 0 && (
-        <p className="mt-2 break-words text-xs text-caution"><strong>Risks:</strong> {axis.risks.slice(0, 3).join("; ")}</p>
+        <p className="mt-2 break-words text-xs text-caution"><strong>Risks:</strong> {axis.risks.slice(0, 3).map(labelPhrase).join("; ")}</p>
       )}
       {axis.missing_information.length > 0 && (
-        <p className="mt-1 break-words text-xs text-ink-muted"><strong>Missing:</strong> {axis.missing_information.slice(0, 3).join("; ")}</p>
+        <p className="mt-1 break-words text-xs text-ink-muted"><strong>Missing:</strong> {axis.missing_information.slice(0, 3).map(labelPhrase).join("; ")}</p>
       )}
       {axis.contradictions.length > 0 && (
         <p className="mt-1 break-words text-xs text-negative"><strong>Contradictions:</strong> {axis.contradictions.slice(0, 2).join("; ")}</p>

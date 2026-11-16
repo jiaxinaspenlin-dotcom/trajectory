@@ -3,7 +3,7 @@
 import { Memo } from "@/lib/types";
 import { normalizeMemoSections } from "@/lib/memo";
 import { Badge, Section } from "@/components/ui";
-import { humanStatus, titleCase } from "@/lib/format";
+import { asSentence, humanStatus, titleCase } from "@/lib/format";
 
 // Renders the full evidence-backed investment memo — the final recommendation
 // plus every standard section, in order. Missing data is labeled, never invented.
@@ -76,7 +76,7 @@ function SwotGrid({ body }: { body: string }) {
       {SWOT_QUADRANTS.map((q) => (
         <div key={q.label} className={`rounded-lg border p-3 ${q.tone}`}>
           <div className={`label ${q.accent}`}>{q.label}</div>
-          <p className="mt-1 text-sm text-ink-soft">{parsed[q.label] || "Not disclosed."}</p>
+          <p className="mt-1 text-sm text-ink-soft">{parsed[q.label] ? asSentence(parsed[q.label]) : "Not disclosed."}</p>
         </div>
       ))}
     </div>

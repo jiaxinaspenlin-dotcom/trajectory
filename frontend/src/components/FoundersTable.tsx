@@ -161,7 +161,9 @@ export function FoundersTable({
   );
 
   const review = (l: FounderLead) => (
-    <Link href={`/vc/opportunities/${l.id}`} onClick={stop} className="btn-secondary btn-sm" aria-label={`Review ${name(l)}`}>Review →</Link>
+    <Link href={`/vc/opportunities/${l.id}`} onClick={stop} className="btn-secondary btn-sm">
+      Review<span className="sr-only"> <span data-content>{name(l)}</span></span> <span aria-hidden>→</span>
+    </Link>
   );
 
   const errorLine = (l: FounderLead) =>
@@ -186,7 +188,7 @@ export function FoundersTable({
                 <StatusBadges l={l} shortlist={shortlistOf(l, overlay[l.id] ?? null)} />
                 <span className="flex shrink-0 items-center gap-1.5">
                   {review(l)}
-                  <RowMenu label={`More Actions for ${name(l)}`} items={menuItems(l)} busy={busy === l.id} />
+                  <RowMenu name={name(l)} items={menuItems(l)} busy={busy === l.id} />
                 </span>
               </div>
               {errorLine(l)}
@@ -237,7 +239,7 @@ export function FoundersTable({
                 <td className="text-right" onClick={stop}>
                   <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
                     {compact ? (
-                      <RowMenu label={`More Actions for ${name(l)}`} items={menuItems(l)} busy={busy === l.id} />
+                      <RowMenu name={name(l)} items={menuItems(l)} busy={busy === l.id} />
                     ) : inPipeline(l) ? (
                       <Link href={`/vc/pipeline?stage=${l.stage}`} className="btn-ghost btn-sm">View in Pipeline</Link>
                     ) : confirming === l.id ? (
@@ -319,8 +321,8 @@ function CompanyCell({ l }: { l: FounderLead }) {
   if (l.company) {
     return (
       <div className="min-w-0">
-        <p className="truncate text-ink">{l.company.name}</p>
-        {l.company.one_liner && <p className="truncate text-xs text-ink-muted">{l.company.one_liner}</p>}
+        <p className="truncate text-ink" data-content>{l.company.name}</p>
+        {l.company.one_liner && <p className="truncate text-xs text-ink-muted" data-content>{l.company.one_liner}</p>}
       </div>
     );
   }
@@ -331,7 +333,7 @@ function CompanyCell({ l }: { l: FounderLead }) {
         <span className="flex min-w-0 items-center gap-1.5">
           {l.top_project.url ? (
             <a href={l.top_project.url} target="_blank" rel="noreferrer" onClick={stop} className="truncate text-brand hover:underline" data-content>{l.top_project.name} ↗</a>
-          ) : <span className="truncate text-ink">{l.top_project.name}</span>}
+          ) : <span className="truncate text-ink" data-content>{l.top_project.name}</span>}
           {l.top_project.stars != null && (
             <span className="num shrink-0 text-xs text-ink-muted" title="External Interest Only, Not Traction">★ {l.top_project.stars}</span>
           )}
@@ -388,7 +390,9 @@ type RowMenuItem =
 
 // Row actions that don't fit inline. Positioned against the viewport so the
 // table's scroll container never clips it; closes on Escape, outside click, or scroll.
-function RowMenu({ label, items, busy }: { label: string; items: RowMenuItem[]; busy?: boolean }) {
+// The row's name is content, so the accessible name is built from text rather
+// than an aria-label: "More Actions for {name}".
+function RowMenu({ name, items, busy }: { name: string; items: RowMenuItem[]; busy?: boolean }) {
   const [open, setOpen] = useState(false);
   const [confirm, setConfirm] = useState<Extract<RowMenuItem, { separator?: false }>["confirm"] | null>(null);
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
@@ -447,8 +451,8 @@ function RowMenu({ label, items, busy }: { label: string; items: RowMenuItem[]; 
       <button
         ref={button}
         type="button"
+        id={`${id}-button`}
         className="icon-btn h-8 w-8 border border-line-strong bg-white"
-        aria-label={label}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? id : undefined}
@@ -456,13 +460,15 @@ function RowMenu({ label, items, busy }: { label: string; items: RowMenuItem[]; 
         disabled={busy}
       >
         <MoreIcon size={16} />
+        <span className="sr-only">More Actions for <span data-content>{name}</span></span>
       </button>
       {open && pos && (
         <div
           ref={menu}
           id={id}
           role={confirm ? "dialog" : "menu"}
-          aria-label={confirm ? confirm.title : label}
+          aria-label={confirm ? confirm.title : undefined}
+          aria-labelledby={confirm ? undefined : `${id}-button`}
           onClick={stop}
           style={{ top: pos.top, right: pos.right }}
           className="fixed z-50 w-64 rounded-lg border border-line bg-white p-1.5 text-left shadow-overlay"

@@ -1,7 +1,7 @@
 "use client";
 
 import { humanStatus } from "@/lib/format";
-import { groupFieldLabel, groupNodes, matchesSearch, nodeColor, nodeKindLabel } from "@/lib/opportunityMap";
+import { groupFieldLabel, groupNodes, isContentGroup, matchesSearch, nodeColor, nodeKindLabel } from "@/lib/opportunityMap";
 import { MapNode } from "@/lib/types";
 
 // Same nodes and grouping as the canvas, as a keyboard-friendly list. Used when
@@ -22,10 +22,10 @@ export function MapList({
   return (
     <div className="space-y-3 p-3" data-testid="map-list">
       {groups.map((g) => (
-        <section key={g.key} aria-label={`${g.label} Group`}>
-          <h3 className="flex items-center gap-1.5 px-1 text-xs font-semibold text-ink">
+        <section key={g.key} aria-labelledby={`map-group-${g.key}`}>
+          <h3 id={`map-group-${g.key}`} className="flex items-center gap-1.5 px-1 text-xs font-semibold text-ink">
             <span aria-hidden className="h-2 w-2 rounded-full" style={{ background: colors.get(g.key) }} />
-            {g.label} · {g.ids.length}
+            <span data-content={isContentGroup(g.field) || undefined}>{g.label}</span> · {g.ids.length}
           </h3>
           <p className="px-1 text-xs text-ink-muted">Grouped by {groupFieldLabel(g.field)}</p>
           <ul className="mt-1 divide-y divide-line overflow-hidden rounded-md border border-line bg-white">
@@ -47,7 +47,7 @@ export function MapList({
                     />
                     <span className="min-w-0 flex-1">
                       <span className="flex min-w-0 items-center gap-1.5">
-                        <span className="truncate text-sm font-medium text-ink">{n.name}</span>
+                        <span className="truncate text-sm font-medium text-ink" data-content>{n.name}</span>
                         {!!n.new_evidence_count && <span className="chip shrink-0 bg-signal-wash text-caution">New Evidence · {n.new_evidence_count}</span>}
                       </span>
                       <span className="block truncate text-xs text-ink-muted">

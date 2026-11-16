@@ -15,6 +15,8 @@ def test_title_case_rule():
     assert title_case("evidence-backed 30-day") == "Evidence-Backed 30-Day"
     assert title_case("idea vs market") == "Idea vs Market"
     assert title_case("github profile via openai") == "GitHub Profile via OpenAI"
+    assert title_case("+16.4 pts / 30d") == "+16.4 pts / 30d"
+    assert title_case("GitHub ada/ledgerkit-sdk") == "GitHub ada/ledgerkit-sdk"
 
 
 def test_action_label_is_title_case():
@@ -35,3 +37,4 @@ def test_queue_labels_and_details_are_title_case(client, seeded):
         assert a["next_action"] == title_case(a["next_action"]), a
         if a["next_action_detail"]:
             assert a["next_action_detail"] == title_case(a["next_action_detail"]), a
+

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Debate } from "@/lib/types";
-import { humanStatus, pct } from "@/lib/format";
+import { asSentence, humanStatus, pct } from "@/lib/format";
 import { BullCharacter, BearCharacter, RefereeCharacter, CharState } from "./Characters";
 import { ArenaBackdrop } from "./stage";
 import { EvidenceRef } from "../EvidenceRef";
@@ -208,7 +208,7 @@ export function DebatePlayer({ debate, onClose }: { debate: Debate; onClose: () 
                 </div>
                 <div className={`max-w-[80%] rounded-2xl border px-3 py-2 ${meta.wash} ${meta.border} ${alignRight ? "rounded-tr-sm" : "rounded-tl-sm"} ${t.verdict ? "ring-2 ring-brand/40" : ""}`}>
                   <div className={`text-xs font-bold ${meta.color}`}>{meta.name}<span className="ml-1 font-normal text-ink-muted">· {meta.sub}</span></div>
-                  <p className="mt-0.5 text-sm text-ink-soft">{t.text}<Refs ids={t.evidence_ids} /></p>
+                  <p className="mt-0.5 text-sm text-ink-soft">{asSentence(t.text)}<Refs ids={t.evidence_ids} /></p>
                 </div>
               </div>
             );
