@@ -10,21 +10,7 @@ import { FounderLead, PipelineDeal } from "./types";
 export const PIPELINE_STAGES = ["screening", "diligence", "decision"] as const;
 export type SourceFilter = "all" | "inbound" | "outbound";
 
-// Stage badges step up in intensity as a deal advances.
-export function stageTone(stage: string): string {
-  switch (stage) {
-    case "screening":
-      return "bg-brand-wash text-brand";
-    case "diligence":
-      return "bg-brand text-white";
-    case "decision":
-      return "bg-ink text-white";
-    default:
-      return "bg-neutral-wash text-neutral";
-  }
-}
-
-// Solid dot per stage (badges use washes; dots need a visible fill).
+// Solid dot per stage; the dot carries the stage's color everywhere it appears.
 export function stageDot(stage: string): string {
   return { sourcing: "bg-positive", screening: "bg-brand-soft", diligence: "bg-brand", decision: "bg-ink" }[stage] ?? "bg-neutral";
 }

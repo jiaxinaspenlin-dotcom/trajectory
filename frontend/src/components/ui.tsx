@@ -13,20 +13,22 @@ export function DemoBadge() {
   return <Badge tone="bg-neutral-wash text-ink-muted" title="Fictional demo data">Demo data</Badge>;
 }
 
-// Page-level hierarchy: one title, an optional one-line purpose, actions on the right.
+// Page-level hierarchy: one title, an optional one-line purpose, actions on the
+// right (on phones they wrap under the title). At most one action is primary.
 export function PageHeader({ title, subtitle, actions }: { title: ReactNode; subtitle?: ReactNode; actions?: ReactNode }) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
       <div className="min-w-0">
-        <h1 className="text-2xl font-semibold tracking-[-0.015em] text-ink">{title}</h1>
-        {subtitle && <p className="mt-1 max-w-3xl text-[15px] text-ink-muted">{subtitle}</p>}
+        <h1 className="text-page text-ink">{title}</h1>
+        {subtitle && <p className="mt-1 max-w-3xl text-body text-ink-muted">{subtitle}</p>}
       </div>
       {actions && <div className="flex min-w-0 flex-wrap items-center gap-2">{actions}</div>}
     </div>
   );
 }
 
-// A bordered panel with a thin header row. `flush` removes body padding (tables).
+// A white card with a header. `flush` puts a list or table edge to edge under a
+// divided header; otherwise the body continues under the title without a rule.
 export function Section({
   title, subtitle, children, right, id, flush = false, className = "",
 }: {
@@ -34,14 +36,14 @@ export function Section({
 }) {
   return (
     <section className={`card ${className}`} id={id} aria-label={typeof title === "string" ? title : undefined}>
-      <div className="panel-header">
+      <div className={`panel-header ${flush ? "panel-header-divided" : ""}`}>
         <div className="min-w-0">
           <h2 className="panel-title">{title}</h2>
-          {subtitle && <p className="truncate text-[13px] text-ink-muted">{subtitle}</p>}
+          {subtitle && <p className="text-meta text-ink-muted">{subtitle}</p>}
         </div>
         {right}
       </div>
-      <div className={flush ? "" : "p-5"}>{children}</div>
+      <div className={flush ? "" : "px-5 pb-5 pt-1"}>{children}</div>
     </section>
   );
 }
@@ -97,12 +99,13 @@ export function ConfidenceBar({ value }: { value: number }) {
   );
 }
 
+// What's missing, why it matters, and the one thing to do about it.
 export function EmptyState({ title, hint, action }: { title: string; hint?: string; action?: ReactNode }) {
   return (
-    <div className="rounded-lg border border-dashed border-line-strong bg-white px-6 py-10 text-center">
-      <p className="text-base font-medium text-ink">{title}</p>
-      {hint && <p className="mx-auto mt-1 max-w-md text-sm text-ink-muted">{hint}</p>}
-      {action && <div className="mt-4 flex justify-center gap-2">{action}</div>}
+    <div className="card px-6 py-12 text-center">
+      <p className="text-section text-ink">{title}</p>
+      {hint && <p className="mx-auto mt-1.5 max-w-md text-body text-ink-muted">{hint}</p>}
+      {action && <div className="mt-5 flex flex-wrap justify-center gap-2">{action}</div>}
     </div>
   );
 }

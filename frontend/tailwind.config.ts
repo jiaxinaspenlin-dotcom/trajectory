@@ -1,9 +1,12 @@
 import type { Config } from "tailwindcss";
 
-// Trajectory design system: a light, restrained research-tool palette.
-// Neutral slate ink on white, hairline dividers, one blue accent for actions and
-// selection, and semantic colors reserved for status. Token names are shared by
-// every page, so changing them here restyles the whole product.
+// Trajectory design system: a calm research tool. Neutral ink on white cards
+// over a quiet canvas, hairline dividers, and one blue accent reserved for
+// actions and focus; status uses small semantic washes and stage dots. Token
+// names are shared by every page, so changing them here restyles the product.
+//
+// Type scale (16px root): page 26/34 · section 17/24 · body 15/24 · meta 13/20
+// · 2xs 11/16. Spacing follows the 4px grid: 4, 8, 12, 16, 24, 32, 48.
 const config: Config = {
   content: ["./src/**/*.{ts,tsx}"],
   theme: {
@@ -12,7 +15,7 @@ const config: Config = {
         ink: {
           DEFAULT: "#0b1220",
           soft: "#2b3648",
-          muted: "#667085",
+          muted: "#5f6b7d",
           faint: "#98a2b3",
         },
         surface: {
@@ -20,7 +23,7 @@ const config: Config = {
           sunken: "#f7f8fa",
           raised: "#ffffff",
         },
-        canvas: "#fbfbfc",
+        canvas: "#f6f7f9",
         line: {
           DEFAULT: "#e6e8ec",
           strong: "#d0d5dd",
@@ -47,10 +50,16 @@ const config: Config = {
         mono: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
       fontSize: {
+        page: ["1.625rem", { lineHeight: "2.125rem", letterSpacing: "-0.02em", fontWeight: "600" }],
+        section: ["1.0625rem", { lineHeight: "1.5rem", letterSpacing: "-0.01em", fontWeight: "600" }],
+        body: ["0.9375rem", { lineHeight: "1.5rem" }],
+        meta: ["0.8125rem", { lineHeight: "1.25rem" }],
         "2xs": ["0.6875rem", { lineHeight: "1rem" }],
       },
       boxShadow: {
         card: "0 1px 2px rgba(16,24,40,0.04)",
+        // the one emphasized surface on a page (e.g. Dashboard's next step)
+        focus: "0 1px 2px rgba(16,24,40,0.05), 0 0 0 1px rgba(31,79,216,0.18)",
         raised: "0 8px 24px -6px rgba(16,24,40,0.14), 0 2px 6px rgba(16,24,40,0.06)",
         overlay: "0 16px 40px -12px rgba(16,24,40,0.22), 0 4px 10px rgba(16,24,40,0.06)",
       },

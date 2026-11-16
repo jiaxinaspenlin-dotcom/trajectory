@@ -34,11 +34,12 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
               href={item.href}
               onClick={onNavigate}
               aria-current={active ? "page" : undefined}
-              className={`flex h-10 items-center gap-3 rounded-md px-3 text-[15px] font-medium transition-colors ${
-                active ? "bg-brand-wash text-brand" : "text-ink-soft hover:bg-neutral-wash hover:text-ink"
+              className={`flex h-10 items-center gap-3 rounded-md px-3 text-body font-medium transition-colors ${
+                active ? "bg-neutral-wash text-ink" : "text-ink-soft hover:bg-neutral-wash/70 hover:text-ink"
               }`}
             >
-              <Icon size={18} className={active ? "text-brand" : "text-ink-muted"} />
+              {/* blue is kept for actions; the current page is marked in ink */}
+              <Icon size={18} className={active ? "text-ink" : "text-ink-muted"} />
               {item.label}
             </Link>
           </li>
@@ -91,7 +92,7 @@ export function InvestorShell({ children }: { children: React.ReactNode }) {
     <ToastProvider>
     <div className="min-h-[100dvh] lg:flex">
       {/* desktop rail */}
-      <aside className="sticky top-0 hidden h-[100dvh] w-60 shrink-0 flex-col border-r border-line bg-white px-3 py-4 lg:flex">
+      <aside className="sticky top-0 hidden h-[100dvh] w-56 shrink-0 flex-col border-r border-line bg-white px-3 py-4 lg:flex">
         <Link href="/vc" className="mb-5 flex h-10 items-center gap-2.5 px-3">
           <TrajectoryLogo size={22} />
           <span className="text-base font-semibold text-ink">Trajectory</span>
@@ -132,7 +133,7 @@ export function InvestorShell({ children }: { children: React.ReactNode }) {
 
       <main className={fullBleed ? "relative h-[calc(100dvh-3.5rem)] min-w-0 flex-1 lg:h-[100dvh]" : "min-w-0 flex-1"}>
         {/* 24–32px padding beside the rail; wide pages use the width up to a generous cap */}
-        {fullBleed ? children : <div className="w-full max-w-[1800px] px-4 py-6 sm:px-6 lg:py-7 xl:px-8">{children}</div>}
+        {fullBleed ? children : <div className="w-full max-w-[1800px] px-4 py-6 sm:px-6 lg:px-10 lg:py-9">{children}</div>}
       </main>
     </div>
     </ToastProvider>

@@ -1,16 +1,21 @@
 import { humanStatus } from "@/lib/format";
-import { Shortlist, SHORTLIST_LABEL, sourceLabel, stageTone } from "@/lib/pipeline";
+import { Shortlist, SHORTLIST_LABEL, sourceLabel, stageDot } from "@/lib/pipeline";
 import { Badge } from "./ui";
 
+// Shared stage: an outlined pill with the stage's dot, so it never competes with
+// action buttons and stays distinct from the filled personal shortlist badge.
 export function StageBadge({ stage }: { stage: string }) {
-  return <Badge tone={stageTone(stage)}>{humanStatus(stage)}</Badge>;
+  return (
+    <Badge tone="border border-line-strong bg-white text-ink-soft">
+      <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${stageDot(stage)}`} />
+      {humanStatus(stage)}
+    </Badge>
+  );
 }
 
+// Where the opportunity came from: quiet text, not a status.
 export function SourceBadge({ entryType }: { entryType: string }) {
-  const tone = entryType === "inbound"
-    ? "border border-positive/30 bg-positive-wash text-positive"
-    : "border border-line bg-white text-ink-soft";
-  return <Badge tone={tone}>{sourceLabel(entryType)}</Badge>;
+  return <Badge tone="bg-neutral-wash text-ink-muted">{sourceLabel(entryType)}</Badge>;
 }
 
 export function ProspectStatusBadge({ status }: { status: string }) {
