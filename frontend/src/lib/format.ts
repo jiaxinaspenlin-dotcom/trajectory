@@ -47,11 +47,21 @@ export function trajectoryTone(t: string): string {
 
 // ---- Title Case (docs/copy-style.md) ----------------------------------------
 // Labels, headings and short phrases are Title Case; full sentences are not run
-// through this. Minor words stay lowercase unless first or last in a phrase;
+// through this. Minor words stay lowercase unless first or last in a phrase or
+// the particle of a phrasal verb (Fill In);
 // both halves of a hyphenated word are capitalized; units, numbers, @handles and
 // mixed-case names (GitHub, InsForge) are left exactly as they are.
 const MINOR = new Set(
-  "a an the and but or nor for so yet as at by in of off on per to up via vs with from into than".split(" ")
+  "a an the and but or nor for as at by in of on per to via vs with from into than".split(" ")
+);
+// "in", "on" and "out" complete a verb here, so they are capitalized: Set Up, Fill In,
+// Log Out, Opt In. After anything else they are prepositions ("7 in Pipeline").
+const PARTICLES = new Set(["in", "on", "out"]);
+const PHRASAL = new Set(
+  ("fill filled filling log logged logging sign signed signing opt opted opting check checked checking " +
+    "turn turned turning carry carried carrying zoom zoomed zooming plug plugged plugging type typed typing " +
+    "hand handed handing read reading drill drilled drilling dial dialed dialing weigh weighed weighing " +
+    "follow followed following find found finding point pointed pointing build built building").split(" ")
 );
 const NAMES: Record<string, string> = {
   github: "GitHub", openai: "OpenAI", tavily: "Tavily", ai: "AI", url: "URL", urls: "URLs", pdf: "PDF",
@@ -63,7 +73,7 @@ const UNITS = new Set(["pt", "pts"]);
 // tokens that end one phrase and start the next ("Recommended: Continue Diligence · Waiting 3d")
 const BREAKS = new Set(["·", "—", "–", "/", "|", "→", "←"]);
 
-function casePart(part: string, edge: boolean): string {
+function casePart(part: string, edge: boolean, afterVerb = false): string {
   // units, values, handles, domains and abbreviations (3d, $250K, @ada, insforge.dev, e.g.)
   if (!/[a-z]/i.test(part) || /\d/.test(part) || part.startsWith("@") || /\.[a-z]/i.test(part)) return part;
   const name = NAMES[part.toLowerCase()];
@@ -71,11 +81,11 @@ function casePart(part: string, edge: boolean): string {
   if (UNITS.has(part)) return part;
   if (/[A-Z]/.test(part.slice(1))) return part; // mixed case or acronym: a name, keep it
   const lower = part.toLowerCase();
-  if (!edge && MINOR.has(lower)) return lower;
+  if (!edge && MINOR.has(lower) && !(afterVerb && PARTICLES.has(lower))) return lower;
   return lower.charAt(0).toUpperCase() + lower.slice(1);
 }
 
-function caseWord(word: string, edge: boolean): string {
+function caseWord(word: string, edge: boolean, afterVerb = false): string {
   // keep surrounding punctuation: "(revenue", "users)", "next:"
   const m = word.match(/^([^A-Za-z0-9@$]*)(.*?)([^A-Za-z0-9%]*)$/);
   if (!m || !m[2]) return word;
@@ -83,7 +93,7 @@ function caseWord(word: string, edge: boolean): string {
   if (m[2].includes("/")) return word;
   const [, lead, core, trail] = m;
   const parts = core.split("-");
-  return lead + parts.map((p, i) => casePart(p, i === 0 ? edge || !!lead : true)).join("-") + trail;
+  return lead + parts.map((p, i) => casePart(p, i === 0 ? edge || !!lead : true, i === 0 && !lead && afterVerb)).join("-") + trail;
 }
 
 export function titleCase(text: string): string {
@@ -104,7 +114,11 @@ export function titleCase(text: string): string {
     const next = tokens.slice(k + 1).find((t) => t.trim());
     if (w === words.length - 1 || /[:]$/.test(words[w].t) || (next && BREAKS.has(next))) edges.add(k);
   }
-  return tokens.map((t, k) => (t.trim() && !BREAKS.has(t) ? caseWord(t, edges.has(k)) : t)).join("");
+  const afterVerb = (k: number) => {
+    const prev = k >= 2 ? tokens[k - 2] : "";
+    return PHRASAL.has(prev.toLowerCase()) && !BREAKS.has(prev);
+  };
+  return tokens.map((t, k) => (t.trim() && !BREAKS.has(t) ? caseWord(t, edges.has(k), afterVerb(k)) : t)).join("");
 }
 
 // A generated phrase shown as a label (a gap, an unknown): Title Case, unless it

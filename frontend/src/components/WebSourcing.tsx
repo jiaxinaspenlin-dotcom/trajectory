@@ -106,7 +106,7 @@ export function WebSourcing({ onSourced }: { onSourced: () => void }) {
   if (!status.search_configured || !status.ai_configured) {
     return (
       <div className="rounded-lg border border-dashed border-line-strong bg-white px-5 py-6" data-testid="web-not-configured">
-        <p className="text-sm font-medium text-ink">Web Search Isn&apos;t Set up Yet</p>
+        <p className="text-sm font-medium text-ink">Web Search Isn&apos;t Set Up Yet</p>
         <ul className="mt-2 space-y-1 text-sm text-ink-muted">
           {!status.search_configured && <li>Add <code className="font-mono text-ink-soft">TAVILY_API_KEY</code> to the backend environment and restart it.</li>}
           {!status.ai_configured && <li>Add <code className="font-mono text-ink-soft">OPENAI_API_KEY</code>. Results are structured with AI and checked against their sources.</li>}

@@ -151,7 +151,7 @@ function ProvideInfo({ app, onSaved }: { app: ApplicationDetail; onSaved: () => 
   return (
     <Section
       title="What Would Help the Fund Decide"
-      subtitle={app.missing_fields.length ? `${app.missing_fields.length} Item${app.missing_fields.length === 1 ? "" : "s"} Outstanding — Fill in What You Can` : "Everything Requested Has Been Provided"}
+      subtitle={app.missing_fields.length ? `${app.missing_fields.length} Item${app.missing_fields.length === 1 ? "" : "s"} Outstanding — Fill In What You Can` : "Everything Requested Has Been Provided"}
     >
       {done && (
         <p className="mb-3 text-sm text-positive">You&rsquo;ve provided everything the fund asked for. You can still update details below.</p>

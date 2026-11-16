@@ -22,9 +22,14 @@ The rules:
 
 - Capitalize the first and last word, and every major word.
 - Lowercase these minor words unless they are first or last in the phrase:
-  a, an, the, and, but, or, nor, for, so, yet, as, at, by, in, of, off, on,
-  per, to, up, via, vs, with, from, into, than. ("Next Up" keeps Up because it
-  is the last word.)
+  a, an, the, and, but, or, nor, for, as, at, by, in, of, on, per, to, via,
+  vs, with, from, into, than.
+- Up, Off, Yet and So are always capitalized: "Next Up", "Not Yet in
+  Pipeline", "So Far".
+- In, On and Out are capitalized when they complete a verb (a phrasal verb):
+  "Set Up Your Fund Thesis", "Fill In What You Can", "Log Out", "Opt In". As
+  prepositions they stay lowercase: "7 in Pipeline". The helpers recognize the
+  verbs listed in `PHRASAL`; add a verb there when a new label needs it.
 - A phrase restarts after `·`, `—`, `/` and a colon, so the word after one is
   a first word and the word before one is a last word: "Recommended: Continue
   Diligence", "New Inbound Application · Waiting 4d".
@@ -49,6 +54,8 @@ Examples from the Dashboard:
 | 12 more: 5 leads in Founders | 12 More: 5 Leads in Founders |
 | Founder portal | Founder Portal |
 | All in Pipeline | All in Pipeline (unchanged) |
+| Fill in what you can | Fill In What You Can |
+| Not yet in pipeline | Not Yet in Pipeline |
 
 ## Sentences
 

@@ -163,7 +163,7 @@ function OpportunityMap() {
       <div data-map-inset="top" className={`pointer-events-none absolute left-3 right-3 top-3 z-20 flex items-start gap-2 sm:left-4 sm:right-4 sm:top-4 sm:gap-3 ${selected ? "sm:right-[432px]" : ""}`}>
         <div className="pointer-events-auto hidden shrink-0 items-center gap-2 lg:flex">
           <div className="hud flex h-10 items-center gap-2 px-4 text-sm">
-            <span className="text-ink-muted" title="Leads in Sourcing (Not yet in Pipeline)">Leads</span>
+            <span className="text-ink-muted" title="Leads in Sourcing (Not Yet in Pipeline)">Leads</span>
             <span className="num font-semibold text-ink">{leadCount}</span>
           </div>
           {/* primary until a record is open — then the drawer's Open opportunity is the main action */}
@@ -343,7 +343,7 @@ function OpportunityMap() {
       )}
       {!data!.has_thesis && (
         <p className="hud absolute bottom-20 right-4 z-10 max-w-xs px-4 py-3 text-sm text-caution">
-          No active thesis — thesis fit can&apos;t be plotted. <Link href="/vc/fund" className="underline">Set up Your Fund Thesis</Link>.
+          No active thesis — thesis fit can&apos;t be plotted. <Link href="/vc/fund" className="underline">Set Up Your Fund Thesis</Link>.
         </p>
       )}
     </>

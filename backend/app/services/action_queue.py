@@ -105,6 +105,7 @@ def build_action_queue(db: Session, fund_id: int, limit: int | None = 8) -> list
     opps = db.scalars(select(Opportunity).where(Opportunity.fund_id == fund_id)).all()
 
     items: list[dict] = []
+    waiting_since: dict[int, datetime] = {}
     for o in opps:
         nxt = next_action_info(db, o)
         if nxt is None:
@@ -114,6 +115,7 @@ def build_action_queue(db: Session, fund_id: int, limit: int | None = 8) -> list
         company = db.get(Company, o.company_id) if o.company_id else None
         name = (company.name if company else None) or (founder.full_name if founder else None) or f"Opportunity #{o.id}"
         founder_name = founder.full_name if founder else None
+        waiting_since[o.id] = _aware(o.first_signal_at) or now
 
         items.append(
             {
@@ -130,6 +132,7 @@ def build_action_queue(db: Session, fund_id: int, limit: int | None = 8) -> list
             }
         )
 
-    # act-now first (lower priority number), then oldest-waiting first
-    items.sort(key=lambda x: (x["priority"], -x["age_days"]))
+    # act-now first (lower priority number), then oldest-waiting first. Whole days
+    # tie often, so the exact waiting time and then the id keep the order stable.
+    items.sort(key=lambda x: (x["priority"], waiting_since[x["opportunity_id"]], x["opportunity_id"]))
     return items if limit is None else items[:limit]

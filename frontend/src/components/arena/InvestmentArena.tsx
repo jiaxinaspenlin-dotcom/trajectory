@@ -165,7 +165,7 @@ export function InvestmentArena({
             Confidence {pct(referee.confidence)} ·{" "}
             {referee.final_decision_supportable
               ? "Final Decision Currently Supportable"
-              : "Not yet Decisive — More Evidence Needed"}
+              : "Not Yet Decisive — More Evidence Needed"}
           </div>
         </div>
       )}

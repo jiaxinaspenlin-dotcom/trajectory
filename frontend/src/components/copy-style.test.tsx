@@ -268,6 +268,15 @@ describe("titleCase", () => {
   it("follows the rule: minor words, last word, hyphens, units and names", () => {
     expect(titleCase("needs attention")).toBe("Needs Attention");
     expect(titleCase("next up")).toBe("Next Up");
+    // phrasal verbs: the particle is capitalized; "in" as a preposition is not
+    expect(titleCase("set up your fund thesis")).toBe("Set Up Your Fund Thesis");
+    expect(titleCase("fill in what you can")).toBe("Fill In What You Can");
+    expect(titleCase("not yet in pipeline")).toBe("Not Yet in Pipeline");
+    expect(titleCase("log out")).toBe("Log Out");
+    expect(titleCase("opt in to updates")).toBe("Opt In to Updates");
+    expect(titleCase("signed off on it")).toBe("Signed Off on It");
+    expect(titleCase("so far")).toBe("So Far");
+    expect(titleCase("7 in pipeline")).toBe("7 in Pipeline");
     expect(titleCase("take the tour")).toBe("Take the Tour");
     expect(titleCase("Northstar Ventures (Demo) · what to do next")).toBe("Northstar Ventures (Demo) · What to Do Next");
     expect(titleCase("Recommended: Continue diligence")).toBe("Recommended: Continue Diligence");

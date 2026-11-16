@@ -10,6 +10,12 @@ from app.services.serializers import _display_components
 def test_title_case_rule():
     assert title_case("needs attention") == "Needs Attention"
     assert title_case("next up") == "Next Up"
+    assert title_case("set up your fund thesis") == "Set Up Your Fund Thesis"
+    assert title_case("fill in what you can") == "Fill In What You Can"
+    assert title_case("not yet in pipeline") == "Not Yet in Pipeline"
+    assert title_case("log out") == "Log Out"
+    assert title_case("opt in to updates") == "Opt In to Updates"
+    assert title_case("7 in pipeline") == "7 in Pipeline"
     assert title_case("Recommended: Continue diligence") == "Recommended: Continue Diligence"
     assert title_case("New inbound application · waiting 4d") == "New Inbound Application · Waiting 4d"
     assert title_case("evidence-backed 30-day") == "Evidence-Backed 30-Day"
