@@ -51,19 +51,19 @@ export default function DiligencePage() {
         <span className="text-ink-soft">Diligence</span>
       </nav>
       <PageHeader
-        title="Diligence workspace"
+        title="Diligence Workspace"
         subtitle="Targeted questions, claim verification, and contradictions — tracked to resolution."
         actions={
           <>
-            <Link href={`/vc/opportunities/${id}`} className="btn-secondary">Back to opportunity</Link>
-            <button className="btn-primary" onClick={generate}>Generate questions</button>
+            <Link href={`/vc/opportunities/${id}`} className="btn-secondary">Back to Opportunity</Link>
+            <button className="btn-primary" onClick={generate}>Generate Questions</button>
           </>
         }
       />
 
       {genError && <ErrorState message={genError} />}
 
-      <Section title="Diligence questions" subtitle="Track each to resolution" flush>
+      <Section title="Diligence Questions" subtitle="Track Each to Resolution" flush>
         {diligence.loading ? <div className="p-4"><Spinner /></div> : diligence.error ? <div className="p-4"><ErrorState message={diligence.error} onRetry={diligence.reload} /></div> : (
           <div className="divide-y divide-line">
             {diligence.data?.items.length ? diligence.data.items.map((q) => (
@@ -74,7 +74,7 @@ export default function DiligencePage() {
                     <p className="text-xs text-ink-muted">{q.rationale}</p>
                     <div className="mt-1 flex gap-1">
                       <Badge tone="bg-neutral-wash text-neutral">{humanStatus(q.category)}</Badge>
-                      <Badge tone="bg-neutral-wash text-neutral">via {q.generated_by}</Badge>
+                      <Badge tone="bg-neutral-wash text-neutral">{`Via ${humanStatus(q.generated_by)}`}</Badge>
                       {q.related_claim_ids.map((c) => <span key={c} className="chip bg-surface-sunken text-ink-muted font-mono">C{c}</span>)}
                     </div>
                   </div>
@@ -92,13 +92,13 @@ export default function DiligencePage() {
         {claims.data ? <ClaimsTable claims={claims.data.items} /> : <Spinner />}
       </Section>
 
-      <Section title="Contradictions & validation failures">
+      <Section title="Contradictions & Validation Failures">
         {contradictions.data?.items.length ? (
           <ul className="space-y-2">
             {contradictions.data.items.map((c) => (
               <li key={c.id} className="rounded-lg border border-negative/30 bg-negative-wash p-3 text-sm text-negative">
                 <Badge tone="bg-white text-negative">{humanStatus(c.severity)}</Badge> {c.description}
-                <span className="ml-2 text-xs text-ink-muted">detected by {c.detected_by}</span>
+                <span className="ml-2 text-xs text-ink-muted">Detected by {humanStatus(c.detected_by)}</span>
               </li>
             ))}
           </ul>

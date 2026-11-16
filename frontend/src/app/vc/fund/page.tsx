@@ -47,7 +47,7 @@ const money = (n: number) =>
 
 export default function FundPage() {
   return (
-    <Suspense fallback={<Spinner label="Loading fund…" />}>
+    <Suspense fallback={<Spinner label="Loading Fund…" />}>
       <Fund />
     </Suspense>
   );
@@ -95,11 +95,11 @@ function Fund() {
 
   const header = (
     <PageHeader
-      title="Investment thesis"
+      title="Investment Thesis"
       subtitle={thesis
-        ? `${thesis.fund_name} · What we look for. Thesis fit scores and lead searches use it.`
-        : "What your fund looks for. Thesis fit scores and lead searches use it."}
-      actions={thesis && <button className="btn-primary" onClick={() => setEditing(true)}>Edit thesis</button>}
+        ? `${thesis.fund_name} · What We Look For`
+        : "What Your Fund Looks For"}
+      actions={thesis && <button className="btn-primary" onClick={() => setEditing(true)}>Edit Thesis</button>}
     />
   );
 
@@ -111,7 +111,7 @@ function Fund() {
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-positive/30 bg-positive-wash px-4 py-3 text-[15px] text-positive" role="status">
           <span><strong className="font-semibold">Thesis saved.</strong> {impact}</span>
           <span className="flex gap-2">
-            <Link href="/vc/founders?source=open" className="btn-secondary btn-sm">Source founders</Link>
+            <Link href="/vc/founders?source=open" className="btn-secondary btn-sm">Source Founders</Link>
             <button className="btn-ghost btn-sm" onClick={() => setImpact(null)}>Dismiss</button>
           </span>
         </div>
@@ -122,17 +122,17 @@ function Fund() {
             {staleFits === 1 ? "1 thesis fit score doesn't" : `${staleFits} thesis fit scores don't`} reflect your current thesis. They stay as they are until you recalculate.
           </span>
           <button className="btn-secondary btn-sm" onClick={recalculate} disabled={recalculating}>
-            {recalculating ? "Recalculating…" : `Recalculate ${staleFits} score${staleFits === 1 ? "" : "s"}`}
+            {recalculating ? "Recalculating…" : `Recalculate ${staleFits} Score${staleFits === 1 ? "" : "s"}`}
           </button>
         </div>
       )}
-      {loading ? <Spinner label="Loading fund…" /> : loadError ? <ErrorState message={loadError} onRetry={load} /> : thesis ? (
+      {loading ? <Spinner label="Loading Fund…" /> : loadError ? <ErrorState message={loadError} onRetry={load} /> : thesis ? (
         <Profile t={thesis} />
       ) : (
         <EmptyState
-          title="No investment thesis yet"
+          title="No Investment Thesis Yet"
           hint="Start with your sectors, stages, and geographies. Trajectory uses them to score each company's thesis fit and to plan lead searches."
-          action={<button className="btn-primary" onClick={() => setEditing(true)}>Create thesis</button>}
+          action={<button className="btn-primary" onClick={() => setEditing(true)}>Create Thesis</button>}
         />
       )}
       <ThesisEditor
@@ -158,7 +158,7 @@ function Profile({ t }: { t: Thesis }) {
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px] [&>*]:min-w-0">
       <div className="space-y-6">
-        <Section title="Investment focus" subtitle="Matches raise a company's thesis fit score">
+        <Section title="Investment Focus" subtitle="Matches raise a company's thesis fit score.">
           <dl className="grid gap-4 sm:grid-cols-3">
             <Chips label="Sectors" items={t.sectors} />
             <Chips label="Stages" items={t.stages} />
@@ -168,31 +168,31 @@ function Profile({ t }: { t: Thesis }) {
             <p className="mt-4 max-w-prose border-t border-line pt-4 text-[15px] leading-7 text-ink-soft">{t.custom_description}</p>
           )}
           <dl className="mt-4 grid gap-4 border-t border-line pt-4 sm:grid-cols-2">
-            <Text label="Founders we look for" value={t.founder_preferences} />
-            <Text label="Traction we look for" value={t.traction_preferences} />
+            <Text label="Founders We Look For" value={t.founder_preferences} />
+            <Text label="Traction We Look For" value={t.traction_preferences} />
           </dl>
         </Section>
 
-        <Section title="Exclusions" subtitle="Companies that match any of these get a very low fit score (5–8 of 100)">
+        <Section title="Exclusions" subtitle="Companies that match any of these get a very low fit score (5–8 of 100).">
           <dl className="grid gap-4 sm:grid-cols-3">
             <Chips label="Sectors" items={t.excluded_sectors} tone="bg-negative-wash text-negative" empty="None" />
             <Chips label="Geographies" items={t.excluded_geographies} tone="bg-negative-wash text-negative" empty="None" />
-            <Chips label="Business models" items={t.excluded_business_models} tone="bg-negative-wash text-negative" empty="None" />
+            <Chips label="Business Models" items={t.excluded_business_models} tone="bg-negative-wash text-negative" empty="None" />
           </dl>
         </Section>
       </div>
 
       <div className="space-y-6">
-        <Section title="Terms" subtitle="For your reference; not used in scoring">
+        <Section title="Terms" subtitle="For your reference; not used in scoring.">
           <dl className="divide-y divide-line text-[15px]">
-            <Term label="Check size" value={t.min_check_size || t.max_check_size ? `${money(t.min_check_size)} – ${money(t.max_check_size)}` : "Not set"} />
-            <Term label="Target ownership" value={t.target_ownership ? `${t.target_ownership}%` : "Not set"} />
-            <Term label="Risk tolerance" value={humanStatus(t.risk_tolerance || "—")} />
-            {t.updated_at && <Term label="Last updated" value={new Date(t.updated_at).toLocaleDateString()} />}
+            <Term label="Check Size" value={t.min_check_size || t.max_check_size ? `${money(t.min_check_size)} – ${money(t.max_check_size)}` : "Not Set"} />
+            <Term label="Target Ownership" value={t.target_ownership ? `${t.target_ownership}%` : "Not Set"} />
+            <Term label="Risk Tolerance" value={humanStatus(t.risk_tolerance || "—")} />
+            {t.updated_at && <Term label="Last Updated" value={new Date(t.updated_at).toLocaleDateString()} />}
           </dl>
         </Section>
         {weights.length > 0 && (
-          <Section title="Founder Score weights" subtitle="How the Founder Score is composed">
+          <Section title="Founder Score Weights" subtitle="How the Founder Score Is Composed">
             <ul className="space-y-2">
               {weights.map(([k, w]) => (
                 <li key={k}>
@@ -213,7 +213,7 @@ function Chips({ label, items, tone, empty = "Any" }: { label: string; items: st
     <div>
       <dt className="label">{label}</dt>
       <dd className="mt-1.5 flex flex-wrap gap-1">
-        {items.length ? items.map((s) => <Badge key={s} tone={tone}>{s}</Badge>) : <span className="text-sm text-ink-faint">{empty}</span>}
+        {items.length ? items.map((s) => <span key={s} data-content><Badge tone={tone}>{s}</Badge></span>) : <span className="text-sm text-ink-faint">{empty}</span>}
       </dd>
     </div>
   );
@@ -223,7 +223,7 @@ function Text({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <dt className="label">{label}</dt>
-      <dd className="mt-1 text-sm leading-6 text-ink-soft">{value || <span className="text-ink-faint">Not specified</span>}</dd>
+      <dd className="mt-1 text-sm leading-6 text-ink-soft">{value || <span className="text-ink-faint">Not Specified</span>}</dd>
     </div>
   );
 }
@@ -242,7 +242,7 @@ type Errors = Partial<Record<keyof Form, string>>;
 // The editor's three sections share one draft and one Save button.
 type ThesisSection = "focus" | "terms" | "exclusions";
 const SECTIONS: { key: ThesisSection; label: string }[] = [
-  { key: "focus", label: "Investment focus" },
+  { key: "focus", label: "Investment Focus" },
   { key: "terms", label: "Terms" },
   { key: "exclusions", label: "Exclusions" },
 ];
@@ -355,41 +355,41 @@ function ThesisEditor({ open, existing, onClose, onSaved }: {
     <Drawer
       open={open}
       onClose={onClose}
-      title={existing ? "Edit thesis" : "Create thesis"}
+      title={existing ? "Edit Thesis" : "Create Thesis"}
       subtitle="One draft across all three sections — switch freely, then save once. Separate lists with commas."
       footer={
         <>
           {errorCount > 0 && <span className="mr-auto text-[13px] text-negative" role="alert">Fix {errorCount} {errorCount === 1 ? "field" : "fields"} to save.</span>}
           <button className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn-primary" onClick={save} disabled={saving}>{saving ? "Saving…" : existing ? "Save changes" : "Create thesis"}</button>
+          <button className="btn-primary" onClick={save} disabled={saving}>{saving ? "Saving…" : existing ? "Save Changes" : "Create Thesis"}</button>
         </>
       }
     >
       <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); save(); }} noValidate>
         {error && <ErrorState message={error} onRetry={save} />}
         <Tabs
-          label="Thesis sections"
+          label="Thesis Sections"
           idPrefix="thesis"
           size="sm"
           value={section}
           onChange={setSection}
           tabs={SECTIONS.map((sec) => {
             const n = sectionErrors(sec.key);
-            return { key: sec.key, label: sec.label, badge: n ? <span className="chip bg-negative-wash text-negative" aria-label={`${n} to fix`}>{n}</span> : undefined };
+            return { key: sec.key, label: sec.label, badge: n ? <span className="chip bg-negative-wash text-negative" aria-label={`${n} to Fix`}>{n}</span> : undefined };
           })}
         />
         <div {...tabPanelProps("thesis", section)}>
         {section === "focus" && (
         <fieldset className="space-y-4">
-          <legend className="sr-only">Investment focus</legend>
+          <legend className="sr-only">Investment Focus</legend>
           <p className="text-[13px] text-ink-muted"><span className="text-negative">*</span> Required. Matches on sectors, stages, and geographies raise a company&apos;s thesis fit.</p>
-          {field("fund_name", "Fund name", { ph: "Northstar Ventures", required: true })}
+          {field("fund_name", "Fund Name", { ph: "Northstar Ventures", required: true })}
           <div className="grid gap-4 sm:grid-cols-2">
             {field("sectors", "Sectors", { ph: "fintech, ai/ml, devtools", hint: "A matching sector adds the most to thesis fit. Also used to plan lead searches." })}
             {field("stages", "Stages", { ph: "pre-seed, seed", hint: "Matching stage adds to thesis fit." })}
             {field("geographies", "Geographies", { ph: "Boston, San Francisco", hint: "Matching location adds to thesis fit." })}
             <div>
-              <label htmlFor="thesis-risk" className="label">Risk tolerance</label>
+              <label htmlFor="thesis-risk" className="label">Risk Tolerance</label>
               <select id="thesis-risk" className="select mt-1" value={form.risk_tolerance} aria-describedby="thesis-risk-hint" onChange={(e) => setForm({ ...form, risk_tolerance: e.target.value })}>
                 {["conservative", "balanced", "aggressive"].map((r) => <option key={r} value={r}>{humanStatus(r)}</option>)}
                 {!["conservative", "balanced", "aggressive"].includes(form.risk_tolerance) && <option value={form.risk_tolerance}>{form.risk_tolerance}</option>}
@@ -398,14 +398,14 @@ function ThesisEditor({ open, existing, onClose, onSaved }: {
             </div>
           </div>
           <div>
-            <label htmlFor="thesis-description" className="label">Thesis in a sentence or two</label>
+            <label htmlFor="thesis-description" className="label">Thesis in a Sentence or Two</label>
             <textarea id="thesis-description" className="textarea mt-1" rows={3} value={form.custom_description} aria-describedby="thesis-description-hint"
               placeholder="We back technical pre-seed founders building financial infrastructure."
               onChange={(e) => setForm({ ...form, custom_description: e.target.value })} />
             <p id="thesis-description-hint" className="mt-1 text-[13px] text-ink-muted">Used to plan web searches and as context for AI analysis.</p>
           </div>
-          {field("founder_preferences", "Founders we look for", { ph: "Technical founders with repeated execution", hint: "Used to plan lead searches." })}
-          {field("traction_preferences", "Traction we look for", { ph: "Evidence of product adoption", hint: "Shown on your fund profile." })}
+          {field("founder_preferences", "Founders We Look For", { ph: "Technical founders with repeated execution", hint: "Used to plan lead searches." })}
+          {field("traction_preferences", "Traction We Look For", { ph: "Evidence of product adoption", hint: "Shown on your fund profile." })}
         </fieldset>
         )}
         {section === "terms" && (
@@ -413,9 +413,9 @@ function ThesisEditor({ open, existing, onClose, onSaved }: {
           <legend className="sr-only">Terms</legend>
           <p className="text-[13px] text-ink-muted">For your reference on the fund profile; not used in scoring.</p>
           <div className="grid gap-4 sm:grid-cols-3">
-            {field("min_check_size", "Min check ($)", { ph: "250000", type: "number" })}
-            {field("max_check_size", "Max check ($)", { ph: "1500000", type: "number" })}
-            {field("target_ownership", "Target ownership (%)", { ph: "8", type: "number" })}
+            {field("min_check_size", "Min Check ($)", { ph: "250000", type: "number" })}
+            {field("max_check_size", "Max Check ($)", { ph: "1500000", type: "number" })}
+            {field("target_ownership", "Target Ownership (%)", { ph: "8", type: "number" })}
           </div>
         </fieldset>
         )}
@@ -426,7 +426,7 @@ function ThesisEditor({ open, existing, onClose, onSaved }: {
           <div className="grid gap-4 sm:grid-cols-3">
             {field("excluded_sectors", "Sectors", { ph: "gambling" })}
             {field("excluded_geographies", "Geographies")}
-            {field("excluded_business_models", "Business models", { ph: "services agency" })}
+            {field("excluded_business_models", "Business Models", { ph: "services agency" })}
           </div>
         </fieldset>
         )}

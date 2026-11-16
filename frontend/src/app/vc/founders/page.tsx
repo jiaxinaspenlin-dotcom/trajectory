@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useFetch } from "@/lib/useFetch";
+import { humanStatus } from "@/lib/format";
 import { Badge, Drawer, EmptyState, ErrorState, PageHeader, Segmented, Spinner, Toolbar } from "@/components/ui";
 import { FoundersTable } from "@/components/FoundersTable";
 import { useToast } from "@/components/Toast";
@@ -41,7 +42,7 @@ const DISCOVERY_CACHE = "trajectory_last_discovery";
 
 export default function FoundersPage() {
   return (
-    <Suspense fallback={<Spinner label="Loading founders…" />}>
+    <Suspense fallback={<Spinner label="Loading Founders…" />}>
       <Founders />
     </Suspense>
   );
@@ -67,16 +68,16 @@ function Founders() {
       <PageHeader
         title="Founders"
         subtitle={leads.data
-          ? `${all.length} sourced ${all.length === 1 ? "lead" : "leads"} · ${pipelineCount} moved to Pipeline. Review a lead's evidence, shortlist it, and move it to Screening when it's worth evaluating.`
-          : "Leads you've sourced from public evidence"}
+          ? `${all.length} Sourced ${all.length === 1 ? "Lead" : "Leads"} · ${pipelineCount} Moved to Pipeline`
+          : "Leads You've Sourced from Public Evidence"}
         // with no leads yet, the empty state below carries this action
-        actions={all.length > 0 && <button className="btn-primary" onClick={() => setSourcingOpen(true)}>+ Source founders</button>}
+        actions={all.length > 0 && <button className="btn-primary" onClick={() => setSourcingOpen(true)}>+ Source Founders</button>}
       />
       <FounderLeads leads={leads} onOpenSourcing={() => setSourcingOpen(true)} />
       <Drawer
         open={sourcingOpen}
         onClose={() => setSourcingOpen(false)}
-        title="Source founders"
+        title="Source Founders"
         subtitle="Search the web or public GitHub for leads, review the evidence, then save the ones worth tracking. Nothing is sent to founders."
         width="max-w-2xl"
       >
@@ -91,13 +92,13 @@ function SourcingTabs({ onSourced }: { onSourced: () => void }) {
   return (
     <div className="space-y-4">
       <Segmented
-        label="Sourcing method"
+        label="Sourcing Method"
         value={tab}
         onChange={setTab}
         options={[
-          { value: "web", label: "Web search" },
-          { value: "ai", label: "GitHub discovery" },
-          { value: "github", label: "GitHub profile" },
+          { value: "web", label: "Web Search" },
+          { value: "ai", label: "GitHub Discovery" },
+          { value: "github", label: "GitHub Profile" },
         ]}
       />
       {tab === "web" ? <WebSourcing onSourced={onSourced} /> : tab === "ai" ? <AiDiscovery onSourced={onSourced} /> : <ManualAdd onSourced={onSourced} />}
@@ -163,7 +164,7 @@ function AiDiscovery({ onSourced }: { onSourced: () => void }) {
   return (
     <div className="space-y-3">
       <label className="block">
-        <span className="label">Search brief</span>
+        <span className="label">Search Brief</span>
         <textarea
           className="textarea mt-1"
           rows={3}
@@ -173,18 +174,18 @@ function AiDiscovery({ onSourced }: { onSourced: () => void }) {
         />
       </label>
       <div className="flex items-center gap-3">
-        <button className="btn-primary" onClick={run} disabled={loading}>{loading ? "Discovering…" : "Run GitHub discovery"}</button>
-        {loading && <Spinner label="Planning the search, querying GitHub, scoring candidates…" />}
+        <button className="btn-primary" onClick={run} disabled={loading}>{loading ? "Discovering…" : "Run GitHub Discovery"}</button>
+        {loading && <Spinner label="Planning the Search, Querying GitHub, Scoring Candidates…" />}
       </div>
       {error && <ErrorState message={error} />}
 
       {result && (
         <div className="space-y-3 border-t border-line pt-3">
           <div className="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
-            <Badge tone="bg-brand-wash text-brand">Planned by {result.planned_by}</Badge>
-            <span className="num">{result.candidates_found} candidates · searched {result.searched_sources.join(", ")}</span>
-            {result.rate_limit_remaining !== null && <span className="num">· GitHub budget {result.rate_limit_remaining}</span>}
-            <button className="btn-ghost btn-sm" onClick={() => setShowPlan((v) => !v)}>{showPlan ? "Hide" : "Show"} search plan</button>
+            <Badge tone="bg-brand-wash text-brand">Planned by {humanStatus(result.planned_by)}</Badge>
+            <span className="num">{result.candidates_found} Candidates · Searched {result.searched_sources.join(", ")}</span>
+            {result.rate_limit_remaining !== null && <span className="num">· GitHub Budget {result.rate_limit_remaining}</span>}
+            <button className="btn-ghost btn-sm" onClick={() => setShowPlan((v) => !v)}>{showPlan ? "Hide" : "Show"} Search Plan</button>
             <button className="btn-ghost btn-sm" onClick={clearResults}>Clear</button>
           </div>
           {showPlan && (
@@ -252,7 +253,7 @@ function ManualAdd({ onSourced }: { onSourced: () => void }) {
     <div className="space-y-3">
       <form className="flex flex-wrap items-end gap-2" onSubmit={(e) => { e.preventDefault(); if (username.trim()) sync(); }}>
         <label className="block min-w-[14rem] flex-1">
-          <span className="label">GitHub username</span>
+          <span className="label">GitHub Username</span>
           <input className="input mt-1" placeholder="e.g. torvalds" value={username} onChange={(e) => setUsername(e.target.value)} />
         </label>
         <button type="submit" className="btn-primary" disabled={loading || !username.trim()}>Sync from GitHub</button>
@@ -262,8 +263,8 @@ function ManualAdd({ onSourced }: { onSourced: () => void }) {
       {error && <ErrorState message={error} />}
       {result && (
         <div className="rounded-md border border-line bg-surface-sunken p-3 text-sm">
-          <p className="font-medium text-ink">Sync {result.sync?.status}: {result.sync?.message}</p>
-          {result.opportunity_id && <Link href={`/vc/opportunities/${result.opportunity_id}`} className="btn-secondary btn-sm mt-2">Open founder profile →</Link>}
+          <p className="font-medium text-ink">Sync {humanStatus(result.sync?.status ?? "")}: {result.sync?.message}</p>
+          {result.opportunity_id && <Link href={`/vc/opportunities/${result.opportunity_id}`} className="btn-secondary btn-sm mt-2">Open Founder Profile →</Link>}
         </div>
       )}
     </div>
@@ -309,15 +310,15 @@ function FounderLeads({
     notify({ message: `${leadName(id)} moved to Screening. No outreach was sent.`, href: "/vc/pipeline?stage=screening", linkLabel: "View in Pipeline" });
   }
 
-  if (leads.loading && !leads.data) return <Spinner label="Loading founders…" />;
+  if (leads.loading && !leads.data) return <Spinner label="Loading Founders…" />;
   if (leads.error) return <ErrorState message={`Couldn't load founders: ${leads.error}`} onRetry={leads.reload} />;
   const all = leads.data?.items ?? [];
   if (!all.length) {
     return (
       <EmptyState
-        title="No founders sourced yet"
+        title="No Founders Sourced Yet"
         hint="Search the web for launches and company sites, or source from GitHub. Saved leads appear here with their evidence."
-        action={<button className="btn-primary" onClick={onOpenSourcing}>Source founders</button>}
+        action={<button className="btn-primary" onClick={onOpenSourcing}>Source Founders</button>}
       />
     );
   }
@@ -334,19 +335,19 @@ function FounderLeads({
         {/* scrolls inside its own row on phones instead of widening the page */}
         <div className="max-w-full overflow-x-auto">
           <Segmented
-            label="Filter founders"
+            label="Filter Founders"
             value={view}
             onChange={setView}
             options={FOUNDER_VIEWS.map((v) => ({ value: v.key, label: <>{v.label} <span className="opacity-60">{count(v.key)}</span></> }))}
           />
         </div>
         <label className="relative w-full sm:w-auto">
-          <span className="sr-only">Search founders</span>
+          <span className="sr-only">Search Founders</span>
           <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-muted" />
           <input
             type="search"
-            aria-label="Search founders"
-            placeholder="Search name, @handle, company, project"
+            aria-label="Search Founders"
+            placeholder="Search Name, @handle, Company, Project"
             className="input w-full pl-8 sm:w-72"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -358,8 +359,8 @@ function FounderLeads({
         <FoundersTable leads={shown} overlay={overlay} onSetStatus={setStatus} onMoveToScreening={moveToScreening} />
       ) : (
         <EmptyState
-          title="No founders match this view"
-          action={<button className="btn-secondary" onClick={() => { setView("all"); setQuery(""); }}>Show all founders</button>}
+          title="No Founders Match This View"
+          action={<button className="btn-secondary" onClick={() => { setView("all"); setQuery(""); }}>Show All Founders</button>}
         />
       )}
       <p className="text-xs text-ink-muted">

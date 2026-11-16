@@ -43,12 +43,12 @@ function AxisCard({ axis }: { axis: AxisAssessment }) {
         <span className="text-2xl font-semibold text-ink">{Math.round(axis.display_score)}</span>
         <span className="text-xs text-ink-muted">/ 100</span>
         {axis.axis === "market" && (
-          <span className="ml-auto text-xs text-ink-muted">Outlook: {axis.outlook}</span>
+          <span className="ml-auto text-xs text-ink-muted">Outlook: {humanStatus(axis.outlook)}</span>
         )}
       </div>
       {axis.trend && (
         <div className="mt-2 flex items-center gap-1">
-          <span className="text-xs uppercase tracking-wide text-ink-muted">Trend</span>
+          <span className="text-xs text-ink-muted">Trend</span>
           <Badge tone={trajectoryTone(axis.trend)}>
             <span className="mr-0.5">{TREND_ARROW[axis.trend] ?? "→"}</span>{humanStatus(axis.trend)}
           </Badge>
@@ -67,7 +67,7 @@ function AxisCard({ axis }: { axis: AxisAssessment }) {
                   {p.evidence_ids.slice(0, 4).map((id) => <EvidenceRef key={id} id={id} />)}
                 </span>
               ) : (
-                <span className="ml-1 text-xs text-caution">unverified</span>
+                <span className="ml-1 text-xs text-caution">Unverified</span>
               )}
             </li>
           ))}

@@ -34,7 +34,7 @@ export function FounderScoreBreakdown({ components }: { components: ScoreCompone
   return (
     <div className="mt-3">
       <button className="btn-ghost text-xs" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
-        {open ? "Hide" : "Show"} component breakdown ({components.length})
+        {open ? "Hide" : "Show"} Component Breakdown ({components.length})
       </button>
       {open && (
         <div className="mt-2 overflow-x-auto">
@@ -63,7 +63,7 @@ export function FounderScoreBreakdown({ components }: { components: ScoreCompone
                   <td>{Math.round(c.value)}</td>
                   <td>{c.evidence_count}</td>
                   <td>{Math.round(c.confidence * 100)}%</td>
-                  <td>{c.missingness >= 0.99 ? <span className="text-caution">missing</span> : `${Math.round(c.missingness * 100)}%`}</td>
+                  <td>{c.missingness >= 0.99 ? <span className="text-caution">Missing</span> : `${Math.round(c.missingness * 100)}%`}</td>
                   <td className="font-semibold text-ink">{c.contribution.toFixed(1)}</td>
                 </tr>
               ))}

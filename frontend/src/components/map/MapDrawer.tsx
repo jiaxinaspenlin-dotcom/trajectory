@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { humanStatus, trajectoryTone } from "@/lib/format";
+import { humanStatus, titleCase, trajectoryTone } from "@/lib/format";
 import {
   AxesLayout, formatMetric, groupFieldLabel, linksFor, METRICS, nodeColor, nodeKindLabel,
 } from "@/lib/opportunityMap";
@@ -49,14 +49,14 @@ export function MapDrawer({
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      window.prompt("Copy this link", url);
+      window.prompt("Copy this link:", url);
     }
   }
 
   return (
     <aside
       data-testid="map-node-panel"
-      aria-label={`Selected opportunity: ${node.name}`}
+      aria-label={`Selected Opportunity: ${node.name}`}
       data-map-inset="auto"
       className="hud pointer-events-auto absolute inset-x-3 bottom-3 z-30 flex max-h-[58%] flex-col sm:inset-x-auto sm:bottom-4 sm:right-4 sm:top-4 sm:max-h-none sm:w-[400px]"
     >
@@ -70,7 +70,7 @@ export function MapDrawer({
           {node.company?.one_liner && <p className="mt-0.5 line-clamp-2 text-xs text-ink-muted">{node.company.one_liner}</p>}
           {node.founder && node.company && <p className="text-xs text-ink-muted">Founder · {node.founder.full_name}</p>}
         </div>
-        <button ref={closeRef} type="button" className="icon-btn -mr-1.5 -mt-0.5" onClick={onClose} aria-label="Close and return to overview">
+        <button ref={closeRef} type="button" className="icon-btn -mr-1.5 -mt-0.5" onClick={onClose} aria-label="Close and Return to Overview">
           <CloseIcon />
         </button>
       </div>
@@ -80,7 +80,7 @@ export function MapDrawer({
           <SourceBadge entryType={node.entry_type} />
           <StageBadge stage={node.stage} />
           {node.status === "dismissed" && <Badge tone="bg-negative-wash text-negative">Dismissed</Badge>}
-          {node.is_demo && <Badge>Demo data</Badge>}
+          {node.is_demo && <Badge>Demo Data</Badge>}
         </div>
 
         {hiddenByFilters && <p className="mt-3 rounded-md bg-caution-wash px-2.5 py-1.5 text-xs text-caution">Hidden by the current filters.</p>}
@@ -88,7 +88,7 @@ export function MapDrawer({
         {mode === "axes" && !hiddenByFilters && (
           excluded ? (
             <div className="mt-3 rounded-md border border-line bg-surface-sunken px-3 py-2" data-testid="drawer-not-plotted">
-              <p className="text-xs font-semibold text-ink">Not plotted on these axes</p>
+              <p className="text-xs font-semibold text-ink">Not Plotted on These Axes</p>
               <ul className="mt-1 space-y-0.5 text-xs text-ink-soft">
                 {excluded.reasons.map((r) => <li key={r}>{r}</li>)}
               </ul>
@@ -110,9 +110,9 @@ export function MapDrawer({
             {node.group.label}
             <span className="block text-xs text-ink-muted">{groupFieldLabel(node.group.field)}</span>
           </Row>
-          <Row label="Founder Score">{node.founder_score != null ? <span className="num">{Math.round(node.founder_score)}</span> : <Muted>Not scored</Muted>}</Row>
-          <Row label="Thesis fit">
-            {node.thesis_fit.value != null ? <span className="num">{Math.round(node.thesis_fit.value)} / 100</span> : <Muted>{node.thesis_fit.reason}</Muted>}
+          <Row label="Founder Score">{node.founder_score != null ? <span className="num">{Math.round(node.founder_score)}</span> : <Muted>Not Scored</Muted>}</Row>
+          <Row label="Thesis Fit">
+            {node.thesis_fit.value != null ? <span className="num">{Math.round(node.thesis_fit.value)} / 100</span> : <Muted>{titleCase(node.thesis_fit.reason ?? "Not computed")}</Muted>}
           </Row>
           <Row label="Momentum">
             {node.momentum.value != null ? (
@@ -120,33 +120,33 @@ export function MapDrawer({
                 <span className="num">{formatMetric("momentum", node.momentum.value)} / 30d</span>
                 {node.momentum.trajectory && <Badge tone={trajectoryTone(node.momentum.trajectory)}>{humanStatus(node.momentum.trajectory)}</Badge>}
               </span>
-            ) : <Muted>{node.momentum.reason}</Muted>}
+            ) : <Muted>{titleCase(node.momentum.reason ?? "Not computed")}</Muted>}
           </Row>
           <Row label="Evidence">
             {node.evidence_count ? (
               <span className="flex flex-wrap items-center gap-1.5">
-                <span className="num">{node.evidence_count} items</span>
+                <span className="num">{node.evidence_count} Items</span>
                 {!!node.new_evidence_count && (
                   <Link href={`/vc/opportunities/${node.id}?tab=evidence`} className="chip bg-signal-wash text-caution" data-testid="drawer-new-evidence">
-                    <span className="h-1.5 w-1.5 rounded-full bg-signal" aria-hidden /> {node.new_evidence_count} new
+                    <span className="h-1.5 w-1.5 rounded-full bg-signal" aria-hidden /> {node.new_evidence_count} New
                   </Link>
                 )}
               </span>
-            ) : <Muted>None collected yet</Muted>}
+            ) : <Muted>None Collected Yet</Muted>}
           </Row>
           {node.top_project && (
-            <Row label="Top project">
+            <Row label="Top Project">
               {node.top_project.url
-                ? <a href={node.top_project.url} target="_blank" rel="noreferrer" className="text-brand hover:underline">{node.top_project.name} ↗</a>
+                ? <a href={node.top_project.url} target="_blank" rel="noreferrer" className="text-brand hover:underline" data-content>{node.top_project.name} ↗</a>
                 : node.top_project.name}
               {node.top_project.stars != null && <span className="num ml-1 text-xs text-ink-muted">★ {node.top_project.stars}</span>}
             </Row>
           )}
-          {node.topics.length > 0 && <Row label="Repo topics"><span className="text-xs">{node.topics.slice(0, 8).join(", ")}</span></Row>}
-          <Row label="Next action">
+          {node.topics.length > 0 && <Row label="Repo Topics"><span className="text-xs">{node.topics.slice(0, 8).join(", ")}</span></Row>}
+          <Row label="Next Action">
             {node.next_action
               ? <Link href={nextActionHref(node.id, node.next_action_key)} className="font-medium text-brand hover:underline">{node.next_action} →</Link>
-              : <Muted>None — decided or dismissed</Muted>}
+              : <Muted>None — Decided or Dismissed</Muted>}
           </Row>
         </dl>
 
@@ -170,10 +170,10 @@ export function MapDrawer({
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5 border-t border-line px-4 py-2.5">
-        <Link href={`/vc/opportunities/${node.id}`} className="btn-primary">Open opportunity <ArrowRightIcon size={14} /></Link>
+        <Link href={`/vc/opportunities/${node.id}`} className="btn-primary">Open Opportunity <ArrowRightIcon size={14} /></Link>
         {node.in_pipeline && <Link href={`/vc/pipeline?stage=${node.stage}`} className="btn-secondary">Pipeline</Link>}
         {node.in_founders && <Link href="/vc/founders" className="btn-secondary">Founders</Link>}
-        <button type="button" className="btn-ghost ml-auto" onClick={copyLink} aria-label="Copy link to this opportunity on the map">
+        <button type="button" className="btn-ghost ml-auto" onClick={copyLink} aria-label="Copy Link to This Opportunity on the Map">
           <LinkIcon size={14} /> {copied ? "Copied" : "Link"}
         </button>
       </div>

@@ -1,57 +1,57 @@
-// Guards the copy style (docs/copy-style.md): interface text is sentence case,
-// with a fixed glossary of names. Renders the main pages and components and
-// fails on known bad patterns ("Vs", "Github", Title Case pairs).
+// Guards the copy style (docs/copy-style.md): labels, headings and short
+// phrases are Title Case; full sentences are left alone. Renders the main pages
+// and components and fails on a sentence-case label ("Review recommendation"),
+// a capitalized minor word mid-phrase ("Idea Vs Market") and miscased names.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { humanStatus } from "@/lib/format";
+import { humanStatus, titleCase } from "@/lib/format";
 import { assessment, debate, momentum } from "@/test/fixtures";
 
 // ---- the check ---------------------------------------------------------------
 
-// Multi-word names that keep their capitals (docs/copy-style.md).
-const GLOSSARY_PHRASES = [
-  "Founder Score", "Founder Momentum", "Investment Arena", "Custom Axes", "Trust Score", "Trust Scores",
-  "Product Hunt", "Show HN",
+// User and third-party content in the fixtures below (names, typed values,
+// evidence titles, sectors): never re-cased, so the check skips it.
+const CONTENT = [
+  "Ada Builder", "Demo Investor", "Northwind Labs", "Northstar Ventures", "Northstar", "San Francisco", "Boston",
+  "ledgerkit repository", "Ledgerkit", "Payments", "fintech", "payments", "ada",
+  "pre-seed", "seed", "e.g. ", "https://", "yourhandle",
 ];
-// Single-word names: a capitalized word after the first is fine when it's one of these.
-const NAMES = new Set([
-  "Dashboard", "Map", "Founders", "Pipeline", "Fund", "Sourcing", "Screening", "Diligence", "Decision",
-  "Relationships", "Bull", "Bear", "Referee", "GitHub", "Tavily", "OpenAI", "YC", "PDF", "URL", "AI",
-  "Market", "Trajectory",
-]);
-// People and companies in the fixtures and example placeholders.
-const FIXTURE_NAMES = ["Ada Builder", "Demo Investor", "Northwind Labs", "Northstar Ventures", "San Francisco"];
+
+// A sentence (descriptions, hints, errors) ends with . ? or ! and isn't checked.
+const isSentence = (t: string) => /[.?!]["”)]?\s*[→↗]?$/.test(t);
 
 export function copyProblems(text: string): string[] {
   const problems: string[] = [];
-  if (/\bVs\b/.test(text)) problems.push(`"Vs" in "${text}"`);
-  if (/Github|Openai|Github/.test(text)) problems.push(`miscased name in "${text}"`);
+  if (/Github|Openai/.test(text)) problems.push(`miscased name in "${text}"`);
+  if (!text || isSentence(text)) return problems;
   let t = text;
-  for (const p of [...GLOSSARY_PHRASES, ...FIXTURE_NAMES]) t = t.split(p).join("x");
-  const words = t.split(/\s+/);
-  for (let i = 1; i < words.length; i++) {
-    const [a, b] = [words[i - 1], words[i]];
-    // two adjacent capitalized words, the second not a name → Title Case
-    if (/^[A-Z][a-z]+$/.test(a) && /^[A-Z][a-z]+[.,!?…]?$/.test(b) && !NAMES.has(b.replace(/[.,!?…]$/, ""))) {
-      problems.push(`Title Case "${a} ${b}" in "${text}"`);
-    }
-  }
+  for (const c of CONTENT) t = t.split(c).join("X");
+  const want = titleCase(t);
+  if (want !== t) problems.push(`not Title Case: "${text}" (want "${want}")`);
   return problems;
 }
 
 const TEXT_SELECTOR = "button, a, h1, h2, h3, h4, h5, h6, th, label, legend, summary, option, dt, [role=tab], .label, .chip";
-const ATTRS = ["aria-label", "title", "placeholder"];
 
+// Each text node is judged on its own, so a button's title and its helper line
+// are checked separately. Decorative glyphs (aria-hidden) are skipped.
 function auditDom(root: HTMLElement = document.body): string[] {
   const problems: string[] = [];
   root.querySelectorAll<HTMLElement>(TEXT_SELECTOR).forEach((el) => {
-    problems.push(...copyProblems((el.textContent ?? "").replace(/\s+/g, " ").trim()));
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      if ((n.parentElement as HTMLElement | null)?.closest("[aria-hidden='true'], [data-content]")) continue;
+      problems.push(...copyProblems((n.textContent ?? "").replace(/\s+/g, " ").trim()));
+    }
   });
-  root.querySelectorAll<HTMLElement>("*").forEach((el) => {
-    for (const a of ATTRS) {
+  root.querySelectorAll<HTMLElement>("[aria-label], [title], [placeholder]").forEach((el) => {
+    for (const a of ["aria-label", "title"]) {
       const v = el.getAttribute(a);
       if (v) problems.push(...copyProblems(v));
     }
+    // placeholders that prompt ("Search…", "Choose…") are labels; example values aren't
+    const ph = el.getAttribute("placeholder");
+    if (ph && /^(Search|Choose|Select|Filter)\b/.test(ph)) problems.push(...copyProblems(ph));
   });
   return [...new Set(problems)];
 }
@@ -124,7 +124,7 @@ const opportunity = {
   debate, memo,
   evidence: [{ id: 1, kind: "github_repo", title: "ledgerkit repository", source_name: "GitHub", source_url: "https://github.com/ada/ledgerkit",
     verification_status: "partially_verified", event_date: "2026-10-01", structured_value: {} }],
-  next_step: { key: "review_recommendation", label: "Review recommendation", detail: "Recommended: Continue diligence", priority: 1 },
+  next_step: { key: "review_recommendation", label: "Review Recommendation", detail: "Recommended: Continue Diligence", priority: 1 },
   new_evidence_ids: [],
 };
 const claims = { items: [{ id: 1, text: "1,200 users", category: "traction", provenance: "founder_reported", verification_status: "founder_reported", trust_score: 40, supporting_evidence_ids: [1] }] };
@@ -133,28 +133,49 @@ const claims = { items: [{ id: 1, text: "1,200 users", category: "traction", pro
 
 describe("copy checker", () => {
   it("catches the patterns it's meant to", () => {
+    expect(copyProblems("Review recommendation")).not.toEqual([]);
+    expect(copyProblems("Needs attention")).not.toEqual([]);
     expect(copyProblems("Idea Vs Market")).not.toEqual([]);
-    expect(copyProblems("Github profile")).not.toEqual([]);
-    expect(copyProblems("Skip Tour")).not.toEqual([]);
-    expect(copyProblems("Generate Memo")).not.toEqual([]);
+    expect(copyProblems("Github Profile")).not.toEqual([]);
+    expect(copyProblems("Review Recommendation")).toEqual([]);
     expect(copyProblems("Move to Screening")).toEqual([]);
-    expect(copyProblems("View in Pipeline")).toEqual([]);
-    expect(copyProblems("Founder Score weights")).toEqual([]);
     expect(copyProblems("Idea vs Market")).toEqual([]);
+    expect(copyProblems("Next Up")).toEqual([]);
+    expect(copyProblems("Waiting 4d")).toEqual([]);
+    // sentences are left alone
+    expect(copyProblems("No evidence collected yet.")).toEqual([]);
+  });
+});
+
+describe("titleCase", () => {
+  it("follows the rule: minor words, last word, hyphens, units and names", () => {
+    expect(titleCase("needs attention")).toBe("Needs Attention");
+    expect(titleCase("next up")).toBe("Next Up");
+    expect(titleCase("take the tour")).toBe("Take the Tour");
+    expect(titleCase("Northstar Ventures (Demo) · what to do next")).toBe("Northstar Ventures (Demo) · What to Do Next");
+    expect(titleCase("Recommended: Continue diligence")).toBe("Recommended: Continue Diligence");
+    expect(titleCase("New inbound application · waiting 4d")).toBe("New Inbound Application · Waiting 4d");
+    expect(titleCase("12 more:")).toBe("12 More:");
+    expect(titleCase("5 leads in Founders")).toBe("5 Leads in Founders");
+    expect(titleCase("evidence-backed")).toBe("Evidence-Backed");
+    expect(titleCase("30-day")).toBe("30-Day");
+    expect(titleCase("check size $250K – 8%")).toBe("Check Size $250K – 8%");
+    expect(titleCase("github and openai via tavily")).toBe("GitHub and OpenAI via Tavily");
   });
 });
 
 describe("humanStatus", () => {
-  it("writes stored values as sentence case, with names and acronyms intact", () => {
+  it("writes stored values as Title Case, with names and acronyms intact", () => {
     expect(humanStatus("idea_vs_market")).toBe("Idea vs Market");
-    expect(humanStatus("github_profile")).toBe("GitHub profile");
-    expect(humanStatus("GitHub Profile")).toBe("GitHub profile");
-    expect(humanStatus("Continue Diligence")).toBe("Continue diligence");
-    expect(humanStatus("Invite to Apply")).toBe("Invite to apply");
-    expect(humanStatus("Insufficient Evidence")).toBe("Insufficient evidence");
-    expect(humanStatus("partially_verified")).toBe("Partially verified");
+    expect(humanStatus("github_profile")).toBe("GitHub Profile");
+    expect(humanStatus("GitHub Profile")).toBe("GitHub Profile");
+    expect(humanStatus("Continue Diligence")).toBe("Continue Diligence");
+    expect(humanStatus("Invite to Apply")).toBe("Invite to Apply");
+    expect(humanStatus("Insufficient Evidence")).toBe("Insufficient Evidence");
+    expect(humanStatus("insufficient_history")).toBe("Insufficient History");
+    expect(humanStatus("partially_verified")).toBe("Partially Verified");
+    expect(humanStatus("execution_consistency")).toBe("Execution Consistency");
     expect(humanStatus("screening")).toBe("Screening");
-    expect(humanStatus("ai_generated_pdf")).toBe("AI generated PDF");
   });
 });
 
@@ -166,7 +187,7 @@ describe("pages and components use sentence case", () => {
       top_outbound_prospects: [], recent_inbound_applications: [], highest_momentum: [],
       action_queue: [
         { opportunity_id: 1, name: "Ledgerkit", founder_name: "Ada Builder", entry_type: "outbound", stage: "screening",
-          next_action: "Review recommendation", next_action_key: "review_recommendation", next_action_detail: "Recommended: Continue diligence", priority: 1, age_days: 3 },
+          next_action: "Review Recommendation", next_action_key: "review_recommendation", next_action_detail: "Recommended: Continue Diligence", priority: 1, age_days: 3 },
       ],
       recent_evidence: [{ id: 1, kind: "github_repo", title: "ledgerkit repository", source_name: "GitHub", collected_at: "2026-11-01T00:00:00Z", opportunity_id: 1, opportunity_name: "Ledgerkit" }],
       connectors: { live: [], planned: [] },
@@ -224,7 +245,7 @@ describe("pages and components use sentence case", () => {
   });
 
   it("Pipeline", async () => {
-    fetched["/api/pipeline"] = { items: [{ ...opportunity, next_action: "Review recommendation", next_action_key: "review_recommendation", next_action_detail: "Recommended: Continue diligence", priority: 1, age_days: 3 }] };
+    fetched["/api/pipeline"] = { items: [{ ...opportunity, next_action: "Review Recommendation", next_action_key: "review_recommendation", next_action_detail: "Recommended: Continue Diligence", priority: 1, age_days: 3 }] };
     const { default: Pipeline } = await import("@/app/vc/pipeline/page");
     render(<Pipeline />);
     expectCleanCopy();
@@ -257,7 +278,7 @@ describe("pages and components use sentence case", () => {
         founder: { id: 7, full_name: "Ada Builder", github_username: "ada" }, company: { id: 3, name: "Ledgerkit", sector: "fintech", one_liner: "Payments" },
         founder_score: 61, evidence_count: 3, top_project: null, topics: ["payments"], group: { key: "fintech", label: "fintech", field: "company.sector" },
         thesis_fit: { value: 72, reason: null }, momentum: { value: 4, current_score: 61, trajectory: "improving", reason: null },
-        next_action: "Review recommendation", next_action_key: "review_recommendation", is_demo: true,
+        next_action: "Review Recommendation", next_action_key: "review_recommendation", is_demo: true,
       }],
     };
     const { default: MapPage } = await import("@/app/vc/map/page");

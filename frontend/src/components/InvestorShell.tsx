@@ -56,7 +56,7 @@ function RailFooter({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="space-y-0.5 border-t border-line pt-3 text-sm">
       <Link href="/founder" onClick={onNavigate} className="flex h-9 items-center rounded-md px-3 text-ink-muted hover:bg-neutral-wash hover:text-ink">
-        Founder portal
+        Founder Portal
       </Link>
       <Link href="/" onClick={onNavigate} className="flex h-9 items-center rounded-md px-3 text-ink-muted hover:bg-neutral-wash hover:text-ink">
         About Trajectory
@@ -64,7 +64,7 @@ function RailFooter({ onNavigate }: { onNavigate?: () => void }) {
       {account && (
         <div className="flex items-center justify-between gap-2 px-3 pt-2">
           <span className="truncate text-ink-muted" title={account.email}>{account.display_name}</span>
-          <button className="btn-ghost btn-sm" onClick={async () => { await logout("investor"); router.replace("/"); }}>Sign out</button>
+          <button className="btn-ghost btn-sm" onClick={async () => { await logout("investor"); router.replace("/"); }}>Sign Out</button>
         </div>
       )}
     </div>
@@ -97,7 +97,7 @@ export function InvestorShell({ children }: { children: React.ReactNode }) {
           <TrajectoryLogo size={22} />
           <span className="text-base font-semibold text-ink">Trajectory</span>
         </Link>
-        <nav aria-label="Investor workspace" className="flex-1" data-tour="nav">
+        <nav aria-label="Investor Workspace" className="flex-1" data-tour="nav">
           <NavLinks pathname={pathname} />
         </nav>
         <RailFooter />
@@ -113,7 +113,7 @@ export function InvestorShell({ children }: { children: React.ReactNode }) {
           ref={menuButton}
           type="button"
           className="icon-btn"
-          aria-label={menuOpen ? "Close menu" : "Open menu"}
+          aria-label={menuOpen ? "Close Menu" : "Open Menu"}
           aria-expanded={menuOpen}
           aria-controls="investor-mobile-nav"
           onClick={() => setMenuOpen((v) => !v)}
@@ -124,7 +124,7 @@ export function InvestorShell({ children }: { children: React.ReactNode }) {
       {menuOpen && (
         <div className="fixed inset-0 top-14 z-40 lg:hidden">
           <div className="absolute inset-0 bg-ink/20" onClick={() => setMenuOpen(false)} aria-hidden />
-          <nav id="investor-mobile-nav" aria-label="Investor workspace" className="relative w-64 border-r border-line bg-white p-3 shadow-overlay">
+          <nav id="investor-mobile-nav" aria-label="Investor Workspace" className="relative w-64 border-r border-line bg-white p-3 shadow-overlay">
             <NavLinks pathname={pathname} onNavigate={() => setMenuOpen(false)} />
             <div className="mt-4"><RailFooter onNavigate={() => setMenuOpen(false)} /></div>
           </nav>

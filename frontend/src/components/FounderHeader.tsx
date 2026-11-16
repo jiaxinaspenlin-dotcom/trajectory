@@ -6,7 +6,7 @@ import { TrajectoryLogo } from "./TrajectoryLogo";
 
 const LINKS = [
   { href: "/founder", label: "Apply" },
-  { href: "/founder/applications", label: "My applications" },
+  { href: "/founder/applications", label: "My Applications" },
 ];
 
 // Founder portal header: the same visual system as the investor workspace,
@@ -19,9 +19,9 @@ export function FounderHeader() {
         <Link href="/" className="flex items-center gap-2">
           <TrajectoryLogo size={20} />
           <span className="text-[15px] font-semibold text-ink">Trajectory</span>
-          <span className="hidden text-sm text-ink-muted sm:inline">· Founder portal</span>
+          <span className="hidden text-sm text-ink-muted sm:inline">· Founder Portal</span>
         </Link>
-        <nav className="flex items-center gap-0.5" aria-label="Founder portal">
+        <nav className="flex items-center gap-0.5" aria-label="Founder Portal">
           {LINKS.map((l) => {
             const active = l.href === "/founder" ? pathname === "/founder" : pathname.startsWith("/founder/application");
             return (

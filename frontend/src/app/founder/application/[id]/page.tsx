@@ -39,7 +39,7 @@ export default function ApplicationStatus() {
   return (
     <div className="space-y-5">
       <nav aria-label="Breadcrumb" className="text-xs text-ink-muted">
-        <Link href="/founder/applications" className="hover:text-brand">My applications</Link>
+        <Link href="/founder/applications" className="hover:text-brand">My Applications</Link>
         <span className="mx-1.5 text-ink-faint">/</span>
         <span className="text-ink-soft">{data.company_name}</span>
       </nav>
@@ -47,19 +47,19 @@ export default function ApplicationStatus() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-semibold tracking-[-0.015em] text-ink">{data.company_name}</h1>
-            <Badge tone="bg-brand-wash text-brand">Under review</Badge>
+            <Badge tone="bg-brand-wash text-brand">Under Review</Badge>
           </div>
-          <p className="mt-0.5 text-sm text-ink-muted">{data.sector || "Sector not set"} · {data.geography || "Location not set"}</p>
+          <p className="mt-0.5 text-sm text-ink-muted">{data.sector || "Sector Not Set"} · {data.geography || "Location Not Set"}</p>
         </div>
-        {!deckReady && <Link href="/founder" className="btn-primary">Finish your application</Link>}
+        {!deckReady && <Link href="/founder" className="btn-primary">Finish Your Application</Link>}
       </div>
 
       {/* status timeline */}
-      <ol className="grid grid-cols-3 overflow-hidden rounded-lg border border-line bg-white text-sm" aria-label="Application status">
+      <ol className="grid grid-cols-3 overflow-hidden rounded-lg border border-line bg-white text-sm" aria-label="Application Status">
         {[
-          ["Application received", true],
-          ["Pitch deck read", !!deckReady],
-          ["Human review", false],
+          ["Application Received", true],
+          ["Pitch Deck Read", !!deckReady],
+          ["Human Review", false],
         ].map(([label, done], i) => (
           <li key={String(label)} className={`flex items-center gap-2 px-4 py-2.5 ${i > 0 ? "border-l border-line" : ""}`}>
             <span className={`grid h-5 w-5 place-items-center rounded-full text-xs font-semibold ${done ? "bg-positive text-white" : i === 2 ? "bg-brand-wash text-brand" : "bg-line text-ink-muted"}`}>{done ? "✓" : i + 1}</span>
@@ -69,12 +69,12 @@ export default function ApplicationStatus() {
       </ol>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <Stat label="Pitch deck" value={deckReady ? "Received" : "Pending"} sub={data.document ? `${data.document.num_pages} pages parsed` : "Not uploaded yet"} tone={deckReady ? "text-positive" : "text-caution"} />
-        <Stat label="Users (reported)" value={data.num_users ?? "—"} />
-        <Stat label="Funding requested" value={data.funding_requested ? `$${data.funding_requested.toLocaleString()}` : "—"} />
+        <Stat label="Pitch Deck" value={deckReady ? "Received" : "Pending"} sub={data.document ? `${data.document.num_pages} Pages Parsed` : "Not Uploaded Yet"} tone={deckReady ? "text-positive" : "text-caution"} />
+        <Stat label="Users (Reported)" value={data.num_users ?? "—"} />
+        <Stat label="Funding Requested" value={data.funding_requested ? `$${data.funding_requested.toLocaleString()}` : "—"} />
       </div>
 
-      <Section title="First-pass screen" subtitle="Automated, before human review">
+      <Section title="First-Pass Screen" subtitle="Automated, Before Human Review">
         <p className="text-sm leading-6 text-ink-soft">{data.screen_summary || "Your application is queued for screening."}</p>
       </Section>
 
@@ -150,8 +150,8 @@ function ProvideInfo({ app, onSaved }: { app: ApplicationDetail; onSaved: () => 
 
   return (
     <Section
-      title="What would help the fund decide"
-      subtitle={app.missing_fields.length ? `${app.missing_fields.length} item${app.missing_fields.length === 1 ? "" : "s"} outstanding — fill in what you can` : "Everything requested has been provided"}
+      title="What Would Help the Fund Decide"
+      subtitle={app.missing_fields.length ? `${app.missing_fields.length} Item${app.missing_fields.length === 1 ? "" : "s"} Outstanding — Fill in What You Can` : "Everything Requested Has Been Provided"}
     >
       {done && (
         <p className="mb-3 text-sm text-positive">You&rsquo;ve provided everything the fund asked for. You can still update details below.</p>
@@ -159,11 +159,11 @@ function ProvideInfo({ app, onSaved }: { app: ApplicationDetail; onSaved: () => 
 
       <div className="grid gap-3 sm:grid-cols-2">
         {field("website", "Website", "https://…")}
-        {field("product_link", "Product / demo link", "https://…")}
-        {field("github_profile", "GitHub username", "e.g. yourhandle")}
-        {field("num_users", "Current users", "e.g. 1200", "number")}
-        {field("current_revenue", "Current revenue ($)", "e.g. 5000", "number")}
-        {field("customer_info", "Customer / pilot info", "e.g. 2 paid pilots")}
+        {field("product_link", "Product / Demo Link", "https://…")}
+        {field("github_profile", "GitHub Username", "e.g. yourhandle")}
+        {field("num_users", "Current Users", "e.g. 1200", "number")}
+        {field("current_revenue", "Current Revenue ($)", "e.g. 5000", "number")}
+        {field("customer_info", "Customer / Pilot Info", "e.g. 2 paid pilots")}
       </div>
       <label className="mt-3 block">
         <span className="label">Team</span>
@@ -181,7 +181,7 @@ function ProvideInfo({ app, onSaved }: { app: ApplicationDetail; onSaved: () => 
 
       <div className="mt-3 flex items-center gap-2">
         <button className="btn-primary" onClick={submit} disabled={saving}>
-          {saving ? "Submitting…" : "Submit to the fund"}
+          {saving ? "Submitting…" : "Submit to the Fund"}
         </button>
         <span className="text-xs text-ink-muted">
           Adding a GitHub username lets the fund verify your work with real public activity.

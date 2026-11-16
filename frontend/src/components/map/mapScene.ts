@@ -558,7 +558,7 @@ export class MapScene {
       let el = this.clusterEls.get(c.key);
       if (!el) {
         el = document.createElement("div");
-        el.className = "pointer-events-none absolute left-0 top-0 whitespace-nowrap text-xs font-semibold uppercase tracking-[0.08em] text-ink";
+        el.className = "pointer-events-none absolute left-0 top-0 whitespace-nowrap text-xs font-semibold tracking-[0.02em] text-ink";
         el.dataset.cluster = c.key;
         this.labelLayer.appendChild(el);
         this.clusterEls.set(c.key, el);

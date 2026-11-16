@@ -30,5 +30,5 @@ export function ProspectStatusBadge({ status }: { status: string }) {
 // Personal shortlist (this browser), never confused with the shared stage.
 export function ShortlistBadge({ shortlist }: { shortlist: Shortlist }) {
   const tone = shortlist === "dismissed" ? "bg-negative-wash text-negative" : "bg-positive-wash text-positive";
-  return <Badge tone={tone} title="Your shortlist (this browser)">{SHORTLIST_LABEL[shortlist]}</Badge>;
+  return <Badge tone={tone} title="Your Shortlist (This Browser)">{SHORTLIST_LABEL[shortlist]}</Badge>;
 }

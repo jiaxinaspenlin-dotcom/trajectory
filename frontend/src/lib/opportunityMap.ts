@@ -2,7 +2,7 @@
 // position the same MapNode records (stable opportunity IDs) in one 3D scene;
 // these functions decide where, without touching WebGL.
 
-import { humanStatus } from "./format";
+import { humanStatus, titleCase } from "./format";
 import { MapLink, MapNode } from "./types";
 
 export type MapView = "graph" | "axes";
@@ -92,25 +92,25 @@ const round1 = (v: number) => Math.round(v * 10) / 10;
 
 export const METRICS: Record<MetricKey, MetricDef> = {
   fit: {
-    key: "fit", label: "Thesis fit", short: "Thesis fit", unit: "/100",
+    key: "fit", label: "Thesis Fit", short: "Thesis Fit", unit: "/100",
     value: (n) => n.thesis_fit.value,
-    reason: (n) => n.thesis_fit.reason ?? "Not computed",
+    reason: (n) => titleCase(n.thesis_fit.reason ?? "Not computed"),
     format: (v) => `${Math.round(v)}`,
   },
   momentum: {
     key: "momentum", label: "Founder Momentum (30d)", short: "Momentum", unit: "pts",
     value: (n) => n.momentum.value,
-    reason: (n) => n.momentum.reason ?? "Not computed",
+    reason: (n) => titleCase(n.momentum.reason ?? "Not computed"),
     format: (v) => `${v > 0 ? "+" : ""}${round1(v)}`,
   },
   score: {
     key: "score", label: "Founder Score", short: "Founder Score", unit: "/100",
     value: (n) => n.founder_score,
-    reason: (n) => (n.founder ? "Founder not scored yet" : "No linked founder to score"),
+    reason: (n) => (n.founder ? "Founder Not Scored Yet" : "No Linked Founder to Score"),
     format: (v) => `${Math.round(v)}`,
   },
   evidence: {
-    key: "evidence", label: "Evidence items", short: "Evidence", unit: "items",
+    key: "evidence", label: "Evidence Items", short: "Evidence", unit: "items",
     value: (n) => n.evidence_count,
     reason: () => "",
     format: (v) => `${Math.round(v)}`,
@@ -119,7 +119,7 @@ export const METRICS: Record<MetricKey, MetricDef> = {
 
 export function formatMetric(key: MetricKey, v: number): string {
   const m = METRICS[key];
-  return m.unit === "items" ? `${m.format(v)} items` : m.unit === "pts" ? `${m.format(v)} pts` : `${m.format(v)}${m.unit}`;
+  return m.unit === "items" ? `${m.format(v)} Items` : m.unit === "pts" ? `${m.format(v)} pts` : `${m.format(v)}${m.unit}`;
 }
 
 // A metric is offered on an axis only when at least two records have a real value.
@@ -173,7 +173,7 @@ export function axesLayout(nodes: MapNode[], axes: { x: MetricKey; y: MetricKey;
   const excluded: Excluded[] = [];
   for (const n of nodes) {
     const missing = keys.filter(({ key }) => METRICS[key].value(n) == null);
-    if (missing.length) excluded.push({ node: n, reasons: missing.map(({ key }) => `${METRICS[key].label} unavailable: ${METRICS[key].reason(n)}`) });
+    if (missing.length) excluded.push({ node: n, reasons: missing.map(({ key }) => `${METRICS[key].label} Unavailable: ${METRICS[key].reason(n)}`) });
     else plotted.push(n);
   }
   const domains: AxisDomain[] = keys.map(({ axis, key }) => {
@@ -224,9 +224,9 @@ export function groupNodes(nodes: MapNode[]): MapGroup[] {
 }
 
 export function groupFieldLabel(field: string | null): string {
-  if (field === "company.sector") return "Company sector";
-  if (field === "github_repo.language") return "GitHub repo language (no company yet)";
-  return "No sector or project data yet";
+  if (field === "company.sector") return "Company Sector";
+  if (field === "github_repo.language") return "GitHub Repo Language (No Company Yet)";
+  return "No Sector or Project Data Yet";
 }
 
 // Mid-tone cluster colors that read on white (Meridian-style), assigned by a
@@ -322,7 +322,7 @@ export function linksFor(id: number, links: MapLink[]): { other: number; link: M
 }
 
 export function nodeKindLabel(n: MapNode): string {
-  return n.kind === "lead" ? "Founder lead" : `Active deal · ${humanStatus(n.stage)}`;
+  return n.kind === "lead" ? "Founder Lead" : `Active Deal · ${humanStatus(n.stage)}`;
 }
 
 // Point size (px at the framing distance): founder score when known.

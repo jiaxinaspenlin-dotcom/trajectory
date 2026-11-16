@@ -22,14 +22,14 @@ import {
 // Three.js only runs in the browser; keep it out of the server render and other routes.
 const MapCanvas = dynamic(() => import("@/components/map/MapCanvas").then((m) => m.MapCanvas), {
   ssr: false,
-  loading: () => <Centered><Spinner label="Starting the map…" /></Centered>,
+  loading: () => <Centered><Spinner label="Starting the Map…" /></Centered>,
 });
 
 export default function MapPage() {
   return (
     <div className="dot-grid relative h-full w-full overflow-hidden">
       {/* useSearchParams needs a Suspense boundary for static rendering */}
-      <Suspense fallback={<Centered><Spinner label="Loading map…" /></Centered>}>
+      <Suspense fallback={<Centered><Spinner label="Loading Map…" /></Centered>}>
         <OpportunityMap />
       </Suspense>
     </div>
@@ -84,7 +84,7 @@ function OpportunityMap() {
   const matches = useMemo(() => (q.trim() ? nodes.filter((n) => matchesSearch(n, q)) : []), [nodes, q]);
   const highlight = useMemo(() => (q.trim() ? new Set(matches.map((n) => n.id)) : null), [q, matches]);
 
-  if (loading && !data) return <Centered><Spinner label="Loading map…" /></Centered>;
+  if (loading && !data) return <Centered><Spinner label="Loading Map…" /></Centered>;
   if (error) {
     return (
       <Centered>
@@ -96,9 +96,9 @@ function OpportunityMap() {
     return (
       <Centered>
         <div className="hud max-w-sm p-5 text-center">
-          <p className="text-base font-semibold text-ink">Nothing to map yet</p>
+          <p className="text-base font-semibold text-ink">Nothing to Map Yet</p>
           <p className="mt-1 text-sm text-ink-muted">Founder leads and active deals appear here once you source founders or receive an application.</p>
-          <Link href="/vc/founders?source=open" className="btn-primary mt-4">Source founders</Link>
+          <Link href="/vc/founders?source=open" className="btn-primary mt-4">Source Founders</Link>
         </div>
       </Centered>
     );
@@ -130,7 +130,7 @@ function OpportunityMap() {
           </div>
         </div>
       ) : webgl === null ? (
-        <Centered><Spinner label="Starting the map…" /></Centered>
+        <Centered><Spinner label="Starting the Map…" /></Centered>
       ) : (
         <MapCanvas
           apiRef={canvasRef}
@@ -152,7 +152,7 @@ function OpportunityMap() {
         <Centered>
           <div className="hud pointer-events-auto p-4 text-center text-sm text-ink-muted">
             No opportunities match these filters.
-            <button className="btn-secondary btn-sm ml-2" onClick={() => update({ kind: "all", source: "all" })}>Clear filters</button>
+            <button className="btn-secondary btn-sm ml-2" onClick={() => update({ kind: "all", source: "all" })}>Clear Filters</button>
           </div>
         </Centered>
       )}
@@ -163,11 +163,11 @@ function OpportunityMap() {
       <div data-map-inset="top" className={`pointer-events-none absolute left-3 right-3 top-3 z-20 flex items-start gap-2 sm:left-4 sm:right-4 sm:top-4 sm:gap-3 ${selected ? "sm:right-[432px]" : ""}`}>
         <div className="pointer-events-auto hidden shrink-0 items-center gap-2 lg:flex">
           <div className="hud flex h-10 items-center gap-2 px-4 text-sm">
-            <span className="text-ink-muted" title="Leads in Sourcing (not yet in Pipeline)">Leads</span>
+            <span className="text-ink-muted" title="Leads in Sourcing (Not yet in Pipeline)">Leads</span>
             <span className="num font-semibold text-ink">{leadCount}</span>
           </div>
           {/* primary until a record is open — then the drawer's Open opportunity is the main action */}
-          <Link href="/vc/founders?source=open" className={selected ? "btn-secondary shadow-raised" : "btn-primary shadow-raised"}>+ Source founders</Link>
+          <Link href="/vc/founders?source=open" className={selected ? "btn-secondary shadow-raised" : "btn-primary shadow-raised"}>+ Source Founders</Link>
         </div>
 
         <div className="pointer-events-auto relative mx-auto min-w-0 flex-1 lg:max-w-lg">
@@ -176,8 +176,8 @@ function OpportunityMap() {
             <input
               type="search"
               value={q}
-              aria-label="Search the map"
-              placeholder="Search founders, companies, topics"
+              aria-label="Search the Map"
+              placeholder="Search Founders, Companies, Topics"
               className="h-full min-w-0 flex-1 bg-transparent px-2.5 text-[15px] text-ink outline-none placeholder:text-ink-faint"
               onChange={(e) => { setQ(e.target.value); setResultsOpen(true); update({ q: e.target.value }); }}
               onFocus={() => setResultsOpen(true)}
@@ -189,15 +189,15 @@ function OpportunityMap() {
             />
             {q.trim() && (
               <>
-                <span className="num whitespace-nowrap text-[13px] text-ink-muted">{matches.length} {matches.length === 1 ? "match" : "matches"}</span>
-                <button type="button" className="icon-btn mx-0.5 h-9 w-9" aria-label="Clear search" onClick={() => { setQ(""); update({ q: "" }); }}>
+                <span className="num whitespace-nowrap text-[13px] text-ink-muted">{matches.length} {matches.length === 1 ? "Match" : "Matches"}</span>
+                <button type="button" className="icon-btn mx-0.5 h-9 w-9" aria-label="Clear Search" onClick={() => { setQ(""); update({ q: "" }); }}>
                   <CloseIcon size={16} />
                 </button>
               </>
             )}
           </div>
           {q.trim() && resultsOpen && (
-            <ul className="hud absolute inset-x-0 top-full mt-2 max-h-80 overflow-y-auto py-1" aria-label="Search results">
+            <ul className="hud absolute inset-x-0 top-full mt-2 max-h-80 overflow-y-auto py-1" aria-label="Search Results">
               {matches.length ? matches.slice(0, 8).map((n) => (
                 <li key={n.id}>
                   <button
@@ -214,13 +214,13 @@ function OpportunityMap() {
                     <span className="shrink-0 text-[13px] text-ink-muted">{n.group.label}</span>
                   </button>
                 </li>
-              )) : <li className="px-4 py-2 text-sm text-ink-muted">No matches in the current filters</li>}
+              )) : <li className="px-4 py-2 text-sm text-ink-muted">No Matches in the Current Filters</li>}
             </ul>
           )}
         </div>
 
         <div className="pointer-events-auto relative flex shrink-0 gap-2">
-          <Link href="/vc/founders?source=open" aria-label="Source founders"
+          <Link href="/vc/founders?source=open" aria-label="Source Founders"
             className={`grid h-10 w-10 place-items-center lg:hidden ${selected ? "hud text-brand" : "btn-primary px-0 shadow-raised"}`}><PlusIcon size={18} /></Link>
           <button
             type="button"
@@ -230,23 +230,23 @@ function OpportunityMap() {
             aria-label="Filters"
             onClick={() => setFiltersOpen((v) => !v)}
           >
-            <FilterIcon size={18} /> <span className="hidden sm:inline">Filters</span>{filtersActive && <span className="h-1.5 w-1.5 rounded-full bg-brand" aria-label="active" />}
+            <FilterIcon size={18} /> <span className="hidden sm:inline">Filters</span>{filtersActive && <span className="h-1.5 w-1.5 rounded-full bg-brand" aria-label="Active" />}
           </button>
           {filtersOpen && (
             <div id="map-filters" className="hud absolute right-0 top-full z-30 mt-2 w-72 space-y-4 p-4">
               <div>
                 <p className="label mb-1.5">Records</p>
-                <Segmented<MapKind> size="sm" label="Filter by record type" value={state.kind} onChange={(v) => update({ kind: v })}
+                <Segmented<MapKind> size="sm" label="Filter by Record Type" value={state.kind} onChange={(v) => update({ kind: v })}
                   options={[{ value: "all", label: "All" }, { value: "lead", label: "Leads" }, { value: "deal", label: "Deals" }]} />
                 <p className="mt-1.5 text-xs text-ink-muted">Leads are in Sourcing (Founders); deals are in Pipeline.</p>
               </div>
               <div>
                 <p className="label mb-1.5">Source</p>
-                <Segmented<MapSource> size="sm" label="Filter by source" value={state.source} onChange={(v) => update({ source: v })}
+                <Segmented<MapSource> size="sm" label="Filter by Source" value={state.source} onChange={(v) => update({ source: v })}
                   options={[{ value: "all", label: "All" }, { value: "inbound", label: "Inbound" }, { value: "outbound", label: "Outbound" }]} />
                 <p className="mt-1.5 text-xs text-ink-muted">Inbound applied through the founder portal; outbound were sourced by you.</p>
               </div>
-              <p className="num text-[13px] text-ink-muted">{nodes.length} of {all.length} shown</p>
+              <p className="num text-[13px] text-ink-muted">{nodes.length} of {all.length} Shown</p>
             </div>
           )}
         </div>
@@ -261,8 +261,8 @@ function OpportunityMap() {
       {listOpen && webgl !== false && (
         <div data-map-inset="auto" className="hud absolute bottom-24 left-3 top-[4.25rem] z-20 w-[min(22rem,calc(100%-1.5rem))] overflow-y-auto sm:left-4 sm:top-[4.5rem]">
           <div className="flex items-center justify-between border-b border-line px-4 py-2">
-            <span className="text-[15px] font-semibold text-ink">All records</span>
-            <button type="button" className="icon-btn h-9 w-9" onClick={() => setListOpen(false)} aria-label="Close list"><CloseIcon size={16} /></button>
+            <span className="text-[15px] font-semibold text-ink">All Records</span>
+            <button type="button" className="icon-btn h-9 w-9" onClick={() => setListOpen(false)} aria-label="Close List"><CloseIcon size={16} /></button>
           </div>
           <MapList nodes={nodes} colors={colors} selectedId={state.focus} query={q} onSelect={select} />
         </div>
@@ -272,15 +272,15 @@ function OpportunityMap() {
       <div className="absolute left-3 top-[4.25rem] z-20 flex flex-col items-start gap-2 sm:bottom-4 sm:left-4 sm:top-auto sm:flex-row sm:items-end">
         {webgl !== false && (
           <div className="hud flex flex-col p-0.5" role="group" aria-label="Camera">
-            <button type="button" className="icon-btn" aria-label="Zoom in" onClick={() => canvasRef.current?.zoom(0.7)}><PlusIcon size={18} /></button>
-            <button type="button" className="icon-btn" aria-label="Zoom out" onClick={() => canvasRef.current?.zoom(1.4)}><MinusIcon size={18} /></button>
-            <button type="button" className="icon-btn" aria-label="Reset view" onClick={() => canvasRef.current?.reset()}><ResetIcon size={18} /></button>
+            <button type="button" className="icon-btn" aria-label="Zoom In" onClick={() => canvasRef.current?.zoom(0.7)}><PlusIcon size={18} /></button>
+            <button type="button" className="icon-btn" aria-label="Zoom Out" onClick={() => canvasRef.current?.zoom(1.4)}><MinusIcon size={18} /></button>
+            <button type="button" className="icon-btn" aria-label="Reset View" onClick={() => canvasRef.current?.reset()}><ResetIcon size={18} /></button>
           </div>
         )}
         <div className="flex flex-col gap-2">
           {isAxes && (
             <button type="button" className={`hud flex h-10 items-center gap-2 px-3 text-sm font-medium ${valuesOpen ? "text-brand" : "text-ink-soft"}`}
-              aria-expanded={valuesOpen} aria-label={`Values: ${axes.values.size} of ${nodes.length} plotted`} onClick={() => setValuesOpen((v) => !v)}>
+              aria-expanded={valuesOpen} aria-label={`Values: ${axes.values.size} of ${nodes.length} Plotted`} onClick={() => setValuesOpen((v) => !v)}>
               <TableIcon size={18} /> <span className="hidden sm:inline">Values</span> <span className="num text-ink-muted">{axes.values.size}/{nodes.length}</span>
             </button>
           )}
@@ -303,7 +303,7 @@ function OpportunityMap() {
         {isAxes && !valuesOpen && (
           <AxisPanel x={state.x} y={state.y} z={state.z} options={metrics} onChange={(patch) => update(patch)} />
         )}
-        <div className="hud pointer-events-auto flex p-1" role="group" aria-label="Map mode">
+        <div className="hud pointer-events-auto flex p-1" role="group" aria-label="Map Mode">
           {([["graph", "Relationships"], ["axes", "Custom Axes"]] as const).map(([v, label]) => (
             <button
               key={v}
@@ -318,8 +318,8 @@ function OpportunityMap() {
         </div>
       </div>
 
-      <p className={`pointer-events-none absolute bottom-6 right-4 z-10 hidden text-xs uppercase tracking-[0.08em] text-ink-muted 2xl:block ${selected ? "2xl:hidden" : ""}`}>
-        Drag to orbit · right-drag to pan · scroll to zoom · click to focus
+      <p className={`pointer-events-none absolute bottom-6 right-4 z-10 hidden text-xs text-ink-muted 2xl:block ${selected ? "2xl:hidden" : ""}`}>
+        Drag to Orbit · Right-Drag to Pan · Scroll to Zoom · Click to Focus
       </p>
 
       {selected && (
@@ -343,7 +343,7 @@ function OpportunityMap() {
       )}
       {!data!.has_thesis && (
         <p className="hud absolute bottom-20 right-4 z-10 max-w-xs px-4 py-3 text-sm text-caution">
-          No active thesis — thesis fit can&apos;t be plotted. <Link href="/vc/fund" className="underline">Set up your Fund thesis</Link>.
+          No active thesis — thesis fit can&apos;t be plotted. <Link href="/vc/fund" className="underline">Set up Your Fund Thesis</Link>.
         </p>
       )}
     </>
@@ -378,12 +378,12 @@ function Legend({ nodes, colors, open, onToggle }: {
             ))}
           </ul>
           <div className="mt-3 space-y-1 border-t border-line pt-2.5 text-ink-muted">
-            <p className="flex items-center gap-2"><i className="inline-block h-3 w-3 rounded-full border-[2.5px] border-ink-muted" /> Lead · in Sourcing</p>
-            <p className="flex items-center gap-2"><i className="inline-block h-3 w-3 rounded-full bg-ink-muted" /> Deal · in Pipeline</p>
+            <p className="flex items-center gap-2"><i className="inline-block h-3 w-3 rounded-full border-[2.5px] border-ink-muted" /> Lead · In Sourcing</p>
+            <p className="flex items-center gap-2"><i className="inline-block h-3 w-3 rounded-full bg-ink-muted" /> Deal · In Pipeline</p>
             <p className="pt-1 text-xs">Colors group by company sector, or by GitHub language when there&apos;s no company yet.</p>
             {nodes.some((n) => n.new_evidence_count) && (
               <p className="flex items-center gap-2" data-testid="legend-new-evidence">
-                <i className="inline-block h-3.5 w-3.5 rounded-full border-2 border-signal bg-signal-wash" /> New evidence
+                <i className="inline-block h-3.5 w-3.5 rounded-full border-2 border-signal bg-signal-wash" /> New Evidence
               </p>
             )}
           </div>
@@ -402,11 +402,11 @@ function AxisPanel({ x, y, z, options, onChange }: {
     <div className="hud pointer-events-auto grid w-[min(36rem,calc(100vw-1.5rem))] grid-cols-3 gap-2 p-3 sm:gap-3" data-testid="axis-panel" aria-label="Custom Axes">
       {choices.map(({ axis, value }) => (
         <label key={axis} className="min-w-0">
-          <span className="mb-1 block text-[13px] font-semibold text-ink">{axis.toUpperCase()} axis</span>
+          <span className="mb-1 block text-[13px] font-semibold text-ink">{axis.toUpperCase()} Axis</span>
           <select
             className="select px-2 text-[13px] sm:px-3 sm:text-sm"
             value={value}
-            aria-label={`${axis.toUpperCase()} axis metric`}
+            aria-label={`${axis.toUpperCase()} Axis Metric`}
             onChange={(e) => {
               const v = e.target.value as AxisChoice;
               const next = { x, y, z, [axis]: v } as { x: MetricKey; y: MetricKey; z: AxisChoice };
@@ -417,7 +417,7 @@ function AxisPanel({ x, y, z, options, onChange }: {
               onChange(next);
             }}
           >
-            {axis === "z" && <option value="none">None (plane)</option>}
+            {axis === "z" && <option value="none">None (Plane)</option>}
             {options.map((k) => <option key={k} value={k}>{METRICS[k].short}</option>)}
           </select>
         </label>

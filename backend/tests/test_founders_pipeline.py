@@ -35,7 +35,7 @@ def test_github_prospect_flows_from_founders_to_pipeline(client, seeded, stub_gi
     pipeline = client.get("/api/pipeline").json()["items"]
     deal = next(o for o in pipeline if o["id"] == opp_id)
     assert deal["stage"] == "screening" and deal["entry_type"] == "outbound"
-    assert deal["next_action"] == "Run analysis"
+    assert deal["next_action"] == "Run Analysis"
     assert deal["next_action_key"] == "run_analysis"
     assert _pipeline_ids(client).count(opp_id) == 1
 
@@ -64,7 +64,7 @@ def test_inbound_application_enters_pipeline_at_screening(client, seeded):
     inbound = client.get("/api/pipeline", params={"entry_type": "inbound", "stage": "screening"}).json()["items"]
     deal = next(o for o in inbound if o["id"] == opp_id)
     assert deal["founder"] is None and deal["company"]["name"] == "Pipeline Test Co"
-    assert deal["next_action"] == "Review application"
+    assert deal["next_action"] == "Review Application"
     assert deal["next_action_key"] == "review_application"
     # inbound applications never show up as outbound leads in Founders
     assert opp_id not in [p["id"] for p in client.get("/api/sourcing/prospects").json()["items"]]

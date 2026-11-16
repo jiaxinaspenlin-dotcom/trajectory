@@ -72,10 +72,10 @@ describe("Custom Axes layout", () => {
     expect([...l.positions.keys()]).toEqual([3]);
     expect(l.values.get(3)).toEqual({ fit: 88, momentum: 16 });
     expect(l.excluded.find((e) => e.node.id === 1)!.reasons).toEqual([
-      "Thesis fit unavailable: No company yet — thesis fit is a placeholder",
-      "Founder Momentum (30d) unavailable: Insufficient momentum history (needs 30+ days of score snapshots; has 1 spanning 0 days)",
+      "Thesis Fit Unavailable: No Company Yet — Thesis Fit Is a Placeholder",
+      "Founder Momentum (30d) Unavailable: Insufficient Momentum History (Needs 30+ Days of Score Snapshots; Has 1 Spanning 0 Days)",
     ]);
-    expect(l.excluded.find((e) => e.node.id === 2)!.reasons).toEqual(["Founder Momentum (30d) unavailable: No linked founder to track momentum for"]);
+    expect(l.excluded.find((e) => e.node.id === 2)!.reasons).toEqual(["Founder Momentum (30d) Unavailable: No Linked Founder to Track Momentum For"]);
   });
 
   it("maps actual values onto axes centred on the domain midpoint, with z=none as a plane", () => {
@@ -99,7 +99,7 @@ describe("Custom Axes layout", () => {
     expect(metricDomain("momentum", [3, -27])).toEqual([-30, 30]);
     expect(formatMetric("momentum", 16.42)).toBe("+16.4 pts");
     expect(formatMetric("fit", 88)).toBe("88/100");
-    expect(formatMetric("evidence", 7)).toBe("7 items");
+    expect(formatMetric("evidence", 7)).toBe("7 Items");
   });
 });
 
@@ -132,10 +132,10 @@ describe("MapDrawer", () => {
     const axes = axesLayout([node(), inbound, plotted], { x: "fit", y: "momentum", z: "none" });
     render(<MapDrawer node={node()} links={links} nodesById={byId} colors={colors} mode="axes" axes={axes} hiddenByFilters={false} onSelect={onSelect} onClose={() => {}} />);
     const panel = screen.getByTestId("map-node-panel");
-    expect(within(panel).getByRole("link", { name: /Open opportunity/ })).toHaveAttribute("href", "/vc/opportunities/1");
+    expect(within(panel).getByRole("link", { name: /Open Opportunity/ })).toHaveAttribute("href", "/vc/opportunities/1");
     const why = within(panel).getByTestId("drawer-not-plotted");
-    expect(why).toHaveTextContent("Thesis fit unavailable: No company yet");
-    expect(why).toHaveTextContent("has 1 spanning 0 days");
+    expect(why).toHaveTextContent("Thesis Fit Unavailable: No Company Yet");
+    expect(why).toHaveTextContent("Has 1 Spanning 0 Days");
     fireEvent.click(within(panel).getByText("PayMesh"));
     expect(onSelect).toHaveBeenCalledWith(3);
   });
@@ -160,10 +160,10 @@ describe("MapValuesPanel", () => {
     render(<MapValuesPanel nodes={nodes} axes={axes} selectedId={3} onSelect={onSelect} onClose={() => {}} />);
     const table = screen.getByTestId("plotted-list");
     expect(within(table).getAllByText("88/100")).toHaveLength(2);
-    expect(within(table).getByText("Same point as ForgeTools")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /Not plotted 1/ }));
+    expect(within(table).getByText("Same Point as ForgeTools")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Not Plotted 1/ }));
     const ex = screen.getByTestId("excluded-list");
-    expect(within(ex).getByText(/Insufficient momentum history/)).toBeInTheDocument();
+    expect(within(ex).getByText(/Insufficient Momentum History/)).toBeInTheDocument();
     fireEvent.click(within(ex).getByText("Ada Builder"));
     expect(onSelect).toHaveBeenCalledWith(1);
   });
@@ -175,7 +175,7 @@ describe("MapList (WebGL fallback)", () => {
     const sparse = node({ founder_score: null, evidence_count: 0, top_project: null, topics: [], group: { key: "ungrouped", label: "Not enough data to group", field: null } });
     render(<MapList nodes={[sparse, inbound]} colors={clusterColors([sparse, inbound])} selectedId={null} query="" onSelect={onSelect} />);
     expect(screen.getByText("Not enough data to group · 1")).toBeInTheDocument();
-    expect(screen.getAllByText(/not scored/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Not Scored/).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByText("LedgerLoop"));
     expect(onSelect).toHaveBeenCalledWith(2);
   });

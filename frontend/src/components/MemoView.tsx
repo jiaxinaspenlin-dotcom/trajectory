@@ -3,7 +3,7 @@
 import { Memo } from "@/lib/types";
 import { normalizeMemoSections } from "@/lib/memo";
 import { Badge, Section } from "@/components/ui";
-import { humanStatus } from "@/lib/format";
+import { humanStatus, titleCase } from "@/lib/format";
 
 // Renders the full evidence-backed investment memo — the final recommendation
 // plus every standard section, in order. Missing data is labeled, never invented.
@@ -14,7 +14,7 @@ export function MemoView({ memo }: { memo: Memo }) {
     <div className="space-y-4">
       {memo.recommended_action && (
         <div className="rounded-xl bg-brand-wash p-4">
-          <span className="label text-brand">Final recommendation</span>
+          <span className="label text-brand">Final Recommendation</span>
           <p className="text-lg font-semibold text-brand">{humanStatus(memo.recommended_action)}</p>
           <p className="text-xs text-ink-muted">Confidence {Math.round(memo.confidence * 100)}%</p>
         </div>
@@ -22,8 +22,8 @@ export function MemoView({ memo }: { memo: Memo }) {
       {sections.map((s) => (
         <Section
           key={s.key}
-          title={s.title}
-          right={s.unavailable_label ? <Badge tone="bg-neutral-wash text-neutral">{s.unavailable_label}</Badge> : undefined}
+          title={titleCase(s.title)}
+          right={s.unavailable_label ? <Badge tone="bg-neutral-wash text-neutral">{humanStatus(s.unavailable_label)}</Badge> : undefined}
         >
           {s.key === "swot" ? (
             <SwotGrid body={s.body} />

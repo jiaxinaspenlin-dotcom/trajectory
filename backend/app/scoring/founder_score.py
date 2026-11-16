@@ -27,17 +27,17 @@ DEFAULT_WEIGHTS: dict[str, float] = {
     "evidence_reliability": 0.06,
 }
 
-# Display names, sentence case (docs/copy-style.md). Keys are the stable identifiers.
+# Display names, Title Case (docs/copy-style.md). Keys are the stable identifiers.
 COMPONENT_LABELS: dict[str, str] = {
-    "execution_consistency": "Execution consistency",
-    "technical_evidence": "Technical evidence",
-    "product_progress": "Product progress",
-    "external_validation": "External validation",
+    "execution_consistency": "Execution Consistency",
+    "technical_evidence": "Technical Evidence",
+    "product_progress": "Product Progress",
+    "external_validation": "External Validation",
     "traction": "Traction",
-    "leadership_collaboration": "Leadership & collaboration",
-    "learning_velocity": "Learning velocity",
-    "domain_experience": "Domain experience",
-    "evidence_reliability": "Reliability of evidence",
+    "leadership_collaboration": "Leadership & Collaboration",
+    "learning_velocity": "Learning Velocity",
+    "domain_experience": "Domain Experience",
+    "evidence_reliability": "Reliability of Evidence",
 }
 
 # Which evidence kinds feed which component, and their per-item point value.

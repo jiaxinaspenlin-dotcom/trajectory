@@ -17,9 +17,9 @@ interface Turn {
 }
 
 const ROLE_META: Record<Role, { name: string; sub: string; color: string; wash: string; border: string }> = {
-  bull: { name: "Bull", sub: "Optimistic case", color: "text-bull", wash: "bg-bull/10", border: "border-bull/30" },
-  referee: { name: "Referee", sub: "Neutral judge", color: "text-referee", wash: "bg-referee/10", border: "border-referee/30" },
-  bear: { name: "Bear", sub: "Skeptical case", color: "text-bear", wash: "bg-bear/10", border: "border-bear/30" },
+  bull: { name: "Bull", sub: "Optimistic Case", color: "text-bull", wash: "bg-bull/10", border: "border-bull/30" },
+  referee: { name: "Referee", sub: "Neutral Judge", color: "text-referee", wash: "bg-referee/10", border: "border-referee/30" },
+  bear: { name: "Bear", sub: "Skeptical Case", color: "text-bear", wash: "bg-bear/10", border: "border-bear/30" },
 };
 
 // Turn the generated debate into an alternating, turn-taking conversation.
@@ -128,7 +128,7 @@ export function DebatePlayer({ debate, onClose }: { debate: Debate; onClose: () 
         className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-ink"
         role="dialog"
         aria-modal="true"
-        aria-label="Investment Arena — starting the debate"
+        aria-label="Investment Arena — Starting the Debate"
         onClick={() => setPhase("debate")}
       >
         <div className="absolute inset-0 opacity-40"><ArenaBackdrop /></div>
@@ -152,7 +152,7 @@ export function DebatePlayer({ debate, onClose }: { debate: Debate; onClose: () 
           className="absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-white/90 px-4 py-1.5 text-sm font-medium text-ink shadow-raised hover:bg-white"
           onClick={(e) => { e.stopPropagation(); setPhase("debate"); }}
         >
-          Skip intro →
+          Skip Intro →
         </button>
       </div>
     );
@@ -163,15 +163,15 @@ export function DebatePlayer({ debate, onClose }: { debate: Debate; onClose: () 
       className="fixed inset-0 z-50 flex flex-col bg-surface motion-safe:animate-[debateReveal_.4s_ease-out]"
       role="dialog"
       aria-modal="true"
-      aria-label="Investment Arena — full debate"
+      aria-label="Investment Arena — Full Debate"
     >
       {/* header */}
       <div className="relative flex items-center justify-between border-b border-line bg-white/90 px-4 py-3 backdrop-blur sm:px-6">
         <div>
-          <h2 className="text-lg font-extrabold tracking-tight text-ink sm:text-xl">Investment Arena — full debate</h2>
-          <p className="text-xs text-ink-muted">v{debate.version} · {debate.generated_by} · click Next to hear each turn</p>
+          <h2 className="text-lg font-extrabold tracking-tight text-ink sm:text-xl">Investment Arena — Full Debate</h2>
+          <p className="text-xs text-ink-muted">{`v${debate.version} · ${humanStatus(debate.generated_by)} · Click Next to Hear Each Turn`}</p>
         </div>
-        <button className="btn-secondary" onClick={onClose} aria-label="Close full debate">Close ✕</button>
+        <button className="btn-secondary" onClick={onClose} aria-label="Close Full Debate">Close ✕</button>
       </div>
 
       {/* stage — the three characters, current speaker highlighted */}

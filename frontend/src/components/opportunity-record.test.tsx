@@ -66,18 +66,18 @@ describe("HumanDecisionPanel", () => {
     get.mockResolvedValue({ items: [] });
     render(<HumanDecisionPanel opportunityId={5} recommendation={rec} onDecision={() => {}} />);
     for (const r of screen.getAllByRole("radio")) expect(r).not.toBeChecked();
-    expect(screen.getByLabelText(/Chosen action/)).toHaveValue("");
+    expect(screen.getByLabelText(/Chosen Action/)).toHaveValue("");
 
-    fireEvent.click(screen.getByRole("button", { name: "Record decision" }));
+    fireEvent.click(screen.getByRole("button", { name: "Record Decision" }));
     expect(screen.getByText("Choose an outcome.")).toBeInTheDocument();
     expect(screen.getByText("Choose the action you're taking.")).toBeInTheDocument();
     expect(post).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("radio", { name: /Approve/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Use recommendation" }));
-    expect(screen.getByLabelText(/Chosen action/)).toHaveValue("Continue Diligence");
+    fireEvent.click(screen.getByRole("button", { name: "Use Recommendation" }));
+    expect(screen.getByLabelText(/Chosen Action/)).toHaveValue("Continue Diligence");
     post.mockResolvedValueOnce({ human_decision: { decision: "approved", chosen_action: "Continue Diligence", decided_by: "Demo Investor", decided_at: "", notes: "", system_recommended_action: "Continue Diligence" } });
-    fireEvent.click(screen.getByRole("button", { name: "Record decision" }));
+    fireEvent.click(screen.getByRole("button", { name: "Record Decision" }));
     await waitFor(() => expect(post).toHaveBeenCalledWith("/api/opportunities/5/decision", {
       decided_by: "Demo Investor", decision: "approved", chosen_action: "Continue Diligence", notes: "",
     }));

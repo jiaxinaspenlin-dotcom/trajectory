@@ -9,6 +9,7 @@ import { Badge, EmptyState, ErrorState, Section, Spinner } from "@/components/ui
 import { InvestmentArena } from "@/components/arena/InvestmentArena";
 import { MemoView } from "@/components/MemoView";
 import { Memo, Opportunity } from "@/lib/types";
+import { humanStatus } from "@/lib/format";
 
 export default function MemoPage() {
   const { id } = useParams<{ id: string }>();
@@ -34,13 +35,13 @@ export default function MemoPage() {
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex items-center justify-between print:hidden">
         <div>
-          <h1 className="text-2xl font-semibold tracking-[-0.015em] text-ink">Investment memo</h1>
+          <h1 className="text-2xl font-semibold tracking-[-0.015em] text-ink">Investment Memo</h1>
           <p className="text-sm text-ink-muted">Evidence-backed. Missing data is explicitly labeled, never invented.</p>
         </div>
         <div className="flex gap-2">
           <Link href={`/vc/opportunities/${id}`} className="btn-secondary">Back</Link>
           <button className="btn-secondary" onClick={() => window.print()}>Print / PDF</button>
-          <button className="btn-primary" onClick={generate}>Regenerate memo</button>
+          <button className="btn-primary" onClick={generate}>Regenerate Memo</button>
         </div>
       </div>
 
@@ -53,13 +54,13 @@ export default function MemoPage() {
               <h2 className="text-lg font-semibold text-ink">{opp.data.company?.name}</h2>
               <p className="text-sm text-ink-muted">{opp.data.company?.one_liner}</p>
             </div>
-            {memo.data && <Badge tone="bg-neutral-wash text-neutral">v{memo.data.version} · {memo.data.generated_by}</Badge>}
+            {memo.data && <Badge tone="bg-neutral-wash text-neutral">{`v${memo.data.version} · ${humanStatus(memo.data.generated_by)}`}</Badge>}
           </div>
         </div>
       )}
 
       {memo.loading ? <Spinner /> : memo.error ? (
-        <EmptyState title="No memo yet" hint="Generate the evidence-backed memo." action={<button className="btn-primary" onClick={generate}>Generate memo</button>} />
+        <EmptyState title="No Memo Yet" hint="Generate the evidence-backed memo." action={<button className="btn-primary" onClick={generate}>Generate Memo</button>} />
       ) : memo.data ? (
         <>
           <MemoView memo={memo.data} />

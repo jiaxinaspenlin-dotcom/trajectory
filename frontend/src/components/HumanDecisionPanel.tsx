@@ -14,10 +14,10 @@ const ACTIONS = [
 
 // The outcome is always an explicit choice — nothing is preselected.
 const OUTCOMES: { value: string; label: string; hint: string }[] = [
-  { value: "approved", label: "Approve", hint: "Go ahead with the chosen action" },
-  { value: "rejected", label: "Reject", hint: "Don't take the recommended action" },
-  { value: "deferred", label: "Defer", hint: "Decide later" },
-  { value: "overridden", label: "Override", hint: "Take a different action than recommended" },
+  { value: "approved", label: "Approve", hint: "Go ahead with the chosen action." },
+  { value: "rejected", label: "Reject", hint: "Don't take the recommended action." },
+  { value: "deferred", label: "Defer", hint: "Decide later." },
+  { value: "overridden", label: "Override", hint: "Take a different action than recommended." },
 ];
 
 interface HistoryItem {
@@ -92,7 +92,7 @@ export function HumanDecisionPanel({
   return (
     <div data-testid="human-decision" className="space-y-5">
       <div className="rounded-lg bg-surface-sunken p-4">
-        <span className="label">System recommendation</span>
+        <span className="label">System Recommendation</span>
         {recommendation ? (
           <>
             <p className="mt-1 text-base font-semibold text-ink">{humanStatus(recommendation.action)}</p>
@@ -109,7 +109,7 @@ export function HumanDecisionPanel({
           </p>
           <p className="text-[13px] text-ink-muted">System had recommended: {saved.system_recommended_action ? humanStatus(saved.system_recommended_action) : "—"}. Recorded separately.</p>
           {saved.notes && <p className="mt-1 text-[13px] text-ink-soft">Notes: {saved.notes}</p>}
-          <button className="btn-secondary btn-sm mt-3" onClick={amend}>Record another decision</button>
+          <button className="btn-secondary btn-sm mt-3" onClick={amend}>Record Another Decision</button>
         </div>
       ) : (
         <form className="space-y-4" noValidate onSubmit={(e) => { e.preventDefault(); submit(); }}>
@@ -140,7 +140,7 @@ export function HumanDecisionPanel({
             {err("decision") && <p id="decision-error" className="mt-1 text-[13px] text-negative">{err("decision")}</p>}
           </fieldset>
           <div>
-            <label htmlFor={`action-${opportunityId}`} className="label">Chosen action <span className="text-negative" aria-hidden>*</span></label>
+            <label htmlFor={`action-${opportunityId}`} className="label">Chosen Action <span className="text-negative" aria-hidden>*</span></label>
             <div className="mt-1 flex flex-wrap gap-2">
               <select
                 id={`action-${opportunityId}`}
@@ -150,17 +150,17 @@ export function HumanDecisionPanel({
                 aria-invalid={!!err("action")}
                 onChange={(e) => setAction(e.target.value)}
               >
-                <option value="" disabled>Choose an action…</option>
-                {ACTIONS.map((a) => <option key={a} value={a}>{humanStatus(a)}{recommendation?.action === a ? " (recommended)" : ""}</option>)}
+                <option value="" disabled>Choose an Action…</option>
+                {ACTIONS.map((a) => <option key={a} value={a}>{humanStatus(a)}{recommendation?.action === a ? " (Recommended)" : ""}</option>)}
               </select>
               {recommendation && action !== recommendation.action && (
-                <button type="button" className="btn-ghost btn-sm self-center" onClick={() => setAction(recommendation.action)}>Use recommendation</button>
+                <button type="button" className="btn-ghost btn-sm self-center" onClick={() => setAction(recommendation.action)}>Use Recommendation</button>
               )}
             </div>
             {err("action") && <p className="mt-1 text-[13px] text-negative">{err("action")}</p>}
           </div>
           <div>
-            <label htmlFor={`by-${opportunityId}`} className="label">Decided by <span className="text-negative" aria-hidden>*</span></label>
+            <label htmlFor={`by-${opportunityId}`} className="label">Decided By <span className="text-negative" aria-hidden>*</span></label>
             <input id={`by-${opportunityId}`} ref={byRef} className="input mt-1" value={decidedBy} onChange={(e) => setDecidedBy(e.target.value)} />
             {err("decidedBy") && <p className="mt-1 text-[13px] text-negative">{err("decidedBy")}</p>}
           </div>
@@ -170,14 +170,14 @@ export function HumanDecisionPanel({
           </div>
           {error && <p className="text-[13px] text-negative" role="alert">{error}</p>}
           <button type="submit" className="btn-primary" disabled={busy}>
-            {busy ? "Recording…" : "Record decision"}
+            {busy ? "Recording…" : "Record Decision"}
           </button>
         </form>
       )}
 
       <section aria-labelledby={`history-${opportunityId}`} className="border-t border-line pt-4">
-        <h3 id={`history-${opportunityId}`} className="text-[15px] font-semibold text-ink">Decision history</h3>
-        {history.loading && !history.data ? <div className="mt-2"><Spinner label="Loading history…" /></div>
+        <h3 id={`history-${opportunityId}`} className="text-[15px] font-semibold text-ink">Decision History</h3>
+        {history.loading && !history.data ? <div className="mt-2"><Spinner label="Loading History…" /></div>
           : history.data?.items.length ? (
           <ol className="mt-2 divide-y divide-line" data-testid="decision-history">
             {[...history.data.items].reverse().map((h, i) => (

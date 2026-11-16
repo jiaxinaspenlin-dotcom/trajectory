@@ -62,28 +62,28 @@ describe("WebSourcing", () => {
     const box = await screen.findByTestId("web-not-configured");
     expect(box).toHaveTextContent("TAVILY_API_KEY");
     expect(box).not.toHaveTextContent("OPENAI_API_KEY");
-    expect(screen.queryByRole("button", { name: "Search the web" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Search the Web" })).not.toBeInTheDocument();
   });
 
   it("starts from the thesis, then shows why, evidence, and unknowns for each result", async () => {
     get.mockResolvedValueOnce(status());
     post.mockResolvedValueOnce(response());
     render(<WebSourcing onSourced={() => {}} />);
-    fireEvent.click(await screen.findByRole("button", { name: "Start from fund thesis" }));
-    const box = screen.getByLabelText("What are you looking for?") as HTMLTextAreaElement;
+    fireEvent.click(await screen.findByRole("button", { name: "Start from Fund Thesis" }));
+    const box = screen.getByLabelText("What Are You Looking For?") as HTMLTextAreaElement;
     expect(box.value).toMatch(/^Seed startups building in Fintech/);
-    fireEvent.click(screen.getByRole("button", { name: "Search the web" }));
+    fireEvent.click(screen.getByRole("button", { name: "Search the Web" }));
 
     const card = await screen.findByTestId("web-result-abc123");
     expect(post).toHaveBeenCalledWith("/api/sourcing/web/search", { request: box.value });
-    expect(within(card).getByText("Why it surfaced")).toBeInTheDocument();
+    expect(within(card).getByText("Why It Surfaced")).toBeInTheDocument();
     expect(within(card).getByText("Evidence")).toBeInTheDocument();
-    expect(within(card).getByText("What's unknown")).toBeInTheDocument();
+    expect(within(card).getByText("What's Unknown")).toBeInTheDocument();
     expect(within(card).getByText("Mar 3, 2026")).toBeInTheDocument();
-    expect(within(card).getByText("Date unknown")).toBeInTheDocument();
+    expect(within(card).getByText("Date Unknown")).toBeInTheDocument();
     expect(within(card).getByText("Unverified")).toBeInTheDocument();
     expect(within(card).getAllByRole("link", { name: "S1" })[0]).toHaveAttribute("href", "https://ledgerly.dev/");
-    expect(screen.getByText("1 left out")).toBeInTheDocument();
+    expect(screen.getByText("1 Left Out")).toBeInTheDocument();
   });
 
   it("saves through the stored search and then links to the same record", async () => {
@@ -92,9 +92,9 @@ describe("WebSourcing", () => {
     const onSourced = vi.fn();
     render(<WebSourcing onSourced={onSourced} />);
     const card = await screen.findByTestId("web-result-abc123");
-    expect(screen.getByText("Last search")).toBeInTheDocument();
+    expect(screen.getByText("Last Search")).toBeInTheDocument();
     fireEvent.click(within(card).getByRole("button", { name: "Monitor" }));
-    await waitFor(() => expect(within(card).getByRole("link", { name: "Open lead" })).toHaveAttribute("href", "/vc/opportunities/42"));
+    await waitFor(() => expect(within(card).getByRole("link", { name: "Open Lead" })).toHaveAttribute("href", "/vc/opportunities/42"));
     expect(post).toHaveBeenCalledWith("/api/sourcing/web/searches/5/results/abc123/save", { status: "monitoring" });
     expect(within(card).getByRole("link", { name: "View on Map" })).toHaveAttribute("href", "/vc/map?focus=42");
     expect(onSourced).toHaveBeenCalled();
@@ -111,13 +111,13 @@ describe("WebSourcing", () => {
     });
     post.mockResolvedValueOnce(response({ results: [matched], updated_leads: [{ opportunity_id: 42, name: "Ledgerly", evidence_added: 1 }] }));
     render(<WebSourcing onSourced={() => {}} />);
-    fireEvent.change(await screen.findByLabelText("What are you looking for?"), { target: { value: "payments" } });
-    fireEvent.click(screen.getByRole("button", { name: "Search the web" }));
-    expect(await screen.findByTestId("web-updated-leads")).toHaveTextContent("New evidence added to Ledgerly (+1 source)");
+    fireEvent.change(await screen.findByLabelText("What Are You Looking For?"), { target: { value: "payments" } });
+    fireEvent.click(screen.getByRole("button", { name: "Search the Web" }));
+    expect(await screen.findByTestId("web-updated-leads")).toHaveTextContent("New Evidence Added to Ledgerly (+1 Source)");
     const card = screen.getByTestId("web-result-abc123");
     expect(within(card).getByText("Already in Founders")).toBeInTheDocument();
     expect(within(card).getByText("New")).toBeInTheDocument();
-    expect(within(card).getByText("Already saved")).toBeInTheDocument();
+    expect(within(card).getByText("Already Saved")).toBeInTheDocument();
     expect(within(card).queryByRole("button", { name: "Save lead" })).not.toBeInTheDocument();
   });
 
@@ -125,12 +125,12 @@ describe("WebSourcing", () => {
     get.mockResolvedValueOnce(status());
     post.mockRejectedValueOnce(new ApiError(429, "rate", "rate_limited"));
     render(<WebSourcing onSourced={() => {}} />);
-    fireEvent.change(await screen.findByLabelText("What are you looking for?"), { target: { value: "payments" } });
-    fireEvent.click(screen.getByRole("button", { name: "Search the web" }));
+    fireEvent.change(await screen.findByLabelText("What Are You Looking For?"), { target: { value: "payments" } });
+    fireEvent.click(screen.getByRole("button", { name: "Search the Web" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("rate limited");
 
     post.mockResolvedValueOnce(response({ status: "no_results", results: [], rejected: [], source_count: 6 }));
-    fireEvent.click(screen.getByRole("button", { name: "Search the web" }));
+    fireEvent.click(screen.getByRole("button", { name: "Search the Web" }));
     expect(await screen.findByText(/Found 6 pages, but none described/)).toBeInTheDocument();
   });
 
@@ -145,14 +145,14 @@ describe("LeadWebCheck", () => {
     const onUpdated = vi.fn();
     post.mockResolvedValueOnce({ ...response(), source_count: 9, lead: { evidence_added: 2, matched: true } });
     render(<LeadWebCheck opportunityId={42} onUpdated={onUpdated} />);
-    fireEvent.click(screen.getByRole("button", { name: "Check the web for updates" }));
-    expect(await screen.findByTestId("web-check-result")).toHaveTextContent("2 new sources added");
+    fireEvent.click(screen.getByRole("button", { name: "Check the Web for Updates" }));
+    expect(await screen.findByTestId("web-check-result")).toHaveTextContent("2 New Sources Added");
     expect(post).toHaveBeenCalledWith("/api/sourcing/web/check/42", undefined);
     expect(onUpdated).toHaveBeenCalledTimes(1);
 
     post.mockResolvedValueOnce({ ...response(), source_count: 9, lead: { evidence_added: 0, matched: true } });
-    fireEvent.click(screen.getByRole("button", { name: "Check the web for updates" }));
-    await waitFor(() => expect(screen.getByTestId("web-check-result")).toHaveTextContent("No new sources (checked 9 pages)"));
+    fireEvent.click(screen.getByRole("button", { name: "Check the Web for Updates" }));
+    await waitFor(() => expect(screen.getByTestId("web-check-result")).toHaveTextContent("No New Sources (Checked 9 Pages)"));
     expect(onUpdated).toHaveBeenCalledTimes(1);
   });
 });
@@ -170,9 +170,9 @@ describe("FoundersTable web leads", () => {
   it("shows New evidence, the company, and the founder as unverified", () => {
     render(<FoundersTable leads={[webLead]} overlay={{}} onSetStatus={() => {}} onMoveToScreening={async () => {}} />);
     const row = screen.getByTestId("founder-row-42");
-    expect(within(row).getByTestId("new-evidence-42")).toHaveTextContent("New evidence · 1");
+    expect(within(row).getByTestId("new-evidence-42")).toHaveTextContent("New Evidence · 1");
     expect(within(row).getByTestId("new-evidence-42")).toHaveAttribute("href", "/vc/opportunities/42?tab=evidence");
-    expect(within(row).getByText("Named on source: Maya Chen · unverified")).toBeInTheDocument();
+    expect(within(row).getByText("Named on Source: Maya Chen · Unverified")).toBeInTheDocument();
     expect(within(row).getByText("ledgerly.dev ↗")).toHaveAttribute("href", "https://ledgerly.dev");
   });
 });

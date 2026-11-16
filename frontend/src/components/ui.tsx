@@ -10,7 +10,7 @@ export function Badge({ children, tone = "bg-neutral-wash text-neutral", title }
 }
 
 export function DemoBadge() {
-  return <Badge tone="bg-neutral-wash text-ink-muted" title="Fictional demo data">Demo data</Badge>;
+  return <Badge tone="bg-neutral-wash text-ink-muted" title="Fictional Demo Data">Demo Data</Badge>;
 }
 
 // Page-level hierarchy: one title, an optional one-line purpose, actions on the

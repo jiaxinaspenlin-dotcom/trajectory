@@ -134,7 +134,7 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
 
   return (
     // z-[60] sits ABOVE the highlighted element (z-45) so the card is never covered.
-    <div className="fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-label="Guided tour">
+    <div className="fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-label="Guided Tour">
       {/* Click-blocker: prevents interacting with the page during the tour but does
           NOT close it. The tour only closes via Skip / Finish. */}
       <div className="absolute inset-0" aria-hidden />
@@ -153,7 +153,7 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between">
-              <span className="label">Referee tour</span>
+              <span className="label">Referee Tour</span>
               <span className="text-xs font-medium text-ink-muted">{i + 1} / {steps.length}</span>
             </div>
             {/* progress dots */}
@@ -173,7 +173,7 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
 
         {/* footer — pinned; the Next/Back/Skip buttons are always visible */}
         <div className="flex shrink-0 items-center justify-between gap-2 border-t border-line bg-white px-4 py-3">
-          <button className="btn-ghost text-xs" onClick={skip} data-testid="tour-skip">Skip tour</button>
+          <button className="btn-ghost text-xs" onClick={skip} data-testid="tour-skip">Skip Tour</button>
           <div className="flex gap-2">
             <button className="btn-secondary text-xs" onClick={back} disabled={i === 0} data-testid="tour-back">
               Back
@@ -191,9 +191,9 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
 }
 
 export const DASHBOARD_TOUR: TourStep[] = [
-  { target: "action-queue", title: "Start with what needs attention", body: "Welcome to your investor workspace. This is the short list of what to do next — the most urgent first. Each row's button opens the right part of that opportunity: its decision, its analysis, or its diligence." },
-  { target: "overview", title: "Your pipeline at a glance", body: "Deals by stage — Sourcing, Screening, Diligence, Decision. Click a stage to open those records." },
-  { target: "evidence", title: "Recent evidence", body: "The latest sources collected from GitHub, the web, and pitch decks. Every claim in Trajectory links back to stored evidence like this, with its own verification status." },
-  { target: "nav", title: "Everything else is one click away", body: "Map shows every lead and deal in one view. Founders ranks the leads you've sourced, Pipeline holds the full application queue, and Fund keeps your thesis — every score is evaluated against it." },
-  { target: "action-queue", title: "Open an opportunity to go deeper", body: "Each opportunity has tabs — Overview, Founder, Screening, Arena, Claims, Evidence, and Decision. The button at the top of a record is always its next step; you approve or override every recommendation." },
+  { target: "action-queue", title: "Start with What Needs Attention", body: "Welcome to your investor workspace. This is the short list of what to do next — the most urgent first. Each row's button opens the right part of that opportunity: its decision, its analysis, or its diligence." },
+  { target: "overview", title: "Your Pipeline at a Glance", body: "Deals by stage — Sourcing, Screening, Diligence, Decision. Click a stage to open those records." },
+  { target: "evidence", title: "Recent Evidence", body: "The latest sources collected from GitHub, the web, and pitch decks. Every claim in Trajectory links back to stored evidence like this, with its own verification status." },
+  { target: "nav", title: "Everything Else Is One Click Away", body: "Map shows every lead and deal in one view. Founders ranks the leads you've sourced, Pipeline holds the full application queue, and Fund keeps your thesis — every score is evaluated against it." },
+  { target: "action-queue", title: "Open an Opportunity to Go Deeper", body: "Each opportunity has tabs — Overview, Founder, Screening, Arena, Claims, Evidence, and Decision. The button at the top of a record is always its next step; you approve or override every recommendation." },
 ];

@@ -6,19 +6,19 @@ import { Memo, MemoSection } from "@/lib/types";
 // generated before a section existed. Missing sections are shown as placeholders
 // (regenerating the memo fills them from evidence).
 export const CANONICAL_MEMO_SECTIONS: { key: string; title: string }[] = [
-  { key: "snapshot", title: "Company snapshot" },
-  { key: "hypotheses", title: "Investment hypotheses" },
+  { key: "snapshot", title: "Company Snapshot" },
+  { key: "hypotheses", title: "Investment Hypotheses" },
   { key: "swot", title: "SWOT" },
-  { key: "team", title: "Team & history" },
-  { key: "problem_product", title: "Problem & product" },
-  { key: "technology", title: "Technology & defensibility" },
-  { key: "market", title: "Market sizing" },
+  { key: "team", title: "Team & History" },
+  { key: "problem_product", title: "Problem & Product" },
+  { key: "technology", title: "Technology & Defensibility" },
+  { key: "market", title: "Market Sizing" },
   { key: "competition", title: "Competition" },
   { key: "traction", title: "Traction & KPIs" },
-  { key: "financials", title: "Financials & round structure" },
-  { key: "cap_table", title: "Cap table" },
-  { key: "diligence_log", title: "Due diligence log" },
-  { key: "exit", title: "Exit perspective" },
+  { key: "financials", title: "Financials & Round Structure" },
+  { key: "cap_table", title: "Cap Table" },
+  { key: "diligence_log", title: "Due Diligence Log" },
+  { key: "exit", title: "Exit Perspective" },
 ];
 
 // Merge a memo's stored sections onto the canonical structure: canonical order,
@@ -34,7 +34,7 @@ export function normalizeMemoSections(memo: Memo): MemoSection[] {
       title,
       body: "Not yet covered — regenerate the memo to populate this section from the available evidence.",
       evidence_ids: [],
-      unavailable_label: "Insufficient evidence",
+      unavailable_label: "Insufficient Evidence",
     };
   });
   const canonicalKeys = new Set(CANONICAL_MEMO_SECTIONS.map((c) => c.key));

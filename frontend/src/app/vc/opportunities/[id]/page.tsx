@@ -28,7 +28,7 @@ import {
 export default function OpportunityPage() {
   // useSearchParams (the ?tab= state) needs a Suspense boundary
   return (
-    <Suspense fallback={<Spinner label="Loading opportunity…" />}>
+    <Suspense fallback={<Spinner label="Loading Opportunity…" />}>
       <OpportunityRecord />
     </Suspense>
   );
@@ -113,7 +113,7 @@ function OpportunityRecord() {
   async function suggestOutreach() {
     try {
       await prospectAction("recommend_outreach");
-      notify({ message: "Outreach suggested — it's now the next step, awaiting your review. Nothing was sent.", href: `${pathname}?tab=decision`, linkLabel: "Review it" });
+      notify({ message: "Outreach suggested — it's now the next step, awaiting your review. Nothing was sent.", href: `${pathname}?tab=decision`, linkLabel: "Review It" });
     } catch (e) {
       notify({ tone: "error", message: e instanceof Error ? e.message : "Couldn't suggest outreach." });
     }
@@ -180,7 +180,7 @@ function OpportunityRecord() {
   }
 
   // reloads keep the page (and in-flight messages) mounted; only the first load shows a spinner
-  if (loading && !o) return <Spinner label="Loading opportunity…" />;
+  if (loading && !o) return <Spinner label="Loading Opportunity…" />;
   if (error) return <ErrorState message={error} onRetry={reload} />;
   if (!o) return null;
 
@@ -199,23 +199,23 @@ function OpportunityRecord() {
   // the ONE primary action for this record, from its next step
   const primary =
     step?.key === "run_analysis" || step?.key === "review_application"
-      ? <button className="btn-primary" onClick={() => setConfirmRegen(true)} disabled={busy}>{busy ? "Analyzing…" : "Run analysis"}</button>
+      ? <button className="btn-primary" onClick={() => setConfirmRegen(true)} disabled={busy}>{busy ? "Analyzing…" : "Run Analysis"}</button>
     : step?.key === "review_recommendation"
-      ? <Link href={`${pathname}?tab=decision`} scroll={false} className="btn-primary">Review recommendation</Link>
+      ? <Link href={`${pathname}?tab=decision`} scroll={false} className="btn-primary">Review Recommendation</Link>
     : step?.key === "resolve_diligence"
-      ? <Link href={`/vc/opportunities/${id}/diligence`} className="btn-primary">Open diligence</Link>
+      ? <Link href={`/vc/opportunities/${id}/diligence`} className="btn-primary">Open Diligence</Link>
     : step?.key === "generate_memo"
-      ? <Link href={`/vc/opportunities/${id}/memo`} className="btn-primary">Open memo</Link>
+      ? <Link href={`/vc/opportunities/${id}/memo`} className="btn-primary">Open Memo</Link>
     : null;
 
   const tabs = (Object.keys(TAB_LABELS) as OpportunityTab[]).map((k) => ({
     key: k,
     label: TAB_LABELS[k],
     badge:
-      k === "evidence" && newIds.size ? <span className="chip bg-signal-wash text-caution" aria-label={`${newIds.size} new`}>{newIds.size} new</span>
+      k === "evidence" && newIds.size ? <span className="chip bg-signal-wash text-caution" aria-label={`${newIds.size} New`}>{newIds.size} New</span>
       : k === "evidence" ? <span className="num text-[13px] text-ink-muted">{evidence.length}</span>
       : k === "claims" && claimCount ? <span className="num text-[13px] text-ink-muted">{claimCount}</span>
-      : k === "decision" && step?.key === "review_recommendation" ? <span className="h-2 w-2 rounded-full bg-brand" aria-label="awaiting your review" />
+      : k === "decision" && step?.key === "review_recommendation" ? <span className="h-2 w-2 rounded-full bg-brand" aria-label="Awaiting Your Review" />
       : undefined,
   }));
 
@@ -241,22 +241,22 @@ function OpportunityRecord() {
             {o.is_demo && <DemoBadge />}
           </div>
           {o.company?.one_liner && <p className="mt-1 max-w-3xl text-[15px] text-ink-soft">{o.company.one_liner}</p>}
-          {step && <p className="mt-1 text-[13px] text-ink-muted">Next step: <span className="font-medium text-ink-soft">{step.label}</span>{step.detail ? ` · ${step.detail}` : ""}</p>}
+          {step && <p className="mt-1 text-[13px] text-ink-muted">Next Step: <span className="font-medium text-ink-soft">{step.label}</span>{step.detail ? ` · ${step.detail}` : ""}</p>}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {step?.key !== "generate_memo" && <Link href={`/vc/opportunities/${id}/memo`} className="btn-ghost">Memo</Link>}
-          {step?.key !== "resolve_diligence" && <Link href={`/vc/opportunities/${id}/diligence`} className="btn-ghost">Diligence workspace</Link>}
+          {step?.key !== "resolve_diligence" && <Link href={`/vc/opportunities/${id}/diligence`} className="btn-ghost">Diligence Workspace</Link>}
           {primary}
         </div>
       </header>
 
       {confirmRegen && (
-        <div className="rounded-lg border border-brand/25 bg-brand-wash px-4 py-3" role="region" aria-label="Confirm analysis">
+        <div className="rounded-lg border border-brand/25 bg-brand-wash px-4 py-3" role="region" aria-label="Confirm Analysis">
           <p className="text-sm text-brand">
             {analyzed ? "Regenerate" : "Generate"} the assessment, diligence questions, Arena debate, and memo with OpenAI? Prior versions are kept — nothing is overwritten.
           </p>
           <div className="mt-2 flex gap-2">
-            <button className="btn-primary btn-sm" onClick={regenerate} disabled={busy}>{busy ? "Analyzing…" : analyzed ? "Regenerate" : "Run analysis"}</button>
+            <button className="btn-primary btn-sm" onClick={regenerate} disabled={busy}>{busy ? "Analyzing…" : analyzed ? "Regenerate" : "Run Analysis"}</button>
             <button className="btn-secondary btn-sm" onClick={() => setConfirmRegen(false)} disabled={busy}>Cancel</button>
           </div>
           {regenError && (
@@ -269,7 +269,7 @@ function OpportunityRecord() {
         </div>
       )}
 
-      <Tabs label={`${name} sections`} idPrefix="opp" tabs={tabs} value={tab} onChange={setTab} />
+      <Tabs label={`${name} Sections`} idPrefix="opp" tabs={tabs} value={tab} onChange={setTab} />
 
       <div {...tabPanelProps("opp", tab)}>
         {tab === "overview" && (
@@ -287,24 +287,24 @@ function OpportunityRecord() {
                   <p className="text-sm text-ink-muted">
                     {o.founder
                       ? [o.founder.full_name, o.founder.location].filter(Boolean).join(" · ")
-                      : o.identity?.founder_named ? <>Founder named on a source: {o.identity.founder_named} · <span className="text-caution">unverified</span></> : "Founder not linked yet"}
+                      : o.identity?.founder_named ? <>Founder Named on a Source: {o.identity.founder_named} · <span className="text-caution">Unverified</span></> : "Founder Not Linked Yet"}
                     {o.company?.website && <> · <a href={o.company.website} target="_blank" rel="noreferrer" className="hover:text-brand">{o.company.website.replace(/^https?:\/\/(www\.)?/, "")} ↗</a></>}
                   </p>
                   {o.surfaced_reason && (
                     <div>
-                      <p className="label">Why it surfaced</p>
+                      <p className="label">Why It Surfaced</p>
                       <p className="mt-1 text-sm leading-6">{o.surfaced_reason}</p>
                     </div>
                   )}
                 </div>
               </Section>
-              <Section title="At a glance" flush>
+              <Section title="At a Glance" flush>
                 <dl className="divide-y divide-line">
-                  <Fact label="Thesis fit" value={o.company ? `${Math.round(o.thesis_fit_score)} / 100${o.thesis_fit_stale ? " · not current" : ""}` : "Needs a company"} tab="screening" pathname={pathname} />
-                  <Fact label="Founder Score" value={o.founder_score ? `${Math.round(o.founder_score.score)}` : "Not scored"} tab="founder" pathname={pathname} />
-                  <Fact label="Evidence" value={`${evidence.length} ${evidence.length === 1 ? "item" : "items"}${newIds.size ? ` · ${newIds.size} new` : ""}`} tab="evidence" pathname={pathname} />
+                  <Fact label="Thesis Fit" value={o.company ? `${Math.round(o.thesis_fit_score)} / 100${o.thesis_fit_stale ? " · Not Current" : ""}` : "Needs a Company"} tab="screening" pathname={pathname} />
+                  <Fact label="Founder Score" value={o.founder_score ? `${Math.round(o.founder_score.score)}` : "Not Scored"} tab="founder" pathname={pathname} />
+                  <Fact label="Evidence" value={`${evidence.length} ${evidence.length === 1 ? "Item" : "Items"}${newIds.size ? ` · ${newIds.size} New` : ""}`} tab="evidence" pathname={pathname} />
                   <Fact label="Claims" value={claims.data ? `${claimCount}` : "…"} tab="claims" pathname={pathname} />
-                  <Fact label="Analysis" value={analyzed ? "Done" : "Not run yet"} tab="screening" pathname={pathname} />
+                  <Fact label="Analysis" value={analyzed ? "Done" : "Not Run Yet"} tab="screening" pathname={pathname} />
                 </dl>
               </Section>
             </div>
@@ -318,18 +318,18 @@ function OpportunityRecord() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-lg font-semibold text-ink">{o.founder.full_name}</p>
-                    <p className="text-sm text-ink-muted">{[o.founder.headline, o.founder.location].filter(Boolean).join(" · ") || "No headline or location"}</p>
+                    <p className="text-sm text-ink-muted">{[o.founder.headline, o.founder.location].filter(Boolean).join(" · ") || "No Headline or Location"}</p>
                   </div>
                   {o.founder.github_username ? (
                     <span className="flex flex-col items-end gap-1 text-sm">
-                      <Badge tone="bg-positive-wash text-positive">GitHub profile linked</Badge>
-                      <a href={`https://github.com/${o.founder.github_username}`} target="_blank" rel="noreferrer" className="text-brand hover:underline">@{o.founder.github_username} ↗</a>
+                      <Badge tone="bg-positive-wash text-positive">GitHub Profile Linked</Badge>
+                      <a href={`https://github.com/${o.founder.github_username}`} target="_blank" rel="noreferrer" className="text-brand hover:underline" data-content>@{o.founder.github_username} ↗</a>
                     </span>
-                  ) : <Badge tone="bg-caution-wash text-caution">No public profile linked</Badge>}
+                  ) : <Badge tone="bg-caution-wash text-caution">No Public Profile Linked</Badge>}
                 </div>
               </Section>
               <div className="grid gap-6 lg:grid-cols-2 [&>*]:min-w-0">
-                <Section title="Founder Score" subtitle="Deterministic, from public evidence · persists across companies">
+                <Section title="Founder Score" subtitle="Deterministic, from Public Evidence · Persists Across Companies">
                   {o.founder_score ? (
                     <div className="flex gap-4">
                       <div className="flex flex-col items-center gap-1.5">
@@ -341,24 +341,24 @@ function OpportunityRecord() {
                         <FounderScoreBreakdown components={o.founder_score.components} />
                       </div>
                     </div>
-                  ) : <EmptyState title="No score yet" hint="The Founder Score is computed from the founder's public GitHub evidence. Sync their GitHub profile from Founders → Source founders." />}
+                  ) : <EmptyState title="No Score Yet" hint="The Founder Score is computed from the founder's public GitHub evidence. Sync their GitHub profile from Founders → Source Founders." />}
                 </Section>
-                <Section title="Momentum" subtitle="Direction and rate of change over time">
-                  {o.momentum ? <MomentumChart momentum={o.momentum} /> : <EmptyState title="No momentum history" hint="Momentum appears after the Founder Score has been computed more than once." />}
+                <Section title="Momentum" subtitle="Direction and Rate of Change Over Time">
+                  {o.momentum ? <MomentumChart momentum={o.momentum} /> : <EmptyState title="No Momentum History" hint="Momentum appears after the Founder Score has been computed more than once." />}
                 </Section>
               </div>
             </div>
           ) : (
             <Section title="Founder">
               <div className="max-w-prose space-y-3" data-testid="founder-missing">
-                <p className="text-base font-semibold text-ink">No founder linked yet</p>
+                <p className="text-base font-semibold text-ink">No Founder Linked Yet</p>
                 <p className="text-[15px] leading-7 text-ink-soft">
                   {o.identity?.founder_named
                     ? <>{o.identity.founder_named} {o.identity.founder_named.includes(" and ") ? "are" : "is"} named on a <a href={o.identity.founder_named_source ?? undefined} target="_blank" rel="noreferrer" className="text-brand hover:underline">source</a>, but not verified. </>
                     : "None of this lead's sources name a founder. "}
                   Founder Score and Momentum need a founder with public GitHub activity — sync their GitHub profile to add one.
                 </p>
-                <Link href="/vc/founders?source=open" className="btn-secondary btn-sm">Source founders</Link>
+                <Link href="/vc/founders?source=open" className="btn-secondary btn-sm">Source Founders</Link>
               </div>
             </Section>
           )
@@ -367,7 +367,7 @@ function OpportunityRecord() {
         {tab === "screening" && (
           <div className="space-y-6">
             <div className="grid gap-6 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] [&>*]:min-w-0">
-              <Section title="Thesis fit" subtitle="Against your Fund thesis">
+              <Section title="Thesis Fit" subtitle="Against Your Fund Thesis">
                 {o.company ? (
                   <div className="num text-3xl font-semibold text-ink">{Math.round(o.thesis_fit_score)}<span className="text-base font-normal text-ink-muted"> / 100</span></div>
                 ) : <p className="text-sm text-ink-muted">Not computed — fit is evaluated from a company, and this lead has none yet.</p>}
@@ -375,23 +375,23 @@ function OpportunityRecord() {
                   <div className="mt-3 rounded-md bg-caution-wash px-3 py-2 text-sm text-caution" data-testid="fit-stale">
                     <p>Not scored against your current thesis.</p>
                     <button className="btn-secondary btn-sm mt-2" onClick={recalculateFit} disabled={fitBusy}>
-                      {fitBusy ? "Recalculating…" : "Recalculate fit"}
+                      {fitBusy ? "Recalculating…" : "Recalculate Fit"}
                     </button>
                   </div>
                 )}
-                <Link href="/vc/fund" className="mt-3 inline-block text-sm text-brand hover:underline">View thesis →</Link>
+                <Link href="/vc/fund" className="mt-3 inline-block text-sm text-brand hover:underline">View Thesis →</Link>
               </Section>
-              <Section title="Gaps to investigate" subtitle="Missing information and contradictions, most important first">
+              <Section title="Gaps to Investigate" subtitle="Missing Information and Contradictions, Most Important First">
                 <Gaps assessment={o.assessment ?? null} contradictions={contradictions.data?.items ?? []} />
               </Section>
             </div>
             <Section
               title="Assessment"
-              subtitle="Three independent axes — Founder · Market · Idea vs Market, never averaged"
-              right={analyzed && <button className="btn-secondary btn-sm" onClick={() => setConfirmRegen(true)} disabled={busy}>Regenerate analysis</button>}
+              subtitle="Three Independent Axes — Founder · Market · Idea vs Market, Never Averaged"
+              right={analyzed && <button className="btn-secondary btn-sm" onClick={() => setConfirmRegen(true)} disabled={busy}>Regenerate Analysis</button>}
             >
               {o.assessment ? <ThreeAxes assessment={o.assessment} /> : (
-                <EmptyState title="No assessment yet" hint="Use Run analysis at the top of this record to generate the three screening axes." />
+                <EmptyState title="No Assessment Yet" hint="Use Run Analysis at the top of this record to generate the three screening axes." />
               )}
             </Section>
           </div>
@@ -417,7 +417,7 @@ function OpportunityRecord() {
 
         {tab === "decision" && (
           <div className="max-w-3xl">
-            <Section title="Recommendation & decision" subtitle="The system recommends; a person decides">
+            <Section title="Recommendation & Decision" subtitle="The system recommends; a person decides.">
               <HumanDecisionPanel
                 opportunityId={o.id}
                 recommendation={o.current_recommendation || null}
@@ -456,7 +456,7 @@ function StatusCard({
   screeningError: string | null; setShortlist: (s: PipelineStatus) => void; suggestOutreach: () => void;
 }) {
   return (
-    <section aria-label="Stage, next step, and shortlist" className="card grid gap-x-6 gap-y-4 p-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_auto]">
+    <section aria-label="Stage, Next Step, and Shortlist" className="card grid gap-x-6 gap-y-4 p-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_auto]">
       <div>
         <p className="label">Stage</p>
         <StageTrack stage={o.stage} />
@@ -464,7 +464,7 @@ function StatusCard({
           {!inPipeline && (confirmScreening ? (
             <>
               <span className="w-full text-[13px] text-ink-soft">Move into the fund&apos;s Pipeline at Screening? No outreach is sent.</span>
-              <button className="btn-primary btn-sm" onClick={moveToScreening}>Confirm move</button>
+              <button className="btn-primary btn-sm" onClick={moveToScreening}>Confirm Move</button>
               <button className="btn-ghost btn-sm" onClick={() => setConfirmScreening(false)}>Cancel</button>
             </>
           ) : (
@@ -476,7 +476,7 @@ function StatusCard({
       </div>
 
       <div className="border-line lg:border-l lg:pl-6">
-        <p className="label">Next step</p>
+        <p className="label">Next Step</p>
         {step ? (
           <>
             <p className="mt-1.5 text-base font-semibold text-ink">{step.label}</p>
@@ -496,7 +496,7 @@ function StatusCard({
 
       {o.entry_type === "outbound" && (
         <div className="border-line lg:border-l lg:pl-6">
-          <p className="label" id="shortlist-label">My shortlist</p>
+          <p className="label" id="shortlist-label">My Shortlist</p>
           <div className="mt-1.5 inline-flex rounded-md border border-line-strong bg-white p-0.5" role="group" aria-labelledby="shortlist-label">
             {(["saved", "monitoring", "dismissed"] as const).map((st) => (
               <button
@@ -513,8 +513,8 @@ function StatusCard({
           <p className="mt-1.5 max-w-[16rem] text-xs text-ink-muted">Only you see this (saved in this browser). It doesn&apos;t change the stage.</p>
           {!inPipeline && (
             <button className="btn-ghost btn-sm -ml-3 mt-1" onClick={suggestOutreach}
-              title="Adds an 'Invite to apply' suggestion for you to approve. Nothing is sent.">
-              Suggest outreach
+              title="Adds an 'Invite to Apply' suggestion for you to approve. Nothing is sent.">
+              Suggest Outreach
             </button>
           )}
         </div>
@@ -538,7 +538,7 @@ function Gaps({ assessment, contradictions }: { assessment: Opportunity["assessm
     <ul className="space-y-2" data-testid="screening-gaps">
       {contradictions.slice(0, 3).map((c) => (
         <li key={`c${c.id}`} className="flex items-start gap-2 rounded-md border border-negative/20 bg-negative-wash px-3 py-2 text-sm text-negative">
-          <Badge tone="bg-white text-negative">Contradiction · {c.severity}</Badge><span>{c.description}</span>
+          <Badge tone="bg-white text-negative">Contradiction · {humanStatus(c.severity)}</Badge><span>{c.description}</span>
         </li>
       ))}
       {unique.slice(0, Math.max(0, 6 - Math.min(3, contradictions.length))).map((m) => (
@@ -571,13 +571,13 @@ function EvidencePanel({
   return (
     <Section
       title="Evidence"
-      subtitle={`${evidence.length} sourced, dated items`}
+      subtitle={`${evidence.length} Sourced, Dated Items`}
       right={
         <span className="flex flex-wrap items-center justify-end gap-2">
           {newIds.size ? (
             <span className="flex items-center gap-2" data-testid="evidence-new-summary">
-              <Badge tone="bg-signal-wash text-caution">{newIds.size} new from web search</Badge>
-              <button className="btn-secondary btn-sm" onClick={markReviewed}>Mark reviewed</button>
+              <Badge tone="bg-signal-wash text-caution">{newIds.size} New from Web Search</Badge>
+              <button className="btn-secondary btn-sm" onClick={markReviewed}>Mark Reviewed</button>
             </span>
           ) : o.is_demo ? <DemoBadge /> : null}
           {!o.is_demo && (o.company || o.founder) && <LeadWebCheck opportunityId={o.id} onUpdated={reload} />}
@@ -611,7 +611,7 @@ function EvidencePanel({
                     <td className="max-w-[380px]">
                       {newIds.has(e.id) && <Badge tone="mr-1.5 bg-signal-wash text-caution">New</Badge>}
                       {e.source_url
-                        ? <a href={e.source_url} target="_blank" rel="noreferrer" className="text-ink hover:text-brand">{e.title} <span className="text-ink-faint">↗</span></a>
+                        ? <a href={e.source_url} target="_blank" rel="noreferrer" className="text-ink hover:text-brand" data-content>{e.title} <span className="text-ink-faint">↗</span></a>
                         : <span className="text-ink">{e.title}</span>}
                       {quote && <span className="mt-1 block border-l-2 border-line pl-2 text-[13px] italic text-ink-muted">“{quote}”</span>}
                     </td>
@@ -626,11 +626,11 @@ function EvidencePanel({
           </table>
           {evidence.length > shown.length && (
             <div className="border-t border-line px-5 py-2.5 text-[13px] text-ink-muted">
-              Showing {shown.length} of {evidence.length}. <button className="font-medium text-brand hover:underline" onClick={() => setShowAll(true)}>Show all</button>
+              Showing {shown.length} of {evidence.length}. <button className="font-medium text-brand hover:underline" onClick={() => setShowAll(true)}>Show All</button>
             </div>
           )}
         </div>
-      ) : <p className="px-5 py-6 text-sm text-ink-muted">No evidence collected for this lead yet. Use Check the web for updates, or sync a GitHub profile from Founders.</p>}
+      ) : <p className="px-5 py-6 text-sm text-ink-muted">No evidence collected for this lead yet. Use Check the Web for Updates, or sync a GitHub profile from Founders.</p>}
     </Section>
   );
 }
@@ -639,13 +639,13 @@ function EvidencePanel({
 // shown as unknown rather than guessed.
 function EvidenceDate({ e }: { e: Evidence }) {
   const sv = (e.structured_value ?? {}) as { date_basis?: string | null; date_precision?: string | null; date_text?: string | null };
-  if (!e.event_date) return e.kind.startsWith("web_") ? <span className="italic">Date unknown</span> : <>—</>;
+  if (!e.event_date) return e.kind.startsWith("web_") ? <span className="italic">Date Unknown</span> : <>—</>;
   const d = new Date(e.event_date);
   const text = d.toLocaleDateString("en-US", {
     timeZone: "UTC", month: "short", year: "numeric", ...(sv.date_precision === "month" ? {} : { day: "numeric" }),
   });
-  const title = sv.date_basis === "stated_in_source" ? `Stated in the source: “${sv.date_text}”`
-    : sv.date_basis === "search_provider" ? "Published date reported by the search provider" : undefined;
+  const title = sv.date_basis === "stated_in_source" ? `Stated in the source: “${sv.date_text}”.`
+    : sv.date_basis === "search_provider" ? "Published date reported by the search provider." : undefined;
   return <span title={title}>{text}{sv.date_basis === "search_provider" && " *"}</span>;
 }
 

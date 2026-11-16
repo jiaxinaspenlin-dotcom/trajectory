@@ -11,15 +11,15 @@ import { PipelineTable } from "@/components/PipelineTable";
 import { EmptyState, ErrorState, PageHeader, Segmented, Spinner, Toolbar } from "@/components/ui";
 
 const STAGE_HINT: Record<string, string> = {
-  all: "Every active deal",
-  screening: "New applications and moved-in leads",
-  diligence: "Analyzed; checking claims",
-  decision: "Ready for an invest / pass call",
+  all: "Every Active Deal",
+  screening: "New Applications and Moved-In Leads",
+  diligence: "Analyzed; Checking Claims",
+  decision: "Ready for an Invest / Pass Call",
 };
 
 export default function PipelinePage() {
   return (
-    <Suspense fallback={<Spinner label="Loading pipeline…" />}>
+    <Suspense fallback={<Spinner label="Loading Pipeline…" />}>
       <Deals />
     </Suspense>
   );
@@ -49,8 +49,8 @@ function Deals() {
     <PageHeader
       title="Pipeline"
       subtitle={data
-        ? `${all.length} active ${all.length === 1 ? "deal" : "deals"} in Screening, Diligence, and Decision${actNow ? ` · ${actNow} ${actNow === 1 ? "recommendation" : "recommendations"} awaiting your review` : ""}`
-        : "Active deals in Screening, Diligence, and Decision"}
+        ? `${all.length} Active ${all.length === 1 ? "Deal" : "Deals"} in Screening, Diligence, and Decision${actNow ? ` · ${actNow} ${actNow === 1 ? "Recommendation" : "Recommendations"} Awaiting Your Review` : ""}`
+        : "Active Deals in Screening, Diligence, and Decision"}
       actions={top && (
         // the one primary action: the most urgent deal's next step
         <Link href={nextActionHref(top.id, top.next_action_key)} className="btn-primary max-w-[22rem]" title={`${top.next_action} · ${opportunityName(top)}`}>
@@ -60,16 +60,16 @@ function Deals() {
     />
   );
 
-  if (loading && !data) return <div className="space-y-4">{header}<Spinner label="Loading pipeline…" /></div>;
+  if (loading && !data) return <div className="space-y-4">{header}<Spinner label="Loading Pipeline…" /></div>;
   if (error) return <div className="space-y-4">{header}<ErrorState message={`Couldn't load the pipeline: ${error}`} onRetry={reload} /></div>;
   if (!all.length) {
     return (
       <div className="space-y-4">
         {header}
         <EmptyState
-          title="No active deals yet"
+          title="No Active Deals Yet"
           hint="Inbound applications land here at Screening. Outbound founders join once you move them to Screening from Founders."
-          action={<><Link href="/vc/founders" className="btn-primary">Go to Founders</Link><Link href="/vc/founders?source=open" className="btn-secondary">Source founders</Link></>}
+          action={<><Link href="/vc/founders" className="btn-primary">Go to Founders</Link><Link href="/vc/founders?source=open" className="btn-secondary">Source Founders</Link></>}
         />
       </div>
     );
@@ -85,7 +85,7 @@ function Deals() {
       {header}
 
       {/* stage funnel: the stage filter — each cell says what the stage means */}
-      <div className="grid grid-cols-2 overflow-hidden rounded-lg border border-line bg-white sm:grid-cols-4" role="group" aria-label="Filter by stage">
+      <div className="grid grid-cols-2 overflow-hidden rounded-lg border border-line bg-white sm:grid-cols-4" role="group" aria-label="Filter by Stage">
         {(["all", ...PIPELINE_STAGES] as const).map((s, i) => {
           const active = stage === s;
           return (
@@ -100,7 +100,7 @@ function Deals() {
               <span className="flex items-center justify-between gap-2">
                 <span className="flex items-center gap-1.5 text-[15px] font-medium text-ink">
                   {s !== "all" && <span className={`h-2 w-2 rounded-full ${stageDot(s)}`} aria-hidden />}
-                  {s === "all" ? "All stages" : humanStatus(s)}
+                  {s === "all" ? "All Stages" : humanStatus(s)}
                 </span>
                 <span className="num text-2xl font-semibold text-ink">{stageCount(s)}</span>
               </span>
@@ -113,7 +113,7 @@ function Deals() {
       <Toolbar>
         <span className="text-sm font-medium text-ink-soft">Source</span>
         <Segmented<SourceFilter>
-          label="Filter by source"
+          label="Filter by Source"
           value={source}
           onChange={(v) => setFilter("source", v)}
           options={[
@@ -129,7 +129,7 @@ function Deals() {
             {source !== "all" && <> · {humanStatus(source)}</>}
           </span>
           {(stage !== "all" || source !== "all") && (
-            <button className="btn-ghost btn-sm" onClick={() => router.replace(pathname, { scroll: false })}>Clear filters</button>
+            <button className="btn-ghost btn-sm" onClick={() => router.replace(pathname, { scroll: false })}>Clear Filters</button>
           )}
           {loading && <Spinner label="Refreshing…" />}
         </span>
@@ -139,13 +139,13 @@ function Deals() {
         <>
           <PipelineTable deals={shown} />
           <p className="flex flex-wrap items-center gap-1.5 text-[13px] text-ink-muted">
-            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-brand" /> Awaiting your review · Thesis fit is 0–100 against your Fund thesis · Waiting counts days since the first signal
+            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-brand" /> Blue dot: awaiting your review. Thesis fit is 0–100 against your Fund thesis. Waiting counts days since the first signal.
           </p>
         </>
       ) : (
         <EmptyState
-          title="No deals match these filters"
-          action={<button className="btn-secondary" onClick={() => router.replace(pathname, { scroll: false })}>Clear filters</button>}
+          title="No Deals Match These Filters"
+          action={<button className="btn-secondary" onClick={() => router.replace(pathname, { scroll: false })}>Clear Filters</button>}
         />
       )}
     </div>

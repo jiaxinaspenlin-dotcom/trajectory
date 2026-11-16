@@ -30,7 +30,7 @@ export function MomentumChart({ momentum }: { momentum: Momentum }) {
           </div>
         </div>
         <div>
-          <div className="label">90-day</div>
+          <div className="label">90-Day</div>
           <div className={`text-lg font-semibold ${change90 === null ? "text-ink-muted" : change90 >= 0 ? "text-positive" : "text-negative"}`}>
             {change90 === null ? "—" : `${change90 >= 0 ? "+" : ""}${change90}`}
           </div>
@@ -62,11 +62,11 @@ export function MomentumChart({ momentum }: { momentum: Momentum }) {
 
       {momentum.signal_trends.length > 0 && (
         <div className="mt-3">
-          <div className="label mb-1">Signal-level trends</div>
+          <div className="label mb-1">Signal-Level Trends</div>
           <ul className="grid grid-cols-1 gap-1 sm:grid-cols-2">
             {momentum.signal_trends.slice(0, 6).map((t) => (
               <li key={t.key} className="flex items-center justify-between rounded bg-surface-sunken px-2 py-1 text-xs">
-                <span className="text-ink-soft">{t.label}</span>
+                <span className="text-ink-soft">{humanStatus(t.label)}</span>
                 <span className={t.direction === "up" ? "text-positive" : t.direction === "down" ? "text-negative" : "text-ink-muted"}>
                   {t.direction === "up" ? "▲" : t.direction === "down" ? "▼" : "▬"} {t.change >= 0 ? "+" : ""}{t.change}
                 </span>

@@ -177,7 +177,7 @@ export function MapCanvas(props: {
 
   return (
     <div className="absolute inset-0" data-testid="map-canvas">
-      <div ref={containerRef} className="absolute inset-0" aria-label={`3D map of ${nodes.length} opportunities`} />
+      <div ref={containerRef} className="absolute inset-0" aria-label={`3D Map of ${nodes.length} Opportunities`} />
       <div ref={labelRef} className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden />
       <div ref={tooltipRef} data-testid="map-tooltip" className="pointer-events-none absolute z-20 hidden max-w-[240px] rounded-md border border-line bg-white px-2.5 py-1.5 shadow-raised" />
     </div>
@@ -188,14 +188,14 @@ function describe(id: number, p: { nodes: MapNode[]; mode: "graph" | "axes"; axe
   const n = p.nodes.find((x) => x.id === id);
   if (!n) return { title: "", lines: [] };
   const lines = [`${nodeKindLabel(n)} · ${humanStatus(n.entry_type)}`, n.group.label];
-  if (n.new_evidence_count) lines.unshift(`New evidence · ${n.new_evidence_count}`);
+  if (n.new_evidence_count) lines.unshift(`New Evidence · ${n.new_evidence_count}`);
   if (p.mode === "axes") {
     const vals = p.axes.values.get(id) ?? {};
     lines.push(p.axes.domains.map((d) => `${METRICS[d.key].label}: ${formatMetric(d.key as MetricKey, vals[d.key]!)}`).join(" · "));
     const same = p.axes.overlaps.find((ids) => ids.includes(id))?.filter((o) => o !== id) ?? [];
-    if (same.length) lines.push(`Same point: ${same.map((o) => p.nodes.find((x) => x.id === o)?.name).join(", ")}`);
+    if (same.length) lines.push(`Same Point: ${same.map((o) => p.nodes.find((x) => x.id === o)?.name).join(", ")}`);
   } else {
-    lines.push(n.founder_score != null ? `Founder Score ${Math.round(n.founder_score)} · ${n.evidence_count} evidence` : `Not scored · ${n.evidence_count} evidence`);
+    lines.push(n.founder_score != null ? `Founder Score ${Math.round(n.founder_score)} · ${n.evidence_count} Evidence` : `Not Scored · ${n.evidence_count} Evidence`);
   }
   return { title: n.name, lines };
 }

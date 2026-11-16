@@ -34,7 +34,7 @@ export function ClaimsTable({ claims }: { claims: Claim[] }) {
               <td className="py-2 pr-2 text-ink-soft">{c.text}</td>
               <td className="pr-2 text-ink-muted">{humanStatus(c.category)}</td>
               <td className="pr-2 text-xs text-ink-muted">
-                {c.provenance === "independent" ? "Independent" : "Founder-reported"}
+                {c.provenance === "independent" ? "Independent" : "Founder-Reported"}
               </td>
               <td className="pr-2"><Badge tone={verificationTone(c.verification_status)}>{humanStatus(c.verification_status)}</Badge></td>
               <td className={`pr-2 font-semibold ${trustTone(c.trust_score)}`}>{Math.round(c.trust_score)}</td>

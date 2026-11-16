@@ -17,7 +17,7 @@ export function EvidenceRef({ id }: { id: number }) {
   const cls = "mr-1 inline-block rounded bg-surface-sunken px-1 font-mono text-xs";
   if (!href) return <span className={cls}>E{id}</span>;
   return (
-    <Link href={href(id)} scroll={false} className={`${cls} text-brand hover:bg-brand-wash hover:underline`} title={`Open evidence E${id}`} aria-label={`Evidence E${id}`}>
+    <Link href={href(id)} scroll={false} className={`${cls} text-brand hover:bg-brand-wash hover:underline`} title={`Open Evidence E${id}`} aria-label={`Evidence E${id}`}>
       E{id}
     </Link>
   );

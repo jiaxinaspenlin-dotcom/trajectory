@@ -22,12 +22,12 @@ export function MapList({
   return (
     <div className="space-y-3 p-3" data-testid="map-list">
       {groups.map((g) => (
-        <section key={g.key} aria-label={`${g.label} group`}>
-          <h3 className="flex items-center gap-1.5 px-1 text-xs font-semibold uppercase tracking-[0.06em] text-ink">
+        <section key={g.key} aria-label={`${g.label} Group`}>
+          <h3 className="flex items-center gap-1.5 px-1 text-xs font-semibold text-ink">
             <span aria-hidden className="h-2 w-2 rounded-full" style={{ background: colors.get(g.key) }} />
             {g.label} · {g.ids.length}
           </h3>
-          <p className="px-1 text-xs text-ink-muted">Grouped by {groupFieldLabel(g.field).toLowerCase()}</p>
+          <p className="px-1 text-xs text-ink-muted">Grouped by {groupFieldLabel(g.field)}</p>
           <ul className="mt-1 divide-y divide-line overflow-hidden rounded-md border border-line bg-white">
             {g.ids.map((id) => {
               const n = byId.get(id)!;
@@ -48,11 +48,11 @@ export function MapList({
                     <span className="min-w-0 flex-1">
                       <span className="flex min-w-0 items-center gap-1.5">
                         <span className="truncate text-sm font-medium text-ink">{n.name}</span>
-                        {!!n.new_evidence_count && <span className="chip shrink-0 bg-signal-wash text-caution">New evidence · {n.new_evidence_count}</span>}
+                        {!!n.new_evidence_count && <span className="chip shrink-0 bg-signal-wash text-caution">New Evidence · {n.new_evidence_count}</span>}
                       </span>
                       <span className="block truncate text-xs text-ink-muted">
                         {nodeKindLabel(n)} · {humanStatus(n.entry_type)}
-                        {n.founder_score != null ? ` · score ${Math.round(n.founder_score)}` : " · not scored"}
+                        {n.founder_score != null ? ` · Score ${Math.round(n.founder_score)}` : " · Not Scored"}
                       </span>
                     </span>
                   </button>

@@ -10,6 +10,8 @@ from app.models.core import InvestmentThesis
 from app.models.entities import Company, Founder
 from app.models.sources import Claim, Evidence
 from app.models.workflow import Debate, DiligenceQuestion, InvestmentMemo, RecommendedAction
+from app.scoring.founder_score import COMPONENT_LABELS
+from app.services.copy import title_case
 from app.services.founder import latest_founder_score, momentum_for
 from app.services.thesis import fit_is_stale
 
@@ -77,12 +79,23 @@ def claim_out(db: Session, c: Claim) -> dict:
     }
 
 
+def _display_components(components: list | None) -> list:
+    """Component names as current Title Case display text, whatever casing the
+    stored score was computed with (stored rows are never rewritten)."""
+    out = []
+    for c in components or []:
+        if isinstance(c, dict) and c.get("key"):
+            c = {**c, "name": COMPONENT_LABELS.get(c["key"]) or title_case(str(c.get("name", "")))}
+        out.append(c)
+    return out
+
+
 def founder_score_out(fs) -> dict | None:
     if not fs:
         return None
     return {
         "id": fs.id, "founder_id": fs.founder_id, "version": fs.version, "score": fs.score,
-        "confidence": fs.confidence, "components": fs.components, "explanation": fs.explanation,
+        "confidence": fs.confidence, "components": _display_components(fs.components), "explanation": fs.explanation,
         "evidence_ids": fs.evidence_ids, "computed_at": iso(fs.computed_at),
     }
 
@@ -137,7 +150,11 @@ def memo_out(m: InvestmentMemo) -> dict:
     return {
         "id": m.id, "opportunity_id": m.opportunity_id, "version": m.version,
         "generated_by": m.generated_by, "computed_at": iso(m.computed_at),
-        "sections": m.sections, "recommended_action": m.recommended_action, "confidence": m.confidence,
+        "sections": [
+            {**s, "title": title_case(s["title"])} if isinstance(s, dict) and s.get("title") else s
+            for s in (m.sections or [])
+        ],
+        "recommended_action": m.recommended_action, "confidence": m.confidence,
     }
 
 

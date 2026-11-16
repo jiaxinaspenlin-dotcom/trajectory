@@ -42,7 +42,7 @@ describe("FoundersTable", () => {
     );
     const row = screen.getByTestId("founder-row-11");
     expect(within(row).getByText("Ada Builder")).toHaveAttribute("href", "/vc/opportunities/11");
-    expect(within(row).getByText(/No company yet/)).toBeInTheDocument();
+    expect(within(row).getByText(/No Company Yet/)).toBeInTheDocument();
     expect(within(row).getByText("ledgerkit ↗")).toBeInTheDocument();
     expect(within(row).getByText("61")).toBeInTheDocument();
     expect(within(row).getByText(/Accelerating/)).toBeInTheDocument();
@@ -52,9 +52,9 @@ describe("FoundersTable", () => {
 
   it("says so honestly when there is no score, evidence, or project", () => {
     render(<FoundersTable leads={[lead()]} overlay={{}} onSetStatus={() => {}} onMoveToScreening={async () => {}} />);
-    expect(screen.getByText("Not scored")).toBeInTheDocument();
-    expect(screen.getByText("None yet")).toBeInTheDocument();
-    expect(screen.getByText("No company yet")).toBeInTheDocument();
+    expect(screen.getByText("Not Scored")).toBeInTheDocument();
+    expect(screen.getByText("None Yet")).toBeInTheDocument();
+    expect(screen.getByText("No Company Yet")).toBeInTheDocument();
   });
 
   it("asks for confirmation before moving to screening, then calls with the same ID", async () => {
@@ -63,7 +63,7 @@ describe("FoundersTable", () => {
     fireEvent.click(screen.getByText("Move to Screening"));
     expect(move).not.toHaveBeenCalled();
     expect(screen.getByText(/No outreach is sent/)).toBeInTheDocument();
-    fireEvent.click(screen.getByText("Confirm move"));
+    fireEvent.click(screen.getByText("Confirm Move"));
     await waitFor(() => expect(move).toHaveBeenCalledWith(11));
   });
 
@@ -79,7 +79,7 @@ describe("FoundersTable", () => {
   it("opens the existing opportunity detail when a row is clicked", () => {
     push.mockClear();
     render(<FoundersTable leads={[lead()]} overlay={{}} onSetStatus={() => {}} onMoveToScreening={async () => {}} />);
-    fireEvent.click(screen.getByText("No company yet"));
+    fireEvent.click(screen.getByText("No Company Yet"));
     expect(push).toHaveBeenCalledWith("/vc/opportunities/11");
   });
 });
@@ -116,7 +116,7 @@ describe("PipelineTable", () => {
     expect(within(row).getByText("Screening")).toBeInTheDocument();
     // the next action is a link to where it's done
     expect(within(row).getByRole("link", { name: "Run analysis →" })).toHaveAttribute("href", "/vc/opportunities/11");
-    expect(within(row).getByText("No company")).toBeInTheDocument();
+    expect(within(row).getByText("No Company")).toBeInTheDocument();
     expect(within(row).getByText("Ada Builder")).toHaveAttribute("href", "/vc/opportunities/11");
   });
 
@@ -124,12 +124,12 @@ describe("PipelineTable", () => {
     render(<PipelineTable deals={[deal({ next_action: "Review recommendation", next_action_key: "review_recommendation", next_action_detail: "Recommended: Continue diligence", priority: 1 })]} />);
     expect(screen.getByRole("link", { name: /Review recommendation/ })).toHaveAttribute("href", "/vc/opportunities/11?tab=decision");
     expect(screen.getByText("Recommended: Continue diligence")).toBeInTheDocument();
-    expect(screen.getByLabelText("Awaiting your review")).toBeInTheDocument();
+    expect(screen.getByLabelText("Awaiting Your Review")).toBeInTheDocument();
   });
 
   it("marks decided deals as having no next action", () => {
     render(<PipelineTable deals={[deal({ next_action: null, priority: null, stage: "decision" })]} />);
-    expect(screen.getByText("None — decided")).toBeInTheDocument();
+    expect(screen.getByText("None — Decided")).toBeInTheDocument();
   });
 });
 
@@ -180,7 +180,7 @@ describe("FoundersTable when space is tight", () => {
     expect(within(row).queryByText("Move to Screening")).not.toBeInTheDocument();
     expect(within(row).queryByLabelText(/Prospect status/)).not.toBeInTheDocument();
 
-    const more = within(row).getByRole("button", { name: "More actions for Ada Builder" });
+    const more = within(row).getByRole("button", { name: "More Actions for Ada Builder" });
     fireEvent.click(more);
     expect(more).toHaveAttribute("aria-expanded", "true");
     fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: /Monitoring/ }));
@@ -191,13 +191,13 @@ describe("FoundersTable when space is tight", () => {
     // confirmation happens inside the menu; nothing moves until confirmed
     expect(screen.getByRole("dialog", { name: "Move Ada Builder to Screening?" })).toHaveTextContent("No outreach is sent");
     expect(onMove).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Confirm move" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm Move" }));
     await waitFor(() => expect(onMove).toHaveBeenCalledWith(11));
   });
 
   it("offers View in Pipeline from the menu for a lead already in the pipeline", async () => {
     render(<FoundersTable layout="compact" leads={[lead({ stage: "screening", status: "applied" })]} overlay={{}} onSetStatus={() => {}} onMoveToScreening={async () => {}} />);
-    fireEvent.click(screen.getByRole("button", { name: "More actions for Ada Builder" }));
+    fireEvent.click(screen.getByRole("button", { name: "More Actions for Ada Builder" }));
     expect(await screen.findByRole("menuitem", { name: "View in Pipeline · Screening" })).toHaveAttribute("href", "/vc/pipeline?stage=screening");
     expect(screen.queryByRole("menuitem", { name: "Move to Screening…" })).not.toBeInTheDocument();
   });
@@ -207,7 +207,7 @@ describe("FoundersTable when space is tight", () => {
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
     const card = screen.getByTestId("founder-row-11");
     expect(within(card).getByRole("link", { name: "Review Ada Builder" })).toBeInTheDocument();
-    expect(within(card).getByRole("button", { name: "More actions for Ada Builder" })).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "More Actions for Ada Builder" })).toBeInTheDocument();
     expect(within(card).getByText("Evidence")).toBeInTheDocument();
   });
 });

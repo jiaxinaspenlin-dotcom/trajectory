@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.models.assessment import Opportunity, OpportunityAssessment
 from app.models.entities import Company, Founder
 from app.models.workflow import DiligenceQuestion, HumanDecision, RecommendedAction
+from app.services.copy import title_case
 
 _OPEN_DILIGENCE = ("open", "requested", "unresolved")
 
@@ -27,13 +28,11 @@ def _aware(dt: datetime | None) -> datetime | None:
 
 
 def action_label(action: str) -> str:
-    """A recommended action as sentence-case display text.
+    """A recommended action as Title Case display text (docs/copy-style.md).
 
-    Stored values are Title Case ("Continue Diligence"); the UI uses sentence
-    case (docs/copy-style.md). Display only: never store the result.
+    Display only: never store the result.
     """
-    words = str(action).split()
-    return " ".join([words[0], *(w.lower() for w in words[1:])]) if words else ""
+    return title_case(str(action))
 
 
 def next_action_info(db: Session, o: Opportunity) -> dict | None:
@@ -77,16 +76,16 @@ def next_action_info(db: Session, o: Opportunity) -> dict | None:
     is_inbound = str(o.entry_type) == "inbound"
     if rec and not decided:
         # awaiting the investor's review — not the same as the Decision stage
-        return action("review_recommendation", "Review recommendation", 1, f"Recommended: {action_label(rec.action)}")
+        return action("review_recommendation", "Review Recommendation", 1, f"Recommended: {action_label(rec.action)}")
     if is_inbound and not assessment:
         # a founder just applied and is waiting — surface it prominently.
-        return action("review_application", "Review application", 2, "New inbound application")
+        return action("review_application", "Review Application", 2, "New Inbound Application")
     if open_diligence > 0:
         plural = "s" if open_diligence != 1 else ""
-        return action("resolve_diligence", f"Resolve {open_diligence} diligence question{plural}", 3)
+        return action("resolve_diligence", f"Resolve {open_diligence} Diligence Question{plural}", 3)
     if not assessment:
-        return action("run_analysis", "Run analysis", 4, "Scores the three screening axes")
-    return action("generate_memo", "Generate debate & memo", 5)
+        return action("run_analysis", "Run Analysis", 4, "Scores the Three Screening Axes")
+    return action("generate_memo", "Generate Debate & Memo", 5)
 
 
 def next_action_for(db: Session, o: Opportunity) -> tuple[str, int] | None:

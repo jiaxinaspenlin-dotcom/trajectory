@@ -32,8 +32,8 @@ describe("MomentumChart", () => {
 
   it("names a short history's real window instead of calling it 30-day", () => {
     render(<MomentumChart momentum={{ ...momentum, change_30d_window_days: 3, change_90d_window_days: 3 }} />);
-    expect(screen.getByText("3-day")).toBeInTheDocument();
-    expect(screen.queryByText("30-day")).not.toBeInTheDocument();
+    expect(screen.getByText("3-Day")).toBeInTheDocument();
+    expect(screen.queryByText("30-Day")).not.toBeInTheDocument();
     // the 90-day figure is the same partial change, so it isn't shown
     expect(screen.queryByText("+25")).not.toBeInTheDocument();
     expect(screen.getByTestId("momentum-short-history")).toHaveTextContent(

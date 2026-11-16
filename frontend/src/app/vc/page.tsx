@@ -78,11 +78,11 @@ export default function DashboardPage() {
   const header = (
     <PageHeader
       title="Dashboard"
-      subtitle={data?.thesis ? `${data.thesis.fund_name} · what to do next` : "What to do next"}
+      subtitle={data?.thesis ? `${data.thesis.fund_name} · What to Do Next` : "What to Do Next"}
       actions={
         <>
-          <button className="btn-ghost" onClick={() => setTourOpen(true)}>Take the tour</button>
-          <Link href="/vc/founders?source=open" className="btn-secondary">Source founders</Link>
+          <button className="btn-ghost" onClick={() => setTourOpen(true)}>Take the Tour</button>
+          <Link href="/vc/founders?source=open" className="btn-secondary">Source Founders</Link>
         </>
       }
     />
@@ -103,9 +103,9 @@ export default function DashboardPage() {
   const inPipeline = (data.stage_counts.screening || 0) + (data.stage_counts.decision || 0) + (data.stage_counts.diligence || 0);
   // setup, in order; only the first missing step is offered
   const setup = [
-    { done: !!data.thesis, title: "Create your investment thesis", body: "Sectors, stages, and geographies every lead is scored against. It takes a minute.", href: "/vc/fund?edit=1", cta: "Create thesis" },
-    { done: total > 0, title: "Source your first founders", body: "Search the web or GitHub for leads, or share the founder portal so founders can apply.", href: "/vc/founders?source=open", cta: "Source founders" },
-    { done: inPipeline > 0, title: "Move a lead to Screening", body: "Open a lead in Founders, review its evidence, then move it into Pipeline to evaluate it.", href: "/vc/founders", cta: "Open Founders" },
+    { done: !!data.thesis, title: "Create Your Investment Thesis", body: "Sectors, stages, and geographies every lead is scored against. It takes a minute.", href: "/vc/fund?edit=1", cta: "Create Thesis" },
+    { done: total > 0, title: "Source Your First Founders", body: "Search the web or GitHub for leads, or share the founder portal so founders can apply.", href: "/vc/founders?source=open", cta: "Source Founders" },
+    { done: inPipeline > 0, title: "Move a Lead to Screening", body: "Open a lead in Founders, review its evidence, then move it into Pipeline to evaluate it.", href: "/vc/founders", cta: "Open Founders" },
   ];
   const stepIndex = setup.findIndex((x) => !x.done);
   const nextSetup = stepIndex >= 0 ? setup[stepIndex] : null;
@@ -119,12 +119,12 @@ export default function DashboardPage() {
       <section aria-labelledby="attention-title" data-tour="action-queue">
         <div className="mb-3 flex items-baseline justify-between gap-3">
           <h2 id="attention-title" className="text-section text-ink">
-            Needs attention
+            Needs Attention
             {queue.length > 0 && <span className="num ml-2 font-normal text-ink-muted">{queue.length}</span>}
           </h2>
           {queue.length > 0
             ? <Link href="/vc/pipeline" className="link text-meta">All in Pipeline →</Link>
-            : nextSetup && <span className="text-meta text-ink-muted">Setup · step {stepIndex + 1} of {setup.length}</span>}
+            : nextSetup && <span className="text-meta text-ink-muted">Setup · Step {stepIndex + 1} of {setup.length}</span>}
         </div>
 
         {next ? (
@@ -132,13 +132,13 @@ export default function DashboardPage() {
             {nextSetup && !data.thesis && (
               <p className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-caution-wash px-4 py-2.5 text-meta text-caution">
                 <span>No investment thesis yet — thesis fit can&apos;t be scored.</span>
-                <Link href="/vc/fund?edit=1" className="font-medium underline underline-offset-2">Create thesis</Link>
+                <Link href="/vc/fund?edit=1" className="font-medium underline underline-offset-2">Create Thesis</Link>
               </p>
             )}
             <NextUp a={next} onOpen={() => router.push(nextActionHref(next.opportunity_id, next.next_action_key))} />
             {waiting.length > 0 && (
               <div className="card">
-                <ol className="divide-y divide-line" aria-label="Also waiting">
+                <ol className="divide-y divide-line" aria-label="Also Waiting">
                   {waiting.map((a) => (
                     <AttentionRow key={a.opportunity_id} a={a} onOpen={() => router.push(nextActionHref(a.opportunity_id, a.next_action_key))} />
                   ))}
@@ -149,9 +149,9 @@ export default function DashboardPage() {
                   const leads = rest.length - deals;
                   return (
                     <p className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line px-5 py-3 text-meta text-ink-muted">
-                      <span>{rest.length} more:</span>
-                      {deals > 0 && <Link href="/vc/pipeline" className="link">{deals} in Pipeline →</Link>}
-                      {leads > 0 && <Link href="/vc/founders" className="link">{leads} {leads === 1 ? "lead" : "leads"} in Founders →</Link>}
+                      <span>{rest.length} More:</span>
+                      {deals > 0 && <Link href="/vc/pipeline" className="link">{`${deals} in Pipeline →`}</Link>}
+                      {leads > 0 && <Link href="/vc/founders" className="link">{`${leads} ${leads === 1 ? "Lead" : "Leads"} in Founders →`}</Link>}
                     </p>
                   );
                 })()}
@@ -169,7 +169,7 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="card px-6 py-8">
-            <p className="text-body font-medium text-ink">You&apos;re all caught up.</p>
+            <p className="text-body font-medium text-ink">You&apos;re All Caught Up</p>
             <p className="mt-1 text-meta text-ink-muted">New applications, analysis results, and recommendations will appear here.</p>
           </div>
         )}
@@ -178,7 +178,7 @@ export default function DashboardPage() {
       {/* 2. where things stand: each stage opens its list */}
       <section aria-labelledby="stages-title">
         <h2 id="stages-title" className="mb-3 text-section text-ink">Stages</h2>
-        <nav aria-label="Pipeline summary" data-tour="overview"
+        <nav aria-label="Pipeline Summary" data-tour="overview"
           className="card grid grid-cols-2 overflow-hidden sm:grid-cols-4">
           {STAGES.map((s, i) => {
             const n = data.stage_counts[s] || 0;
@@ -206,21 +206,21 @@ export default function DashboardPage() {
       {/* 3. what's new */}
       <section aria-labelledby="evidence-title">
         <div className="mb-3 flex items-baseline justify-between gap-3">
-          <h2 id="evidence-title" className="text-section text-ink">Recent evidence</h2>
-          <span className="hidden text-meta text-ink-muted sm:inline">Newest sources across your leads and deals</span>
+          <h2 id="evidence-title" className="text-section text-ink">Recent Evidence</h2>
+          <span className="hidden text-meta text-ink-muted sm:inline">Newest Sources Across Your Leads and Deals</span>
         </div>
         <ul data-tour="evidence" className="card divide-y divide-line">
           {evidence.length ? evidence.map((e) => {
             const body = (
               <>
                 <span className="min-w-0">
-                  <span className="block text-body text-ink">{e.title}</span>
+                  <span className="block text-body text-ink" data-content>{e.title}</span>
                   <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-meta text-ink-muted">
-                    {e.opportunity_name && <span className="shrink-0 font-medium text-ink-soft">{e.opportunity_name}</span>}
+                    {e.opportunity_name && <span className="shrink-0 font-medium text-ink-soft" data-content>{e.opportunity_name}</span>}
                     {e.opportunity_name && <span aria-hidden>·</span>}
                     <span className="shrink-0">{humanStatus(e.kind)}</span>
                     <span aria-hidden>·</span>
-                    <span className="truncate">{e.source_name}</span>
+                    <span className="truncate" data-content>{e.source_name}</span>
                   </span>
                 </span>
                 <span className="num shrink-0 text-meta text-ink-muted">{relativeDay(e.collected_at)}</span>
@@ -249,11 +249,11 @@ const STAGES = ["sourcing", "screening", "diligence", "decision"] as const;
 
 function relativeDay(iso: string): string {
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
-  return days <= 0 ? "Today" : days === 1 ? "Yesterday" : `${days}d ago`;
+  return days <= 0 ? "Today" : days === 1 ? "Yesterday" : `${days} Days Ago`;
 }
 
 function waitingText(days: number): string {
-  return days === 0 ? "waiting since today" : `waiting ${days}d`;
+  return days === 0 ? "Waiting Since Today" : `Waiting ${days}d`;
 }
 
 function SetupProgress({ step, total }: { step: number; total: number }) {
@@ -270,7 +270,7 @@ function SetupProgress({ step, total }: { step: number; total: number }) {
 function NextUp({ a, onOpen }: { a: ActionItem; onOpen: () => void }) {
   return (
     <div className="card cursor-pointer p-5 shadow-focus transition-colors hover:bg-surface-sunken/60 sm:p-6" onClick={onOpen}>
-      <p className="text-meta font-medium text-brand">Next up</p>
+      <p className="text-meta font-medium text-brand">Next Up</p>
       <div className="mt-2 flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
         <div className="min-w-0">
           <Link href={`/vc/opportunities/${a.opportunity_id}`} onClick={(e) => e.stopPropagation()}
@@ -301,7 +301,7 @@ function AttentionRow({ a, onOpen }: { a: ActionItem; onOpen: () => void }) {
           <StageBadge stage={a.stage} />
         </span>
         <span className="mt-0.5 block text-meta text-ink-muted">
-          {a.priority === 1 && <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-brand align-middle" aria-label="Act now" />}
+          {a.priority === 1 && <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-brand align-middle" aria-label="Act Now" />}
           {a.next_action_detail ?? a.next_action}
           <span className="num"> · {waitingText(a.age_days)}</span>
         </span>

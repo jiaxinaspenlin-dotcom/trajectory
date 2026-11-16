@@ -12,7 +12,7 @@ const KIND_LABEL: Record<WebEvidence["kind"], string> = {
   launch: "Launch",
   release: "Release",
   changelog: "Changelog",
-  company_site: "Company site",
+  company_site: "Company Site",
   press: "Press",
   other: "Source",
 };
@@ -100,12 +100,12 @@ export function WebSourcing({ onSourced }: { onSourced: () => void }) {
   }
 
   if (statusError) return <ErrorState message={`Couldn't check web search: ${statusError}`} onRetry={loadStatus} />;
-  if (!status) return <Spinner label="Checking web search…" />;
+  if (!status) return <Spinner label="Checking Web Search…" />;
 
   if (!status.search_configured || !status.ai_configured) {
     return (
       <div className="rounded-lg border border-dashed border-line-strong bg-white px-5 py-6" data-testid="web-not-configured">
-        <p className="text-sm font-medium text-ink">Web search isn&apos;t set up yet</p>
+        <p className="text-sm font-medium text-ink">Web Search Isn&apos;t Set up Yet</p>
         <ul className="mt-2 space-y-1 text-sm text-ink-muted">
           {!status.search_configured && <li>Add <code className="font-mono text-ink-soft">TAVILY_API_KEY</code> to the backend environment and restart it.</li>}
           {!status.ai_configured && <li>Add <code className="font-mono text-ink-soft">OPENAI_API_KEY</code>. Results are structured with AI and checked against their sources.</li>}
@@ -125,7 +125,7 @@ export function WebSourcing({ onSourced }: { onSourced: () => void }) {
         }}
       >
         <label className="block">
-          <span className="label">What are you looking for?</span>
+          <span className="label">What Are You Looking For?</span>
           <textarea
             className="textarea mt-1"
             rows={3}
@@ -136,18 +136,18 @@ export function WebSourcing({ onSourced }: { onSourced: () => void }) {
         </label>
         <div className="flex flex-wrap items-center gap-2">
           <button type="submit" className="btn-primary" disabled={loading || request.trim().length < 3}>
-            {loading ? "Searching…" : "Search the web"}
+            {loading ? "Searching…" : "Search the Web"}
           </button>
           <button
             type="button"
             className="btn-secondary"
             disabled={loading || !status.thesis_request}
-            title={status.thesis_request ? "Fill the request from your fund thesis — edit it before searching" : "Set up your fund thesis first"}
+            title={status.thesis_request ? "Fill the request from your fund thesis, then edit it before searching." : "Set up your fund thesis first."}
             onClick={() => setRequest(status.thesis_request)}
           >
-            Start from fund thesis
+            Start from Fund Thesis
           </button>
-          {loading && <Spinner label="Planning queries, searching the web, checking each claim against its source…" />}
+          {loading && <Spinner label="Planning Queries, Searching the Web, Checking Each Claim Against Its Source…" />}
         </div>
         <p className="text-xs text-ink-muted">
           Searches company sites, launch posts, and changelogs. Nothing is added to Founders until you save a result.
@@ -174,19 +174,19 @@ function SearchResults({
   const sources = Object.fromEntries(search.sources.map((s) => [s.id, s]));
 
   return (
-    <section className="space-y-3 border-t border-line pt-4" aria-label="Web search results" data-testid="web-results">
+    <section className="space-y-3 border-t border-line pt-4" aria-label="Web Search Results" data-testid="web-results">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted">
-        {restored && <Badge>Last search</Badge>}
+        {restored && <Badge>Last Search</Badge>}
         <span className="num" data-testid="web-results-summary">
-          {search.results.length} {search.results.length === 1 ? "lead" : "leads"} from {search.source_count} {search.source_count === 1 ? "source" : "sources"}
+          {search.results.length} {search.results.length === 1 ? "Lead" : "Leads"} from {search.source_count} {search.source_count === 1 ? "Source" : "Sources"}
         </span>
-        <span>· {search.queries.length} {search.queries.length === 1 ? "query" : "queries"}</span>
+        <span>· {search.queries.length} {search.queries.length === 1 ? "Query" : "Queries"}</span>
         <button type="button" className="btn-ghost btn-sm" aria-expanded={showSources} onClick={() => setShowSources((v) => !v)}>
-          {showSources ? "Hide" : "Show"} sources
+          {showSources ? "Hide" : "Show"} Sources
         </button>
         {search.rejected.length > 0 && (
           <button type="button" className="btn-ghost btn-sm" aria-expanded={showRejected} onClick={() => setShowRejected((v) => !v)}>
-            {search.rejected.length} left out
+            {search.rejected.length} Left Out
           </button>
         )}
       </div>
@@ -195,7 +195,7 @@ function SearchResults({
       {showRejected && (
         <ul className="space-y-1 rounded-md border border-line bg-surface-sunken p-3 text-xs text-ink-muted">
           {search.rejected.map((r, i) => (
-            <li key={i}><span className="text-ink-soft">{r.company_name || "Unnamed candidate"}</span>: {r.reason}</li>
+            <li key={i}><span className="text-ink-soft">{r.company_name || "Unnamed Candidate"}</span>: {r.reason}</li>
           ))}
         </ul>
       )}
@@ -206,12 +206,12 @@ function SearchResults({
 
       {search.updated_leads.length > 0 && (
         <div className="rounded-md border border-signal/40 bg-signal-wash px-3 py-2 text-sm text-ink-soft" role="status" data-testid="web-updated-leads">
-          New evidence added to{" "}
+          New Evidence Added to{" "}
           {search.updated_leads.map((u, i) => (
             <span key={u.opportunity_id}>
               {i > 0 && ", "}
               <Link href={`/vc/opportunities/${u.opportunity_id}`} className="font-medium text-ink hover:text-brand">{u.name}</Link>{" "}
-              <span className="num">(+{u.evidence_added} {u.evidence_added === 1 ? "source" : "sources"})</span>
+              <span className="num">(+{u.evidence_added} {u.evidence_added === 1 ? "Source" : "Sources"})</span>
             </span>
           ))}
         </div>
@@ -268,6 +268,7 @@ function Cites({ ids, sources }: { ids: string[]; sources: Record<string, WebSou
           target="_blank"
           rel="noreferrer"
           title={sources[id] ? `${sources[id].title} — ${sources[id].domain}` : id}
+          data-content
           className="rounded border border-line px-1 font-mono text-[11px] leading-4 text-ink-muted hover:border-brand hover:text-brand"
         >
           {id}
@@ -288,19 +289,19 @@ function FounderLine({ r }: { r: WebResult }) {
         </>
       ) : f.status === "named_unverified" ? (
         <>
-          Founder named on <a href={f.source_url ?? undefined} target="_blank" rel="noreferrer" className="hover:text-brand">source</a>:{" "}
+          Founder Named on <a href={f.source_url ?? undefined} target="_blank" rel="noreferrer" className="hover:text-brand">Source</a>:{" "}
           <span className="text-ink-soft">{f.name}</span>{" "}
-          <Badge tone="bg-caution-wash text-caution" title="Named on a retrieved page; not matched to a verified profile">Unverified</Badge>
+          <Badge tone="bg-caution-wash text-caution" title="Named on a retrieved page; not matched to a verified profile.">Unverified</Badge>
         </>
       ) : (
-        <>Founder not identified yet</>
+        <>Founder Not Identified Yet</>
       )}
       {r.github && r.founder.status !== "verified_github" && (
         <span className="ml-2">
           · GitHub <a href={r.github.url ?? undefined} target="_blank" rel="noreferrer" className="text-ink-soft hover:text-brand">@{r.github.login} ↗</a>{" "}
           {r.github.verified
-            ? <Badge tone="bg-positive-wash text-positive" title={r.github.basis}>Verified match</Badge>
-            : <span title={r.github.basis}>(not verified)</span>}
+            ? <Badge tone="bg-positive-wash text-positive" title={r.github.basis}>Verified Match</Badge>
+            : <span title={r.github.basis}>(Not Verified)</span>}
         </span>
       )}
     </p>
@@ -313,25 +314,25 @@ function EvidenceRow({ e, showStatus }: { e: WebEvidence; showStatus: boolean })
     <li className="grid grid-cols-[5.5rem_1fr] gap-x-3 gap-y-0.5 py-1.5" data-testid="web-evidence">
       <span className="text-xs text-ink-muted">
         {date ? (
-          <span title={e.date_basis === "stated_in_source" ? `Date stated in the source: “${e.date_text}”` : "Published date reported by the search provider"}>
+          <span title={e.date_basis === "stated_in_source" ? `Date stated in the source: “${e.date_text}”.` : "Published date reported by the search provider."}>
             {date}{e.date_basis === "search_provider" && <span aria-hidden> *</span>}
           </span>
         ) : (
-          <span className="italic">Date unknown</span>
+          <span className="italic">Date Unknown</span>
         )}
       </span>
       <span className="min-w-0 text-sm text-ink-soft">
-        <span className="mr-1.5 text-xs font-medium uppercase tracking-wide text-ink-muted">{KIND_LABEL[e.kind]}</span>
+        <span className="mr-1.5 text-xs font-medium text-ink-muted">{KIND_LABEL[e.kind]}</span>
         {e.claim}
         {showStatus && e.status === "new" && <Badge tone="ml-1.5 bg-signal-wash text-caution">New</Badge>}
-        {showStatus && e.status === "known" && <span className="ml-1.5 text-xs text-ink-faint">Already saved</span>}
+        {showStatus && e.status === "known" && <span className="ml-1.5 text-xs text-ink-faint">Already Saved</span>}
         {e.quote && (
-          <span className="mt-0.5 block border-l-2 border-line pl-2 text-[13px] italic text-ink-muted" title="Quoted from the source">
+          <span className="mt-0.5 block border-l-2 border-line pl-2 text-[13px] italic text-ink-muted" title="Quoted from the Source">
             “{e.quote}”
           </span>
         )}
         <a href={e.url} target="_blank" rel="noreferrer" className="block truncate text-xs text-ink-muted hover:text-brand">
-          {e.source_id} · {e.source_role === "company_site" ? "Company site" : e.source_role === "launch_page" ? "Launch page" : "Source"} · {e.domain} ↗
+          {e.source_id} · {e.source_role === "company_site" ? "Company Site" : e.source_role === "launch_page" ? "Launch Page" : "Source"} · {e.domain} ↗
         </a>
       </span>
     </li>
@@ -370,7 +371,7 @@ function ResultCard({
           ? `${r.company_name} added to Founders as a lead in Sourcing (${status === "saved" ? "Saved" : "Monitoring"}).`
           : `${r.company_name} was already a lead — updated it.`,
         href: `/vc/opportunities/${res.opportunity_id}`,
-        linkLabel: "Open lead",
+        linkLabel: "Open Lead",
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't save this lead.");
@@ -388,13 +389,13 @@ function ResultCard({
           <h3 className="text-base font-semibold text-ink">{r.company_name}</h3>
           <p className="flex flex-wrap items-center gap-x-2 text-xs text-ink-muted">
             {r.website
-              ? <a href={r.website} target="_blank" rel="noreferrer" title={r.website_basis ?? undefined} className="text-brand hover:underline">{r.domain} ↗</a>
-              : <span>Website unknown</span>}
+              ? <a href={r.website} target="_blank" rel="noreferrer" title={r.website_basis ?? undefined} className="text-brand hover:underline" data-content>{r.domain} ↗</a>
+              : <span>Website Unknown</span>}
             {r.sector && <span>· {r.sector}</span>}
           </p>
         </div>
         {oppId != null && (
-          <Badge tone="bg-brand-wash text-brand" title="This company already has a lead in Founders; matched by a reliable identifier">
+          <Badge tone="bg-brand-wash text-brand" title="This company already has a lead in Founders, matched by a reliable identifier.">
             {r.saved_opportunity_id ? "Saved" : "Already in Founders"}
           </Badge>
         )}
@@ -408,7 +409,7 @@ function ResultCard({
 
       <div className="mt-3 grid gap-3">
         <section>
-          <h4 className="label">Why it surfaced</h4>
+          <h4 className="label">Why It Surfaced</h4>
           <p className="mt-1 text-sm text-ink-soft">
             {r.why_matched.text}
             <Cites ids={r.why_matched.source_ids} sources={sources} />
@@ -422,7 +423,7 @@ function ResultCard({
           {hasDated && <p className="mt-1 text-xs text-ink-muted">* Published date reported by the search provider, not stated on the page.</p>}
         </section>
         <section>
-          <h4 className="label">What&apos;s unknown</h4>
+          <h4 className="label">What&apos;s Unknown</h4>
           {r.unknowns.length ? (
             <ul className="mt-1 list-disc space-y-0.5 pl-4 text-sm text-ink-muted">
               {r.unknowns.map((u) => <li key={u}>{u}</li>)}
@@ -434,16 +435,16 @@ function ResultCard({
       <footer className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
         {oppId != null ? (
           <>
-            <Link href={`/vc/opportunities/${oppId}`} className="btn-secondary btn-sm">Open lead</Link>
+            <Link href={`/vc/opportunities/${oppId}`} className="btn-secondary btn-sm">Open Lead</Link>
             <Link href={`/vc/map?focus=${oppId}`} className="btn-ghost btn-sm">View on Map</Link>
             {r.existing && r.existing.evidence_added > 0 && !r.saved_opportunity_id && (
-              <span className="text-xs text-ink-muted">+{r.existing.evidence_added} new {r.existing.evidence_added === 1 ? "source" : "sources"} added</span>
+              <span className="text-xs text-ink-muted">+{r.existing.evidence_added} New {r.existing.evidence_added === 1 ? "Source" : "Sources"} Added</span>
             )}
           </>
         ) : (
           <>
             <button type="button" className="btn-primary btn-sm" disabled={busy != null} onClick={() => save("saved")}>
-              {busy === "saved" ? "Saving…" : "Save lead"}
+              {busy === "saved" ? "Saving…" : "Save Lead"}
             </button>
             <button type="button" className="btn-secondary btn-sm" disabled={busy != null} onClick={() => save("monitoring")}>
               {busy === "monitoring" ? "Saving…" : "Monitor"}
@@ -472,10 +473,10 @@ export function LeadWebCheck({ opportunityId, onUpdated }: { opportunityId: numb
       setMessage({
         tone: "ok",
         text: n
-          ? `${n} new ${n === 1 ? "source" : "sources"} added`
+          ? `${n} New ${n === 1 ? "Source" : "Sources"} Added`
           : r.lead.matched
-          ? `No new sources (checked ${r.source_count} pages)`
-          : `Nothing found that could be tied to this lead (checked ${r.source_count} pages)`,
+          ? `No New Sources (Checked ${r.source_count} Pages)`
+          : `Nothing Found That Could Be Tied to This Lead (Checked ${r.source_count} Pages)`,
       });
       if (n) onUpdated();
     } catch (e) {
@@ -495,8 +496,8 @@ export function LeadWebCheck({ opportunityId, onUpdated }: { opportunityId: numb
         </span>
       )}
       <button type="button" className="btn-secondary btn-sm" onClick={check} disabled={busy}
-        title="Search this lead's own site and launch sites for releases or launches it doesn't have yet">
-        {busy ? "Checking the web…" : "Check the web for updates"}
+        title="Search this lead's own site and launch sites for releases or launches it doesn't have yet.">
+        {busy ? "Checking the Web…" : "Check the Web for Updates"}
       </button>
     </span>
   );

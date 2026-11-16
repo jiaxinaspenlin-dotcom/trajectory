@@ -70,10 +70,10 @@ function AuthForm({ persona, onAuthed }: { persona: Persona; onAuthed: () => voi
             Trajectory
           </Link>
           <div className="mt-2 flex justify-center">
-            <span className={`chip ${chip}`}>{isVC ? "Investor workspace" : "Founder portal"}</span>
+            <span className={`chip ${chip}`}>{isVC ? "Investor Workspace" : "Founder Portal"}</span>
           </div>
           <h1 className="mt-3 text-xl font-semibold text-ink">
-            {mode === "login" ? "Sign in" : "Create your account"}
+            {mode === "login" ? "Sign In" : "Create Your Account"}
           </h1>
           <p className="mt-1 text-sm text-ink-muted">
             {isVC ? "Access your fund's pipeline, discovery, and decisions." : "Apply to the fund and track your applications."}
@@ -122,7 +122,7 @@ function AuthForm({ persona, onAuthed }: { persona: Persona; onAuthed: () => voi
           {error && <p className="text-sm text-negative">{error}</p>}
 
           <button className="btn-primary w-full" disabled={busy}>
-            {busy ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}
+            {busy ? "Please wait…" : mode === "login" ? "Sign In" : "Create Account"}
           </button>
         </form>
 
@@ -132,7 +132,7 @@ function AuthForm({ persona, onAuthed }: { persona: Persona; onAuthed: () => voi
             className={`font-medium ${accent}`}
             onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(null); }}
           >
-            {mode === "login" ? "Create an account" : "Sign in"}
+            {mode === "login" ? "Create an Account" : "Sign In"}
           </button>
         </p>
         <p className="mt-2 text-center text-xs text-ink-muted">

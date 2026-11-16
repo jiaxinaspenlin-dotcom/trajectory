@@ -25,19 +25,19 @@ export function MapValuesPanel({
   const sorted = plotted.sort((a, b) => (b.vals[axes.domains[0].key] ?? 0) - (a.vals[axes.domains[0].key] ?? 0));
 
   return (
-    <div data-testid="map-values" role="dialog" aria-label="Plotted values" className="hud pointer-events-auto flex max-h-[min(440px,60vh)] w-[min(460px,calc(100vw-1rem))] flex-col">
+    <div data-testid="map-values" role="dialog" aria-label="Plotted Values" className="hud pointer-events-auto flex max-h-[min(440px,60vh)] w-[min(460px,calc(100vw-1rem))] flex-col">
       <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-2">
         <Segmented
           size="sm"
-          label="Values view"
+          label="Values View"
           value={tab}
           onChange={setTab}
           options={[
             { value: "plotted", label: `Plotted ${plotted.length}` },
-            { value: "excluded", label: `Not plotted ${axes.excluded.length}` },
+            { value: "excluded", label: `Not Plotted ${axes.excluded.length}` },
           ]}
         />
-        <button type="button" className="icon-btn h-7 w-7" onClick={onClose} aria-label="Close values"><CloseIcon size={14} /></button>
+        <button type="button" className="icon-btn h-7 w-7" onClick={onClose} aria-label="Close Values"><CloseIcon size={14} /></button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         {tab === "plotted" ? (
@@ -59,7 +59,7 @@ export function MapValuesPanel({
                           {node.name}
                         </button>
                         {same.length > 0 && (
-                          <span className="block text-xs text-signal">Same point as {same.map((o) => byId.get(o)?.name).join(", ")}</span>
+                          <span className="block text-xs text-signal">Same Point as {same.map((o) => byId.get(o)?.name).join(", ")}</span>
                         )}
                       </td>
                       {axes.domains.map((d) => <td key={d.axis} className="num text-right text-ink-soft">{formatMetric(d.key, vals[d.key]!)}</td>)}

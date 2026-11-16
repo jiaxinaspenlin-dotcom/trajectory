@@ -113,7 +113,7 @@ export function FoundersTable({
     const dir = sort?.key === k ? sort.dir : null;
     return (
       <th scope="col" className={className} title={title} aria-sort={dir === "asc" ? "ascending" : dir === "desc" ? "descending" : "none"}>
-        <button type="button" onClick={() => toggleSort(k)} className="inline-flex items-center gap-1 uppercase hover:text-ink">
+        <button type="button" onClick={() => toggleSort(k)} className="inline-flex items-center gap-1 hover:text-ink">
           {children}<SortIcon dir={dir} />
         </button>
       </th>
@@ -126,7 +126,7 @@ export function FoundersTable({
   // Secondary actions for the row menu (compact and stacked layouts).
   // Always in this order: open the record, the stage step, then my shortlist.
   const menuItems = (l: FounderLead): RowMenuItem[] => [
-    { label: "Open record", href: `/vc/opportunities/${l.id}` },
+    { label: "Open Record", href: `/vc/opportunities/${l.id}` },
     inPipeline(l)
       ? { label: `View in Pipeline · ${humanStatus(l.stage)}`, href: `/vc/pipeline?stage=${l.stage}` }
       : {
@@ -134,28 +134,28 @@ export function FoundersTable({
           confirm: {
             title: `Move ${name(l)} to Screening?`,
             body: "Moves this lead into the fund's Pipeline at Screening. No outreach is sent.",
-            action: "Confirm move",
+            action: "Confirm Move",
             run: () => confirmMove(l.id),
           },
         },
-    { separator: true, label: "My shortlist" },
+    { separator: true, label: "My Shortlist" },
     ...STATUS_OPTIONS.map((o) => ({
       label: o.label,
       checked: overlay[l.id] === o.value,
       onSelect: () => onSetStatus(l.id, overlay[l.id] === o.value ? null : o.value),
     })),
-    ...(overlay[l.id] ? [{ label: "Remove from shortlist", onSelect: () => onSetStatus(l.id, null) }] : []),
+    ...(overlay[l.id] ? [{ label: "Remove from Shortlist", onSelect: () => onSetStatus(l.id, null) }] : []),
   ];
 
   const statusSelect = (l: FounderLead) => (
     <select
-      aria-label={`My shortlist for ${name(l)}`}
+      aria-label={`My Shortlist for ${name(l)}`}
       className="mt-1 h-7 max-w-full rounded border border-line bg-white px-1 text-xs text-ink-soft"
       value={overlay[l.id] ?? ""}
       onChange={(e) => onSetStatus(l.id, (e.target.value || null) as PipelineStatus | null)}
     >
       {/* the blank option is an action, not a value: the badge above shows the current status */}
-      <option value="">{overlay[l.id] ? "Remove from shortlist" : "Add to shortlist…"}</option>
+      <option value="">{overlay[l.id] ? "Remove from Shortlist" : "Add to Shortlist…"}</option>
       {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
     </select>
   );
@@ -186,7 +186,7 @@ export function FoundersTable({
                 <StatusBadges l={l} shortlist={shortlistOf(l, overlay[l.id] ?? null)} />
                 <span className="flex shrink-0 items-center gap-1.5">
                   {review(l)}
-                  <RowMenu label={`More actions for ${name(l)}`} items={menuItems(l)} busy={busy === l.id} />
+                  <RowMenu label={`More Actions for ${name(l)}`} items={menuItems(l)} busy={busy === l.id} />
                 </span>
               </div>
               {errorLine(l)}
@@ -207,11 +207,11 @@ export function FoundersTable({
         <thead>
           <tr>
             <Th k="founder" className="min-w-[11rem]">Founder</Th>
-            <Th k="company">Company / project</Th>
+            <Th k="company">Company / Project</Th>
             <Th k="score" className="text-right">Score</Th>
             <Th k="momentum">Momentum</Th>
             <Th k="evidence" className="text-right">Evidence</Th>
-            <Th k="status" title="Shared stage, with your shortlist (if any) underneath">Stage</Th>
+            <Th k="status" title="Shared stage, with your shortlist (if any) underneath.">Stage</Th>
             <th scope="col" className="text-right"><span className="sr-only">Actions</span></th>
           </tr>
         </thead>
@@ -228,7 +228,7 @@ export function FoundersTable({
                 <td className="text-right">
                   {l.evidence_count
                     ? <span className="num text-ink-soft">{l.evidence_count}</span>
-                    : <span className="text-xs text-ink-muted">None yet</span>}
+                    : <span className="text-xs text-ink-muted">None Yet</span>}
                 </td>
                 <td onClick={stop}>
                   <StatusBadges l={l} shortlist={shortlist} stacked />
@@ -237,13 +237,13 @@ export function FoundersTable({
                 <td className="text-right" onClick={stop}>
                   <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
                     {compact ? (
-                      <RowMenu label={`More actions for ${name(l)}`} items={menuItems(l)} busy={busy === l.id} />
+                      <RowMenu label={`More Actions for ${name(l)}`} items={menuItems(l)} busy={busy === l.id} />
                     ) : inPipeline(l) ? (
                       <Link href={`/vc/pipeline?stage=${l.stage}`} className="btn-ghost btn-sm">View in Pipeline</Link>
                     ) : confirming === l.id ? (
                       <>
                         <button className="btn-primary btn-sm" onClick={() => confirmMove(l.id)} disabled={busy === l.id}>
-                          {busy === l.id ? "Moving…" : "Confirm move"}
+                          {busy === l.id ? "Moving…" : "Confirm Move"}
                         </button>
                         <button className="btn-ghost btn-sm" onClick={() => setConfirming(null)} disabled={busy === l.id}>Cancel</button>
                       </>
@@ -277,7 +277,7 @@ function FounderCell({ l }: { l: FounderLead }) {
   return (
     <>
       <span className="flex flex-wrap items-center gap-1.5">
-        <Link href={href} onClick={stop} className="break-words font-medium text-ink hover:text-brand">
+        <Link href={href} onClick={stop} className="break-words font-medium text-ink hover:text-brand" data-content>
           {l.founder?.full_name || l.company?.name || `Opportunity #${l.id}`}
         </Link>
         {!!l.new_evidence_count && (
@@ -285,26 +285,26 @@ function FounderCell({ l }: { l: FounderLead }) {
             href={`${href}?tab=evidence`}
             onClick={stop}
             data-testid={`new-evidence-${l.id}`}
-            title="Web evidence found since you last reviewed this lead"
+            title="Web evidence found since you last reviewed this lead."
             className="chip bg-signal-wash text-caution hover:ring-1 hover:ring-signal"
           >
             <span className="h-1.5 w-1.5 rounded-full bg-signal" aria-hidden />
-            New evidence · {l.new_evidence_count}
+            New Evidence · {l.new_evidence_count}
           </Link>
         )}
       </span>
       <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[13px] text-ink-muted [&_a]:max-w-full [&_a]:truncate">
         {l.founder?.github_username && (
-          <a href={`https://github.com/${l.founder.github_username}`} target="_blank" rel="noreferrer" onClick={stop} className="hover:text-brand">
+          <a href={`https://github.com/${l.founder.github_username}`} target="_blank" rel="noreferrer" onClick={stop} className="hover:text-brand" data-content>
             @{l.founder.github_username} ↗
           </a>
         )}
         {l.founder?.location && <span>{l.founder.location}</span>}
         {!l.founder && (l.identity?.founder_named ? (
-          <span title="Named on a retrieved page; not matched to a verified profile">
-            Named on source: {l.identity.founder_named} · unverified
+          <span title="Named on a retrieved page; not matched to a verified profile.">
+            Named on Source: {l.identity.founder_named} · Unverified
           </span>
-        ) : <span>Founder not linked yet</span>)}
+        ) : <span>Founder Not Linked Yet</span>)}
         {!l.founder && l.company?.website && (
           <a href={l.company.website} target="_blank" rel="noreferrer" onClick={stop} className="hover:text-brand">
             {l.company.website.replace(/^https?:\/\/(www\.)?/, "")} ↗
@@ -327,19 +327,19 @@ function CompanyCell({ l }: { l: FounderLead }) {
   if (l.top_project) {
     return (
       <div className="min-w-0">
-        <p className="text-xs text-ink-muted">No company yet · top project</p>
+        <p className="text-xs text-ink-muted">No Company Yet · Top Project</p>
         <span className="flex min-w-0 items-center gap-1.5">
           {l.top_project.url ? (
-            <a href={l.top_project.url} target="_blank" rel="noreferrer" onClick={stop} className="truncate text-brand hover:underline">{l.top_project.name} ↗</a>
+            <a href={l.top_project.url} target="_blank" rel="noreferrer" onClick={stop} className="truncate text-brand hover:underline" data-content>{l.top_project.name} ↗</a>
           ) : <span className="truncate text-ink">{l.top_project.name}</span>}
           {l.top_project.stars != null && (
-            <span className="num shrink-0 text-xs text-ink-muted" title="External interest only, not traction">★ {l.top_project.stars}</span>
+            <span className="num shrink-0 text-xs text-ink-muted" title="External Interest Only, Not Traction">★ {l.top_project.stars}</span>
           )}
         </span>
       </div>
     );
   }
-  return <p className="text-xs text-ink-muted">No company yet</p>;
+  return <p className="text-xs text-ink-muted">No Company Yet</p>;
 }
 
 function ScoreCell({ l }: { l: FounderLead }) {
@@ -347,12 +347,12 @@ function ScoreCell({ l }: { l: FounderLead }) {
     <span className="num font-semibold text-ink" title={`Confidence ${Math.round(l.founder_score.confidence * 100)}%`}>
       {Math.round(l.founder_score.score)}
     </span>
-  ) : <span className="text-xs text-ink-muted">Not scored</span>;
+  ) : <span className="text-xs text-ink-muted">Not Scored</span>;
 }
 
 function MomentumCell({ l }: { l: FounderLead }) {
   const m = l.momentum;
-  if (!m) return <span className="text-xs text-ink-muted">No history</span>;
+  if (!m) return <span className="text-xs text-ink-muted">No History</span>;
   return (
     <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
       <Badge tone={trajectoryTone(m.trajectory)}>{humanStatus(m.trajectory)}</Badge>
@@ -480,7 +480,7 @@ function RowMenu({ label, items, busy }: { label: string; items: RowMenuItem[]; 
             </div>
           ) : items.map((it, i) =>
             it.separator ? (
-              <p key={i} className="mt-1 border-t border-line px-3 pb-1 pt-2 text-xs font-medium uppercase tracking-[0.06em] text-ink-muted">{it.label}</p>
+              <p key={i} className="mt-1 border-t border-line px-3 pb-1 pt-2 text-xs font-medium text-ink-muted">{it.label}</p>
             ) : it.href ? (
               <Link key={i} href={it.href} role="menuitem" className={itemClass} onClick={() => close()}>{it.label}</Link>
             ) : (

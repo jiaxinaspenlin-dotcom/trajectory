@@ -29,7 +29,7 @@ export function InfoTip({ text, label }: { text: string; label?: string }) {
         onFocus={show}
         onBlur={hide}
       >
-        i
+        <span aria-hidden>i</span>
       </button>
       {box &&
         typeof document !== "undefined" &&
