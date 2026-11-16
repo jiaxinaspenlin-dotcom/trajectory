@@ -62,3 +62,21 @@ export const ChevronDownIcon = (p: IconProps) => <Svg {...p}><path d="m4 6 4 4 4
 export const MoreIcon = (p: IconProps) => (
   <Svg {...p}><circle cx="3.5" cy="8" r="1.15" fill="currentColor" stroke="none" /><circle cx="8" cy="8" r="1.15" fill="currentColor" stroke="none" /><circle cx="12.5" cy="8" r="1.15" fill="currentColor" stroke="none" /></Svg>
 );
+export const CheckIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M3.5 8.5 6.5 11.5 12.5 4.5" /></Svg>
+);
+export const ChevronRightIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M6 3.5 10.5 8 6 12.5" /></Svg>
+);
+export const InboxIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M2 9.5 3.6 3.2A1 1 0 0 1 4.6 2.5h6.8a1 1 0 0 1 1 .7L14 9.5V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V9.5Z" /><path d="M2 9.5h3.5l1 1.5h3l1-1.5H14" /></Svg>
+);
+export const DocumentIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M4 1.8h5.2L12.5 5v8.2a1 1 0 0 1-1 1h-7.5a1 1 0 0 1-1-1V2.8a1 1 0 0 1 1-1Z" /><path d="M9 2v3.2h3.3M5.5 8.5h5M5.5 11h3.5" /></Svg>
+);
+export const AlertIcon = (p: IconProps) => (
+  <Svg {...p}><circle cx="8" cy="8" r="6.2" /><path d="M8 4.8v3.8M8 11h.01" /></Svg>
+);
+export const CompassIcon = (p: IconProps) => (
+  <Svg {...p}><circle cx="8" cy="8" r="6.2" /><path d="m10.6 5.4-1.6 3.6-3.6 1.6 1.6-3.6 3.6-1.6Z" /></Svg>
+);

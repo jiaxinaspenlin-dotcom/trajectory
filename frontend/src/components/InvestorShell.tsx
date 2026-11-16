@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Account, getSession, logout } from "@/lib/auth";
+import { useIndicator, usePresence } from "@/lib/motion";
 import { ToastProvider } from "./Toast";
 import { TrajectoryLogo } from "./TrajectoryLogo";
 import { CloseIcon, DashboardIcon, FoundersIcon, FundIcon, MapIcon, MenuIcon, PipelineIcon } from "./icons";
@@ -23,23 +24,30 @@ export function isNavActive(pathname: string, item: { href: string; also?: strin
 }
 
 function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+  const ref = useRef<HTMLUListElement>(null);
+  // the current page's highlight slides between items
+  const box = useIndicator(ref, "a[aria-current='page']", [pathname]);
   return (
-    <ul className="space-y-1">
+    <ul ref={ref} className="relative space-y-0.5">
+      {box && (
+        <li aria-hidden className="pointer-events-none absolute left-0 top-0 w-full rounded-md bg-neutral-wash transition-transform duration-slow ease-out"
+          style={{ height: box.h, transform: `translateY(${box.y}px)` }} />
+      )}
       {INVESTOR_NAV.map((item) => {
         const active = isNavActive(pathname, item);
         const Icon = item.icon;
         return (
-          <li key={item.href}>
+          <li key={item.href} className="relative">
             <Link
               href={item.href}
               onClick={onNavigate}
               aria-current={active ? "page" : undefined}
-              className={`flex h-10 items-center gap-3 rounded-md px-3 text-body font-medium transition-colors ${
-                active ? "bg-neutral-wash text-ink" : "text-ink-soft hover:bg-neutral-wash/70 hover:text-ink"
+              className={`press group flex h-10 items-center gap-3 rounded-md px-3 text-body font-medium transition-colors duration-fast ${
+                active ? `text-ink ${box ? "" : "bg-neutral-wash"}` : "text-ink-muted hover:bg-surface-sunken hover:text-ink"
               }`}
             >
               {/* blue is kept for actions; the current page is marked in ink */}
-              <Icon size={18} className={active ? "text-ink" : "text-ink-muted"} />
+              <Icon size={18} className={`transition-transform duration-base ease-out group-hover:scale-110 ${active ? "text-brand" : "text-ink-faint group-hover:text-ink-soft"}`} />
               {item.label}
             </Link>
           </li>
@@ -55,10 +63,10 @@ function RailFooter({ onNavigate }: { onNavigate?: () => void }) {
   useEffect(() => { setAccount(getSession("investor")?.account ?? null); }, []);
   return (
     <div className="space-y-0.5 border-t border-line pt-3 text-sm">
-      <Link href="/founder" onClick={onNavigate} className="flex h-9 items-center rounded-md px-3 text-ink-muted hover:bg-neutral-wash hover:text-ink">
+      <Link href="/founder" onClick={onNavigate} className="press flex h-9 items-center rounded-md px-3 text-ink-muted transition-colors duration-fast hover:bg-surface-sunken hover:text-ink">
         Founder Portal
       </Link>
-      <Link href="/" onClick={onNavigate} className="flex h-9 items-center rounded-md px-3 text-ink-muted hover:bg-neutral-wash hover:text-ink">
+      <Link href="/" onClick={onNavigate} className="press flex h-9 items-center rounded-md px-3 text-ink-muted transition-colors duration-fast hover:bg-surface-sunken hover:text-ink">
         About Trajectory
       </Link>
       {account && (
@@ -76,6 +84,7 @@ export function InvestorShell({ children }: { children: React.ReactNode }) {
   const fullBleed = pathname === "/vc/map";
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
+  const menu = usePresence(menuOpen, 220);
 
   // close the phone menu on navigation and on Escape
   useEffect(() => setMenuOpen(false), [pathname]);
@@ -92,8 +101,8 @@ export function InvestorShell({ children }: { children: React.ReactNode }) {
     <ToastProvider>
     <div className="min-h-[100dvh] lg:flex">
       {/* desktop rail */}
-      <aside className="sticky top-0 hidden h-[100dvh] w-56 shrink-0 flex-col border-r border-line bg-white px-3 py-4 lg:flex">
-        <Link href="/vc" className="mb-5 flex h-10 items-center gap-2.5 px-3">
+      <aside className="sticky top-0 hidden h-[100dvh] w-60 shrink-0 flex-col border-r border-line bg-white px-3 py-5 lg:flex">
+        <Link href="/vc" className="press mb-6 flex h-10 items-center gap-2.5 px-3">
           <TrajectoryLogo size={22} />
           <span className="text-base font-semibold text-ink">Trajectory</span>
         </Link>
@@ -104,7 +113,7 @@ export function InvestorShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* phone / tablet top bar */}
-      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-line bg-white px-4 lg:hidden">
+      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-line bg-white/90 px-4 backdrop-blur-md lg:hidden">
         <Link href="/vc" className="flex items-center gap-2">
           <TrajectoryLogo size={22} />
           <span className="text-base font-semibold text-ink">Trajectory</span>
@@ -121,19 +130,20 @@ export function InvestorShell({ children }: { children: React.ReactNode }) {
           {menuOpen ? <CloseIcon /> : <MenuIcon />}
         </button>
       </header>
-      {menuOpen && (
+      {menu.mounted && (
         <div className="fixed inset-0 top-14 z-40 lg:hidden">
-          <div className="absolute inset-0 bg-ink/20" onClick={() => setMenuOpen(false)} aria-hidden />
-          <nav id="investor-mobile-nav" aria-label="Investor Workspace" className="relative w-64 border-r border-line bg-white p-3 shadow-overlay">
+          <div className={`absolute inset-0 bg-ink/25 scrim-${menu.state}`} onClick={() => setMenuOpen(false)} aria-hidden />
+          <nav id="investor-mobile-nav" aria-label="Investor Workspace" className={`rail-${menu.state} relative h-full w-72 max-w-[85vw] bg-white p-3 shadow-overlay`}>
             <NavLinks pathname={pathname} onNavigate={() => setMenuOpen(false)} />
             <div className="mt-4"><RailFooter onNavigate={() => setMenuOpen(false)} /></div>
           </nav>
         </div>
       )}
 
-      <main className={fullBleed ? "relative h-[calc(100dvh-3.5rem)] min-w-0 flex-1 lg:h-[100dvh]" : "min-w-0 flex-1"}>
-        {/* 24–32px padding beside the rail; wide pages use the width up to a generous cap */}
-        {fullBleed ? children : <div className="w-full max-w-[1800px] px-4 py-6 sm:px-6 lg:px-10 lg:py-9">{children}</div>}
+      {/* --sticky-top: where sticky table headers stop, under the condensed page header */}
+      <main className={fullBleed ? "relative h-[calc(100dvh-3.5rem)] min-w-0 flex-1 lg:h-[100dvh]" : "min-w-0 flex-1 [--sticky-top:7rem] lg:[--sticky-top:3.5rem]"}>
+        {/* generous space beside the rail; reading width capped so lines stay comfortable */}
+        {fullBleed ? children : <div className="mx-auto w-full max-w-[1280px] px-4 pb-16 pt-6 sm:px-6 lg:px-10 lg:pt-10">{children}</div>}
       </main>
     </div>
     </ToastProvider>

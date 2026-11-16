@@ -1,6 +1,7 @@
 "use client";
 
 import { KeyboardEvent, ReactNode, useRef } from "react";
+import { useIndicator } from "@/lib/motion";
 
 export interface TabItem<T extends string> {
   key: T;
@@ -11,7 +12,8 @@ export interface TabItem<T extends string> {
 
 // Accessible tabs (WAI-ARIA tabs pattern, automatic activation): one tab stop,
 // Left/Right/Home/End move and select. The tab list scrolls inside itself on
-// narrow screens instead of widening the page. Panels use `tabPanelProps`.
+// narrow screens instead of widening the page. Panels use `tabPanelProps`; give
+// the panel `key={value}` so it cross-fades when the tab changes.
 export function Tabs<T extends string>({
   label, tabs, value, onChange, idPrefix, size = "md",
 }: {
@@ -23,6 +25,9 @@ export function Tabs<T extends string>({
   size?: "md" | "sm";
 }) {
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const listRef = useRef<HTMLDivElement>(null);
+  // the active underline slides between tabs (transform only)
+  const box = useIndicator(listRef, "[aria-selected='true']", [value, tabs.length]);
 
   function onKeyDown(e: KeyboardEvent) {
     const i = tabs.findIndex((t) => t.key === value);
@@ -41,7 +46,14 @@ export function Tabs<T extends string>({
 
   return (
     <div className="max-w-full overflow-x-auto border-b border-line [scrollbar-width:none]">
-      <div role="tablist" aria-label={label} className="flex min-w-max gap-1" onKeyDown={onKeyDown}>
+      <div ref={listRef} role="tablist" aria-label={label} className="relative flex min-w-max gap-1" onKeyDown={onKeyDown}>
+        {box && (
+          <span
+            aria-hidden
+            className="absolute bottom-0 left-0 h-0.5 rounded-full bg-brand transition-transform duration-base ease-out"
+            style={{ width: 1, transform: `translateX(${box.x}px) scaleX(${box.w})`, transformOrigin: "left" }}
+          />
+        )}
         {tabs.map((t) => {
           const selected = t.key === value;
           return (
@@ -55,9 +67,9 @@ export function Tabs<T extends string>({
               aria-controls={`${idPrefix}-panel-${t.key}`}
               tabIndex={selected ? 0 : -1}
               onClick={() => onChange(t.key)}
-              className={`relative -mb-px inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 font-medium transition-colors focus-visible:outline-offset-[-2px] ${
+              className={`press relative inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-t-md font-medium transition-colors duration-fast focus-visible:outline-offset-[-2px] ${
                 size === "sm" ? "h-10 px-3 text-sm" : "h-11 px-3.5 text-[15px]"} ${
-                selected ? "border-brand text-brand" : "border-transparent text-ink-soft hover:border-line-strong hover:text-ink"}`}
+                selected ? `text-ink ${box ? "" : "shadow-[inset_0_-2px_0_#3047e8]"}` : "text-ink-muted hover:bg-surface-sunken hover:text-ink"}`}
             >
               {t.label}
               {t.badge}
@@ -75,6 +87,6 @@ export function tabPanelProps(idPrefix: string, key: string) {
     id: `${idPrefix}-panel-${key}`,
     "aria-labelledby": `${idPrefix}-tab-${key}`,
     tabIndex: 0,
-    className: "focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 rounded-lg",
+    className: "animate-fade focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 rounded-lg",
   };
 }

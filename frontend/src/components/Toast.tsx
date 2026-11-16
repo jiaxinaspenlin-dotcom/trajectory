@@ -2,7 +2,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { CloseIcon } from "./icons";
+import { usePresence } from "@/lib/motion";
+import { CheckIcon, CloseIcon } from "./icons";
 
 // "What happened" feedback after an action: one message at a time, announced
 // politely to screen readers, with an optional link to where the result lives.
@@ -21,6 +22,10 @@ export function useToast() {
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toast, setToast] = useState<(ToastMessage & { id: number }) | null>(null);
+  // the last toast stays rendered while it animates out
+  const [shown, setShown] = useState<(ToastMessage & { id: number }) | null>(null);
+  useEffect(() => { if (toast) setShown(toast); }, [toast]);
+  const { mounted, state } = usePresence(!!toast, 200);
   const timer = useRef<ReturnType<typeof setTimeout>>();
   const notify = useCallback((t: ToastMessage) => setToast({ ...t, id: Date.now() }), []);
 
@@ -35,21 +40,26 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     <ToastContext.Provider value={notify}>
       {children}
       <div className="pointer-events-none fixed inset-x-0 bottom-4 z-[60] flex justify-center px-4" role="status" aria-live="polite">
-        {toast && (
+        {mounted && shown && (
           <div
-            key={toast.id}
+            key={shown.id}
             data-testid="toast"
-            className={`pointer-events-auto flex max-w-xl items-center gap-3 rounded-lg px-4 py-3 text-[15px] shadow-overlay ${
-              toast.tone === "error" ? "bg-negative text-white" : "bg-ink text-white"
+            className={`toast-${state} pointer-events-auto flex max-w-xl items-center gap-3 rounded-xl px-4 py-3 text-[15px] shadow-overlay ${
+              shown.tone === "error" ? "bg-negative text-white" : "bg-ink text-white"
             }`}
           >
-            <span>{toast.message}</span>
-            {toast.href && (
-              <Link href={toast.href} onClick={() => setToast(null)} className="shrink-0 font-semibold underline underline-offset-2 hover:no-underline">
-                {toast.linkLabel ?? "Open"}
+            {shown.tone !== "error" && (
+              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-positive text-white" aria-hidden>
+                <CheckIcon size={14} className="check-draw" />
+              </span>
+            )}
+            <span>{shown.message}</span>
+            {shown.href && (
+              <Link href={shown.href} onClick={() => setToast(null)} className="shrink-0 font-semibold underline underline-offset-2 hover:no-underline">
+                {shown.linkLabel ?? "Open"}
               </Link>
             )}
-            <button type="button" aria-label="Dismiss" onClick={() => setToast(null)} className="-mr-1 grid h-8 w-8 shrink-0 place-items-center rounded text-white/70 hover:text-white">
+            <button type="button" aria-label="Dismiss" onClick={() => setToast(null)} className="icon-btn -mr-1 h-8 w-8 text-white/70 hover:bg-white/10 hover:text-white">
               <CloseIcon size={14} />
             </button>
           </div>

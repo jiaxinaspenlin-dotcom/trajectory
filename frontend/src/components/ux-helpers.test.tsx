@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { evidenceHref, nextActionHref, parseOpportunityTab, shortlistOf } from "@/lib/pipeline";
 import { ToastProvider, useToast } from "./Toast";
 
@@ -37,7 +37,7 @@ function Fire() {
 }
 
 describe("toast", () => {
-  it("announces what happened with a link to the result, and can be dismissed", () => {
+  it("announces what happened with a link to the result, and can be dismissed", async () => {
     render(<ToastProvider><Fire /></ToastProvider>);
     fireEvent.click(screen.getByText("go"));
     const t = screen.getByTestId("toast");
@@ -45,6 +45,8 @@ describe("toast", () => {
     expect(screen.getByRole("link", { name: "View in Pipeline" })).toHaveAttribute("href", "/vc/pipeline");
     expect(t.closest("[role=status]")).toHaveAttribute("aria-live", "polite");
     fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
-    expect(screen.queryByTestId("toast")).not.toBeInTheDocument();
+    // it animates out, then leaves the page
+    expect(screen.getByTestId("toast")).toHaveClass("toast-exit");
+    await waitFor(() => expect(screen.queryByTestId("toast")).not.toBeInTheDocument());
   });
 });
