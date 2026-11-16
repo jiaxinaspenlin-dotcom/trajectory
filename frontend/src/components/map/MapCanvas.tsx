@@ -195,7 +195,7 @@ function describe(id: number, p: { nodes: MapNode[]; mode: "graph" | "axes"; axe
     const same = p.axes.overlaps.find((ids) => ids.includes(id))?.filter((o) => o !== id) ?? [];
     if (same.length) lines.push(`Same point: ${same.map((o) => p.nodes.find((x) => x.id === o)?.name).join(", ")}`);
   } else {
-    lines.push(n.founder_score != null ? `Founder score ${Math.round(n.founder_score)} · ${n.evidence_count} evidence` : `Not scored · ${n.evidence_count} evidence`);
+    lines.push(n.founder_score != null ? `Founder Score ${Math.round(n.founder_score)} · ${n.evidence_count} evidence` : `Not scored · ${n.evidence_count} evidence`);
   }
   return { title: n.name, lines };
 }

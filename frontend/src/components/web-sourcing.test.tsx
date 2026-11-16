@@ -96,7 +96,7 @@ describe("WebSourcing", () => {
     fireEvent.click(within(card).getByRole("button", { name: "Monitor" }));
     await waitFor(() => expect(within(card).getByRole("link", { name: "Open lead" })).toHaveAttribute("href", "/vc/opportunities/42"));
     expect(post).toHaveBeenCalledWith("/api/sourcing/web/searches/5/results/abc123/save", { status: "monitoring" });
-    expect(within(card).getByRole("link", { name: "View on map" })).toHaveAttribute("href", "/vc/map?focus=42");
+    expect(within(card).getByRole("link", { name: "View on Map" })).toHaveAttribute("href", "/vc/map?focus=42");
     expect(onSourced).toHaveBeenCalled();
     expect(JSON.parse(localStorage.getItem("trajectory_investor_pipeline") || "{}")).toEqual({ 42: "monitoring" });
     // saving never offers a Screening move here

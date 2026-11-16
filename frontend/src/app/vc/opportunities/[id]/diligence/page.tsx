@@ -73,7 +73,7 @@ export default function DiligencePage() {
                     <p className="text-sm font-medium text-ink">{q.question}</p>
                     <p className="text-xs text-ink-muted">{q.rationale}</p>
                     <div className="mt-1 flex gap-1">
-                      <Badge tone="bg-neutral-wash text-neutral">{q.category}</Badge>
+                      <Badge tone="bg-neutral-wash text-neutral">{humanStatus(q.category)}</Badge>
                       <Badge tone="bg-neutral-wash text-neutral">via {q.generated_by}</Badge>
                       {q.related_claim_ids.map((c) => <span key={c} className="chip bg-surface-sunken text-ink-muted font-mono">C{c}</span>)}
                     </div>
@@ -88,7 +88,7 @@ export default function DiligencePage() {
         )}
       </Section>
 
-      <Section title="Claims & trust scores">
+      <Section title="Claims & Trust Scores">
         {claims.data ? <ClaimsTable claims={claims.data.items} /> : <Spinner />}
       </Section>
 
@@ -97,7 +97,7 @@ export default function DiligencePage() {
           <ul className="space-y-2">
             {contradictions.data.items.map((c) => (
               <li key={c.id} className="rounded-lg border border-negative/30 bg-negative-wash p-3 text-sm text-negative">
-                <Badge tone="bg-white text-negative">{c.severity}</Badge> {c.description}
+                <Badge tone="bg-white text-negative">{humanStatus(c.severity)}</Badge> {c.description}
                 <span className="ml-2 text-xs text-ink-muted">detected by {c.detected_by}</span>
               </li>
             ))}

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Debate, Memo } from "@/lib/types";
-import { pct } from "@/lib/format";
+import { humanStatus, pct } from "@/lib/format";
 import { MemoView } from "@/components/MemoView";
 import { BullCharacter, BearCharacter, RefereeCharacter, CharState } from "./Characters";
 import { DebatePlayer } from "./DebatePlayer";
@@ -12,9 +12,9 @@ import { EvidenceRef } from "../EvidenceRef";
 type Role = "bull" | "bear" | "referee";
 
 const ROLE_META: Record<Role, { name: string; sub: string; color: string }> = {
-  bull: { name: "Bull", sub: "Optimistic Case", color: "text-bull" },
-  referee: { name: "Referee", sub: "Neutral Judge", color: "text-referee" },
-  bear: { name: "Bear", sub: "Skeptical Case", color: "text-bear" },
+  bull: { name: "Bull", sub: "Optimistic case", color: "text-bull" },
+  referee: { name: "Referee", sub: "Neutral judge", color: "text-referee" },
+  bear: { name: "Bear", sub: "Skeptical case", color: "text-bear" },
 };
 
 function EvidenceRefs({ ids }: { ids: number[] }) {
@@ -134,7 +134,7 @@ export function InvestmentArena({
           <div className="flex items-center justify-between">
             <span className="text-xs text-ink-muted">v{debate.version} · {debate.generated_by}</span>
             {expandable && (
-              <button className="btn-ghost text-xs" onClick={() => setExpanded(true)}>Expand Full Debate ↗</button>
+              <button className="btn-ghost text-xs" onClick={() => setExpanded(true)}>Expand full debate ↗</button>
             )}
           </div>
 
@@ -159,8 +159,8 @@ export function InvestmentArena({
       {/* referee recommendation */}
       {referee && (
         <div className="border-t border-line bg-brand-wash px-5 py-3 text-center">
-          <div className="label text-brand">Referee Recommends</div>
-          <div className="text-lg font-semibold text-brand">{referee.recommended_action}</div>
+          <div className="label text-brand">Referee recommends</div>
+          <div className="text-lg font-semibold text-brand">{humanStatus(referee.recommended_action)}</div>
           <div className="text-xs text-ink-muted">
             Confidence {pct(referee.confidence)} ·{" "}
             {referee.final_decision_supportable
@@ -172,8 +172,8 @@ export function InvestmentArena({
 
       {/* pinned detail */}
       <div className="border-t border-line px-5 py-4" data-testid="arena-detail">
-        {pinned === "bull" && bull && <SideDetail title="Bull — Case to Advance" tone="text-bull" argument={bull} />}
-        {pinned === "bear" && bear && <SideDetail title="Bear — Case for Caution" tone="text-bear" argument={bear} />}
+        {pinned === "bull" && bull && <SideDetail title="Bull — case to advance" tone="text-bull" argument={bull} />}
+        {pinned === "bear" && bear && <SideDetail title="Bear — case for caution" tone="text-bear" argument={bear} />}
         {pinned === "referee" && referee && <RefereeDetail referee={referee} />}
         {!pinned && (
           <p className="text-sm text-ink-muted">
@@ -193,7 +193,7 @@ export function InvestmentArena({
             onClick={() => setMemoOpen((v) => !v)}
           >
             <span>
-              <span className="text-sm font-semibold text-ink">Investment Memo</span>
+              <span className="text-sm font-semibold text-ink">Investment memo</span>
               <span className="ml-2 text-xs text-ink-muted">
                 Full evidence-backed write-up — every standard section, missing data labeled, never invented.
               </span>
@@ -252,21 +252,21 @@ function SideDetail({ title, tone, argument }: { title: string; tone: string; ar
 function RefereeDetail({ referee }: { referee: NonNullable<Debate["referee"]> }) {
   return (
     <div className="rounded-lg border border-line bg-surface-sunken p-4">
-      <h4 className="text-sm font-semibold text-referee">Referee Assessment</h4>
+      <h4 className="text-sm font-semibold text-referee">Referee assessment</h4>
       <p className="mt-1 text-sm text-ink-soft">{referee.rationale}</p>
       <dl className="mt-3 grid gap-3 sm:grid-cols-2">
         <div>
-          <dt className="label">Strongest Bull Point</dt>
+          <dt className="label">Strongest Bull point</dt>
           <dd className="text-sm text-ink-soft">{referee.strongest_bull_point}</dd>
         </div>
         <div>
-          <dt className="label">Strongest Bear Point</dt>
+          <dt className="label">Strongest Bear point</dt>
           <dd className="text-sm text-ink-soft">{referee.strongest_bear_point}</dd>
         </div>
       </dl>
       {referee.unresolved_questions.length > 0 && (
         <div className="mt-3">
-          <div className="label">Unresolved Questions</div>
+          <div className="label">Unresolved questions</div>
           <ul className="mt-1 list-inside list-disc text-sm text-ink-soft">
             {referee.unresolved_questions.map((q, i) => <li key={i}>{q}</li>)}
           </ul>
@@ -274,7 +274,7 @@ function RefereeDetail({ referee }: { referee: NonNullable<Debate["referee"]> })
       )}
       {referee.required_diligence.length > 0 && (
         <div className="mt-3">
-          <div className="label">Required Diligence</div>
+          <div className="label">Required diligence</div>
           <ul className="mt-1 list-inside list-disc text-sm text-ink-soft">
             {referee.required_diligence.map((q, i) => <li key={i}>{q}</li>)}
           </ul>

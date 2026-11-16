@@ -5,6 +5,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { Badge, ErrorState, Section, Spinner } from "@/components/ui";
 import { addMyAppId } from "@/lib/myApps";
+import { humanStatus } from "@/lib/format";
 
 export default function ApplyFlow() {
   const [companyName, setCompanyName] = useState("");
@@ -122,7 +123,7 @@ export default function ApplyFlow() {
             <div className="mt-3">
               <span className="label">Information that would help</span>
               <div className="mt-1 flex flex-wrap gap-1">
-                {appResult.missing_fields.map((m: string) => <Badge key={m} tone="bg-caution-wash text-caution">{m.replace(/_/g, " ")}</Badge>)}
+                {appResult.missing_fields.map((m: string) => <Badge key={m} tone="bg-caution-wash text-caution">{humanStatus(m)}</Badge>)}
               </div>
             </div>
           )}

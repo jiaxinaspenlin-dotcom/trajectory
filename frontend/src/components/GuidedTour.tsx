@@ -134,7 +134,7 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
 
   return (
     // z-[60] sits ABOVE the highlighted element (z-45) so the card is never covered.
-    <div className="fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-label="Guided Tour">
+    <div className="fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-label="Guided tour">
       {/* Click-blocker: prevents interacting with the page during the tour but does
           NOT close it. The tour only closes via Skip / Finish. */}
       <div className="absolute inset-0" aria-hidden />
@@ -153,7 +153,7 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between">
-              <span className="label">Referee Tour</span>
+              <span className="label">Referee tour</span>
               <span className="text-xs font-medium text-ink-muted">{i + 1} / {steps.length}</span>
             </div>
             {/* progress dots */}
@@ -173,7 +173,7 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
 
         {/* footer — pinned; the Next/Back/Skip buttons are always visible */}
         <div className="flex shrink-0 items-center justify-between gap-2 border-t border-line bg-white px-4 py-3">
-          <button className="btn-ghost text-xs" onClick={skip} data-testid="tour-skip">Skip Tour</button>
+          <button className="btn-ghost text-xs" onClick={skip} data-testid="tour-skip">Skip tour</button>
           <div className="flex gap-2">
             <button className="btn-secondary text-xs" onClick={back} disabled={i === 0} data-testid="tour-back">
               Back

@@ -19,7 +19,7 @@ export function PipelineTable({ deals }: { deals: PipelineDeal[] }) {
             <th scope="col">Stage</th>
             <th scope="col">Next action</th>
             <th scope="col" className="text-right" title="Fit against your Fund thesis, 0–100">Thesis fit</th>
-            <th scope="col" className="text-right">Founder score</th>
+            <th scope="col" className="text-right">Founder Score</th>
             <th scope="col" className="text-right">Waiting</th>
           </tr>
         </thead>

@@ -24,7 +24,7 @@ export function ClaimsTable({ claims }: { claims: Claim[] }) {
             <th className="pr-2">Category</th>
             <th className="pr-2">Source</th>
             <th className="pr-2">Status</th>
-            <th className="pr-2">Trust</th>
+            <th className="pr-2">Trust Score</th>
             <th>Evidence</th>
           </tr>
         </thead>
@@ -32,7 +32,7 @@ export function ClaimsTable({ claims }: { claims: Claim[] }) {
           {claims.map((c) => (
             <tr key={c.id} className="border-t border-line align-top">
               <td className="py-2 pr-2 text-ink-soft">{c.text}</td>
-              <td className="pr-2 text-ink-muted">{c.category}</td>
+              <td className="pr-2 text-ink-muted">{humanStatus(c.category)}</td>
               <td className="pr-2 text-xs text-ink-muted">
                 {c.provenance === "independent" ? "Independent" : "Founder-reported"}
               </td>

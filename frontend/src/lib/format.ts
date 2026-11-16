@@ -45,8 +45,49 @@ export function trajectoryTone(t: string): string {
   }
 }
 
+// Display text for stored values (enums, recommended actions, missing fields).
+// Sentence case per docs/copy-style.md; known values are spelled out so names
+// and acronyms come out right.
+const DISPLAY: Record<string, string> = {
+  // screening axes are names
+  idea_vs_market: "Idea vs Market",
+  // stored Title Case values
+  "Insufficient Evidence": "Insufficient evidence",
+  "Invite to Apply": "Invite to apply",
+  "Schedule Interview": "Schedule interview",
+  "Request Information": "Request information",
+  "Continue Diligence": "Continue diligence",
+  "Website or Product Link": "Website or product link",
+  "GitHub Profile": "GitHub profile",
+  "Traction Signal (Revenue or Users)": "Traction signal (revenue or users)",
+  "Team Introduction": "Team introduction",
+  // Founder Score components (keys from backend app/scoring/founder_score.py)
+  leadership_collaboration: "Leadership & collaboration",
+  evidence_reliability: "Reliability of evidence",
+  // statuses that read better spelled out
+  founder_reported: "Founder-reported",
+  in_pipeline: "In Pipeline",
+  in_diligence: "In Diligence",
+  not_applicable: "Not applicable",
+};
+
+// Words that keep their capitals inside sentence-case text.
+const NAMES: Record<string, string> = {
+  github: "GitHub", openai: "OpenAI", tavily: "Tavily", ai: "AI", url: "URL", pdf: "PDF",
+  yc: "YC", hn: "HN", swot: "SWOT", kpis: "KPIs", kpi: "KPI", api: "API", mau: "MAU",
+};
+
 export function humanStatus(s: string): string {
-  return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  if (DISPLAY[s]) return DISPLAY[s];
+  const words = s.replace(/_/g, " ").trim().split(/\s+/).filter(Boolean);
+  return words
+    .map((w, i) => {
+      const name = NAMES[w.toLowerCase()];
+      if (name) return name;
+      const lower = w.toLowerCase();
+      return i === 0 ? lower.charAt(0).toUpperCase() + lower.slice(1) : lower;
+    })
+    .join(" ");
 }
 
 export function scoreTone(score: number): string {

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Debate } from "@/lib/types";
-import { pct } from "@/lib/format";
+import { humanStatus, pct } from "@/lib/format";
 import { BullCharacter, BearCharacter, RefereeCharacter, CharState } from "./Characters";
 import { ArenaBackdrop } from "./stage";
 import { EvidenceRef } from "../EvidenceRef";
@@ -17,9 +17,9 @@ interface Turn {
 }
 
 const ROLE_META: Record<Role, { name: string; sub: string; color: string; wash: string; border: string }> = {
-  bull: { name: "Bull", sub: "Optimistic Case", color: "text-bull", wash: "bg-bull/10", border: "border-bull/30" },
-  referee: { name: "Referee", sub: "Neutral Judge", color: "text-referee", wash: "bg-referee/10", border: "border-referee/30" },
-  bear: { name: "Bear", sub: "Skeptical Case", color: "text-bear", wash: "bg-bear/10", border: "border-bear/30" },
+  bull: { name: "Bull", sub: "Optimistic case", color: "text-bull", wash: "bg-bull/10", border: "border-bull/30" },
+  referee: { name: "Referee", sub: "Neutral judge", color: "text-referee", wash: "bg-referee/10", border: "border-referee/30" },
+  bear: { name: "Bear", sub: "Skeptical case", color: "text-bear", wash: "bg-bear/10", border: "border-bear/30" },
 };
 
 // Turn the generated debate into an alternating, turn-taking conversation.
@@ -49,7 +49,7 @@ function buildTurns(debate: Debate): Turn[] {
     turns.push({
       role: "referee",
       verdict: true,
-      text: `My recommendation: ${ref.recommended_action} (confidence ${pct(ref.confidence)}). ${ref.rationale}`,
+      text: `My recommendation: ${humanStatus(ref.recommended_action)} (confidence ${pct(ref.confidence)}). ${ref.rationale}`,
     });
   }
   return turns;
@@ -137,14 +137,14 @@ export function DebatePlayer({ debate, onClose }: { debate: Debate; onClose: () 
         <div className="relative z-10 grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-6 motion-safe:animate-[vsZoomOut_.5s_ease-in_1.9s_forwards] sm:gap-8">
           <div className="flex flex-col items-center motion-safe:animate-[vsBullIn_.55s_ease-out_both]">
             <BullCharacter state="speaking" size={150} />
-            <span className="mt-2 text-lg font-extrabold text-bull drop-shadow">BULL</span>
+            <span className="mt-2 text-lg font-extrabold uppercase text-bull drop-shadow">Bull</span>
           </div>
-          <div className="text-6xl font-black italic tracking-tighter text-white drop-shadow-lg motion-safe:animate-[vsPop_.6s_ease-out_.35s_both] sm:text-8xl">
-            VS
+          <div className="text-6xl font-black uppercase italic tracking-tighter text-white drop-shadow-lg motion-safe:animate-[vsPop_.6s_ease-out_.35s_both] sm:text-8xl" aria-hidden>
+            vs
           </div>
           <div className="flex flex-col items-center motion-safe:animate-[vsBearIn_.55s_ease-out_both]">
             <BearCharacter state="speaking" size={150} />
-            <span className="mt-2 text-lg font-extrabold text-bear drop-shadow">BEAR</span>
+            <span className="mt-2 text-lg font-extrabold uppercase text-bear drop-shadow">Bear</span>
           </div>
         </div>
 
@@ -168,7 +168,7 @@ export function DebatePlayer({ debate, onClose }: { debate: Debate; onClose: () 
       {/* header */}
       <div className="relative flex items-center justify-between border-b border-line bg-white/90 px-4 py-3 backdrop-blur sm:px-6">
         <div>
-          <h2 className="text-lg font-extrabold tracking-tight text-ink sm:text-xl">Investment Arena — Full Debate</h2>
+          <h2 className="text-lg font-extrabold tracking-tight text-ink sm:text-xl">Investment Arena — full debate</h2>
           <p className="text-xs text-ink-muted">v{debate.version} · {debate.generated_by} · click Next to hear each turn</p>
         </div>
         <button className="btn-secondary" onClick={onClose} aria-label="Close full debate">Close ✕</button>

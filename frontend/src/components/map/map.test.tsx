@@ -73,9 +73,9 @@ describe("Custom Axes layout", () => {
     expect(l.values.get(3)).toEqual({ fit: 88, momentum: 16 });
     expect(l.excluded.find((e) => e.node.id === 1)!.reasons).toEqual([
       "Thesis fit unavailable: No company yet — thesis fit is a placeholder",
-      "Founder momentum (30d) unavailable: Insufficient momentum history (needs 30+ days of score snapshots; has 1 spanning 0 days)",
+      "Founder Momentum (30d) unavailable: Insufficient momentum history (needs 30+ days of score snapshots; has 1 spanning 0 days)",
     ]);
-    expect(l.excluded.find((e) => e.node.id === 2)!.reasons).toEqual(["Founder momentum (30d) unavailable: No linked founder to track momentum for"]);
+    expect(l.excluded.find((e) => e.node.id === 2)!.reasons).toEqual(["Founder Momentum (30d) unavailable: No linked founder to track momentum for"]);
   });
 
   it("maps actual values onto axes centred on the domain midpoint, with z=none as a plane", () => {

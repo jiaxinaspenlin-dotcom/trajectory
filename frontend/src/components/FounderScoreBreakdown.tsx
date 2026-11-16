@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ScoreComponent } from "@/lib/types";
 import { InfoTip } from "./InfoTip";
+import { humanStatus } from "@/lib/format";
 
 // Plain-language explanations of each deterministic Founder Score component,
 // keyed by the backend component key (app/scoring/founder_score.py).
@@ -54,7 +55,7 @@ export function FounderScoreBreakdown({ components }: { components: ScoreCompone
                 <tr key={c.key} className="border-t border-line">
                   <td className="py-1.5 font-medium text-ink-soft">
                     <span className="inline-flex items-center whitespace-nowrap">
-                      {c.name}
+                      {humanStatus(c.key)}
                       {COMPONENT_INFO[c.key] && <InfoTip text={COMPONENT_INFO[c.key]} />}
                     </span>
                   </td>

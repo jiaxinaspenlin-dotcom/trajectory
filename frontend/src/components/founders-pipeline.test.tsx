@@ -121,9 +121,9 @@ describe("PipelineTable", () => {
   });
 
   it("links a recommendation awaiting review to the decision panel", () => {
-    render(<PipelineTable deals={[deal({ next_action: "Review recommendation", next_action_key: "review_recommendation", next_action_detail: "Recommended: Continue Diligence", priority: 1 })]} />);
+    render(<PipelineTable deals={[deal({ next_action: "Review recommendation", next_action_key: "review_recommendation", next_action_detail: "Recommended: Continue diligence", priority: 1 })]} />);
     expect(screen.getByRole("link", { name: /Review recommendation/ })).toHaveAttribute("href", "/vc/opportunities/11?tab=decision");
-    expect(screen.getByText("Recommended: Continue Diligence")).toBeInTheDocument();
+    expect(screen.getByText("Recommended: Continue diligence")).toBeInTheDocument();
     expect(screen.getByLabelText("Awaiting your review")).toBeInTheDocument();
   });
 

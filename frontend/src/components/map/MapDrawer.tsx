@@ -110,7 +110,7 @@ export function MapDrawer({
             {node.group.label}
             <span className="block text-xs text-ink-muted">{groupFieldLabel(node.group.field)}</span>
           </Row>
-          <Row label="Founder score">{node.founder_score != null ? <span className="num">{Math.round(node.founder_score)}</span> : <Muted>Not scored</Muted>}</Row>
+          <Row label="Founder Score">{node.founder_score != null ? <span className="num">{Math.round(node.founder_score)}</span> : <Muted>Not scored</Muted>}</Row>
           <Row label="Thesis fit">
             {node.thesis_fit.value != null ? <span className="num">{Math.round(node.thesis_fit.value)} / 100</span> : <Muted>{node.thesis_fit.reason}</Muted>}
           </Row>

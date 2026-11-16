@@ -9,7 +9,7 @@ describe("InvestmentArena", () => {
     expect(screen.getByTestId("arena-bull")).toBeInTheDocument();
     expect(screen.getByTestId("arena-bear")).toBeInTheDocument();
     expect(screen.getByTestId("arena-referee")).toBeInTheDocument();
-    expect(screen.getByText("Continue Diligence")).toBeInTheDocument();
+    expect(screen.getByText("Continue diligence")).toBeInTheDocument();
   });
 
   it("shows the bull speech bubble on hover", () => {
@@ -27,7 +27,7 @@ describe("InvestmentArena", () => {
   it("pins detailed analysis on click", () => {
     render(<InvestmentArena debate={debate} />);
     fireEvent.click(screen.getByTestId("arena-referee"));
-    expect(screen.getByText("Referee Assessment")).toBeInTheDocument();
+    expect(screen.getByText("Referee assessment")).toBeInTheDocument();
     expect(screen.getByText(/Independent traction data/)).toBeInTheDocument();
   });
 

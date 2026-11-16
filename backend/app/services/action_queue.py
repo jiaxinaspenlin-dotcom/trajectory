@@ -26,6 +26,16 @@ def _aware(dt: datetime | None) -> datetime | None:
     return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
 
 
+def action_label(action: str) -> str:
+    """A recommended action as sentence-case display text.
+
+    Stored values are Title Case ("Continue Diligence"); the UI uses sentence
+    case (docs/copy-style.md). Display only: never store the result.
+    """
+    words = str(action).split()
+    return " ".join([words[0], *(w.lower() for w in words[1:])]) if words else ""
+
+
 def next_action_info(db: Session, o: Opportunity) -> dict | None:
     """The ONE concrete next action for an open opportunity.
 
@@ -67,7 +77,7 @@ def next_action_info(db: Session, o: Opportunity) -> dict | None:
     is_inbound = str(o.entry_type) == "inbound"
     if rec and not decided:
         # awaiting the investor's review — not the same as the Decision stage
-        return action("review_recommendation", "Review recommendation", 1, f"Recommended: {rec.action}")
+        return action("review_recommendation", "Review recommendation", 1, f"Recommended: {action_label(rec.action)}")
     if is_inbound and not assessment:
         # a founder just applied and is waiting — surface it prominently.
         return action("review_application", "Review application", 2, "New inbound application")

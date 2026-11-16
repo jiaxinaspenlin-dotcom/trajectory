@@ -322,11 +322,11 @@ def _seed_static_analysis(db: Session, opp: Opportunity) -> None:
     company = ctx["company"]
     tr_claims = [c for c in claims if c["category"] in ("traction", "revenue", "users")]
     memo_sections = [
-        {"key": "snapshot", "title": "Company Snapshot",
+        {"key": "snapshot", "title": "Company snapshot",
          "body": f"{company.get('name')} — {company.get('one_liner') or 'Not disclosed'}. "
                  f"Sector: {company.get('sector') or 'Not disclosed'}. Stage: {company.get('stage') or 'Not disclosed'}.",
          "evidence_ids": strong_ev, "unavailable_label": None},
-        {"key": "hypotheses", "title": "Investment Hypotheses",
+        {"key": "hypotheses", "title": "Investment hypotheses",
          "body": f"Founder axis and momentum suggest execution capability (Founder Score {score:.0f}/100). "
                  f"Thesis fit {thesis_fit:.0f}/100. Core hypotheses require independent traction verification.",
          "evidence_ids": fscore.get("evidence_ids", [])[:5], "unavailable_label": None},
@@ -339,7 +339,7 @@ def _seed_static_analysis(db: Session, opp: Opportunity) -> None:
                           for c in tr_claims[:4]) or "No independently verified traction metrics at this stage.",
          "evidence_ids": [c["id"] for c in tr_claims][:4],
          "unavailable_label": None if tr_claims else "Not verified"},
-        {"key": "financials", "title": "Financials & Round Structure",
+        {"key": "financials", "title": "Financials & round structure",
          "body": "Round structure and financials not disclosed at this stage.", "evidence_ids": [],
          "unavailable_label": "Not disclosed"},
     ]

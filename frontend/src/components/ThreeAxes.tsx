@@ -37,13 +37,13 @@ function AxisCard({ axis }: { axis: AxisAssessment }) {
           <h4 className="text-sm font-semibold text-ink">{AXIS_TITLES[axis.axis] || axis.axis}</h4>
           {AXIS_INFO[axis.axis] && <InfoTip text={AXIS_INFO[axis.axis]} />}
         </span>
-        <Badge tone={labelTone(axis.label)}>{axis.label}</Badge>
+        <Badge tone={labelTone(axis.label)}>{humanStatus(axis.label)}</Badge>
       </div>
       <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
         <span className="text-2xl font-semibold text-ink">{Math.round(axis.display_score)}</span>
         <span className="text-xs text-ink-muted">/ 100</span>
         {axis.axis === "market" && (
-          <span className="ml-auto text-xs capitalize text-ink-muted">outlook: {axis.outlook}</span>
+          <span className="ml-auto text-xs text-ink-muted">Outlook: {axis.outlook}</span>
         )}
       </div>
       {axis.trend && (

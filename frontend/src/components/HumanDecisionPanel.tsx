@@ -95,7 +95,7 @@ export function HumanDecisionPanel({
         <span className="label">System recommendation</span>
         {recommendation ? (
           <>
-            <p className="mt-1 text-base font-semibold text-ink">{recommendation.action}</p>
+            <p className="mt-1 text-base font-semibold text-ink">{humanStatus(recommendation.action)}</p>
             <p className="mt-0.5 text-sm text-ink-muted">{recommendation.rationale}</p>
           </>
         ) : <p className="mt-1 text-sm text-ink-muted">Not generated yet. Run analysis to get a recommendation, or record your own decision.</p>}
@@ -105,9 +105,9 @@ export function HumanDecisionPanel({
         <div className="rounded-lg border border-positive/30 bg-positive-wash p-4 text-sm" role="status">
           <Badge tone="bg-white text-positive">Recorded</Badge>
           <p className="mt-1.5 text-ink-soft">
-            <strong>{saved.decided_by}</strong> chose <strong>{saved.chosen_action}</strong> ({humanStatus(saved.decision)}).
+            <strong>{saved.decided_by}</strong> chose <strong>{humanStatus(saved.chosen_action)}</strong> ({humanStatus(saved.decision)}).
           </p>
-          <p className="text-[13px] text-ink-muted">System had recommended: {saved.system_recommended_action || "—"}. Recorded separately.</p>
+          <p className="text-[13px] text-ink-muted">System had recommended: {saved.system_recommended_action ? humanStatus(saved.system_recommended_action) : "—"}. Recorded separately.</p>
           {saved.notes && <p className="mt-1 text-[13px] text-ink-soft">Notes: {saved.notes}</p>}
           <button className="btn-secondary btn-sm mt-3" onClick={amend}>Record another decision</button>
         </div>
@@ -151,7 +151,7 @@ export function HumanDecisionPanel({
                 onChange={(e) => setAction(e.target.value)}
               >
                 <option value="" disabled>Choose an action…</option>
-                {ACTIONS.map((a) => <option key={a} value={a}>{a}{recommendation?.action === a ? " (recommended)" : ""}</option>)}
+                {ACTIONS.map((a) => <option key={a} value={a}>{humanStatus(a)}{recommendation?.action === a ? " (recommended)" : ""}</option>)}
               </select>
               {recommendation && action !== recommendation.action && (
                 <button type="button" className="btn-ghost btn-sm self-center" onClick={() => setAction(recommendation.action)}>Use recommendation</button>
@@ -182,9 +182,9 @@ export function HumanDecisionPanel({
           <ol className="mt-2 divide-y divide-line" data-testid="decision-history">
             {[...history.data.items].reverse().map((h, i) => (
               <li key={i} className="py-2.5 text-sm">
-                <span className="font-medium text-ink">{humanStatus(h.decision)}: {h.chosen_action}</span>
+                <span className="font-medium text-ink">{humanStatus(h.decision)}: {humanStatus(h.chosen_action)}</span>
                 <span className="text-ink-muted"> · {h.decided_by} · {new Date(h.decided_at).toLocaleDateString()}</span>
-                <span className="block text-[13px] text-ink-muted">System had recommended: {h.system_recommended_action || "—"}{h.notes ? ` · ${h.notes}` : ""}</span>
+                <span className="block text-[13px] text-ink-muted">System had recommended: {h.system_recommended_action ? humanStatus(h.system_recommended_action) : "—"}{h.notes ? ` · ${h.notes}` : ""}</span>
               </li>
             ))}
           </ol>

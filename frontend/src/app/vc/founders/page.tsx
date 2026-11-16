@@ -263,7 +263,7 @@ function ManualAdd({ onSourced }: { onSourced: () => void }) {
       {result && (
         <div className="rounded-md border border-line bg-surface-sunken p-3 text-sm">
           <p className="font-medium text-ink">Sync {result.sync?.status}: {result.sync?.message}</p>
-          {result.opportunity_id && <Link href={`/vc/opportunities/${result.opportunity_id}`} className="btn-secondary btn-sm mt-2">Open Founder Profile →</Link>}
+          {result.opportunity_id && <Link href={`/vc/opportunities/${result.opportunity_id}`} className="btn-secondary btn-sm mt-2">Open founder profile →</Link>}
         </div>
       )}
     </div>

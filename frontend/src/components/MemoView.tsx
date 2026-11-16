@@ -3,6 +3,7 @@
 import { Memo } from "@/lib/types";
 import { normalizeMemoSections } from "@/lib/memo";
 import { Badge, Section } from "@/components/ui";
+import { humanStatus } from "@/lib/format";
 
 // Renders the full evidence-backed investment memo — the final recommendation
 // plus every standard section, in order. Missing data is labeled, never invented.
@@ -13,8 +14,8 @@ export function MemoView({ memo }: { memo: Memo }) {
     <div className="space-y-4">
       {memo.recommended_action && (
         <div className="rounded-xl bg-brand-wash p-4">
-          <span className="label text-brand">Final Recommendation</span>
-          <p className="text-lg font-semibold text-brand">{memo.recommended_action}</p>
+          <span className="label text-brand">Final recommendation</span>
+          <p className="text-lg font-semibold text-brand">{humanStatus(memo.recommended_action)}</p>
           <p className="text-xs text-ink-muted">Confidence {Math.round(memo.confidence * 100)}%</p>
         </div>
       )}

@@ -34,13 +34,13 @@ export default function MemoPage() {
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex items-center justify-between print:hidden">
         <div>
-          <h1 className="text-2xl font-semibold tracking-[-0.015em] text-ink">Investment Memo</h1>
+          <h1 className="text-2xl font-semibold tracking-[-0.015em] text-ink">Investment memo</h1>
           <p className="text-sm text-ink-muted">Evidence-backed. Missing data is explicitly labeled, never invented.</p>
         </div>
         <div className="flex gap-2">
           <Link href={`/vc/opportunities/${id}`} className="btn-secondary">Back</Link>
           <button className="btn-secondary" onClick={() => window.print()}>Print / PDF</button>
-          <button className="btn-primary" onClick={generate}>Regenerate Memo</button>
+          <button className="btn-primary" onClick={generate}>Regenerate memo</button>
         </div>
       </div>
 
@@ -59,7 +59,7 @@ export default function MemoPage() {
       )}
 
       {memo.loading ? <Spinner /> : memo.error ? (
-        <EmptyState title="No memo yet" hint="Generate the evidence-backed memo." action={<button className="btn-primary" onClick={generate}>Generate Memo</button>} />
+        <EmptyState title="No memo yet" hint="Generate the evidence-backed memo." action={<button className="btn-primary" onClick={generate}>Generate memo</button>} />
       ) : memo.data ? (
         <>
           <MemoView memo={memo.data} />

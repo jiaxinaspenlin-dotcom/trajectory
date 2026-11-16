@@ -98,13 +98,13 @@ export const METRICS: Record<MetricKey, MetricDef> = {
     format: (v) => `${Math.round(v)}`,
   },
   momentum: {
-    key: "momentum", label: "Founder momentum (30d)", short: "Momentum", unit: "pts",
+    key: "momentum", label: "Founder Momentum (30d)", short: "Momentum", unit: "pts",
     value: (n) => n.momentum.value,
     reason: (n) => n.momentum.reason ?? "Not computed",
     format: (v) => `${v > 0 ? "+" : ""}${round1(v)}`,
   },
   score: {
-    key: "score", label: "Founder score", short: "Founder score", unit: "/100",
+    key: "score", label: "Founder Score", short: "Founder Score", unit: "/100",
     value: (n) => n.founder_score,
     reason: (n) => (n.founder ? "Founder not scored yet" : "No linked founder to score"),
     format: (v) => `${Math.round(v)}`,

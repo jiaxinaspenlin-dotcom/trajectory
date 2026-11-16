@@ -227,7 +227,7 @@ function OpportunityRecord() {
         {o.entry_type === "outbound" && <><Link href="/vc/founders" className="hover:text-brand">Founders</Link><span className="mx-1.5 text-ink-faint">/</span></>}
         {inPipeline && <><Link href={`/vc/pipeline?stage=${o.stage}`} className="hover:text-brand">Pipeline</Link><span className="mx-1.5 text-ink-faint">/</span></>}
         <span className="truncate text-ink-soft">{name}</span>
-        <Link href={`/vc/map?focus=${o.id}`} className="ml-auto shrink-0 pl-3 hover:text-brand">View on map →</Link>
+        <Link href={`/vc/map?focus=${o.id}`} className="ml-auto shrink-0 pl-3 hover:text-brand">View on Map →</Link>
       </nav>
 
       {/* compact header: name, source, stage, one primary next action */}
@@ -300,8 +300,8 @@ function OpportunityRecord() {
               </Section>
               <Section title="At a glance" flush>
                 <dl className="divide-y divide-line">
-                  <Fact label="Thesis fit" value={o.company ? `${Math.round(o.thesis_fit_score)} / 100${o.thesis_fit_stale ? " · earlier thesis" : ""}` : "Needs a company"} tab="screening" pathname={pathname} />
-                  <Fact label="Founder score" value={o.founder_score ? `${Math.round(o.founder_score.score)}` : "Not scored"} tab="founder" pathname={pathname} />
+                  <Fact label="Thesis fit" value={o.company ? `${Math.round(o.thesis_fit_score)} / 100${o.thesis_fit_stale ? " · not current" : ""}` : "Needs a company"} tab="screening" pathname={pathname} />
+                  <Fact label="Founder Score" value={o.founder_score ? `${Math.round(o.founder_score.score)}` : "Not scored"} tab="founder" pathname={pathname} />
                   <Fact label="Evidence" value={`${evidence.length} ${evidence.length === 1 ? "item" : "items"}${newIds.size ? ` · ${newIds.size} new` : ""}`} tab="evidence" pathname={pathname} />
                   <Fact label="Claims" value={claims.data ? `${claimCount}` : "…"} tab="claims" pathname={pathname} />
                   <Fact label="Analysis" value={analyzed ? "Done" : "Not run yet"} tab="screening" pathname={pathname} />
@@ -373,7 +373,7 @@ function OpportunityRecord() {
                 ) : <p className="text-sm text-ink-muted">Not computed — fit is evaluated from a company, and this lead has none yet.</p>}
                 {o.company && o.thesis_fit_stale && (
                   <div className="mt-3 rounded-md bg-caution-wash px-3 py-2 text-sm text-caution" data-testid="fit-stale">
-                    <p>Scored against an earlier version of your thesis.</p>
+                    <p>Not scored against your current thesis.</p>
                     <button className="btn-secondary btn-sm mt-2" onClick={recalculateFit} disabled={fitBusy}>
                       {fitBusy ? "Recalculating…" : "Recalculate fit"}
                     </button>

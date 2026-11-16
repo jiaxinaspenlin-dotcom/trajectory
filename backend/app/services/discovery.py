@@ -157,7 +157,7 @@ async def run_ai_discovery(
                 stage=WorkflowStage.SOURCING, status=OpportunityStatus.PROSPECT,
                 first_signal_at=datetime.now(UTC), thesis_fit_score=0.0,
                 surfaced_reason=(
-                    f"AI Discovery: matched your thesis via public GitHub search. "
+                    f"AI discovery: matched your thesis via public GitHub search. "
                     f"Founder Score {fs.score if fs else 0:.0f}."
                 ),
                 is_demo=False,

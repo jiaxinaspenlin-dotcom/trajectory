@@ -81,7 +81,7 @@ def _stub_generate_json(system: str, user: str, **_kw) -> dict:
     if "diligence analyst" in s:
         return {"questions": [{"question": "Provide retention.", "category": "traction", "rationale": "gap", "related_claim_ids": []}]}
     if "investment memo" in s:
-        return {"sections": [{"key": "snapshot", "title": "Company Snapshot", "body": "…", "evidence_ids": [1], "unavailable_label": None}],
+        return {"sections": [{"key": "snapshot", "title": "Company snapshot", "body": "…", "evidence_ids": [1], "unavailable_label": None}],
                 "recommended_action": "Continue Diligence", "confidence": 0.5}
     if "natural-language search" in s:
         return {"sectors": ["fintech"], "stages": ["seed"], "geographies": ["Boston"], "technical_founder": True,

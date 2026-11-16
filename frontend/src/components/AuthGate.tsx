@@ -70,10 +70,10 @@ function AuthForm({ persona, onAuthed }: { persona: Persona; onAuthed: () => voi
             Trajectory
           </Link>
           <div className="mt-2 flex justify-center">
-            <span className={`chip ${chip}`}>{isVC ? "Investor Workspace" : "Founder Portal"}</span>
+            <span className={`chip ${chip}`}>{isVC ? "Investor workspace" : "Founder portal"}</span>
           </div>
           <h1 className="mt-3 text-xl font-semibold text-ink">
-            {mode === "login" ? "Sign In" : "Create Your Account"}
+            {mode === "login" ? "Sign in" : "Create your account"}
           </h1>
           <p className="mt-1 text-sm text-ink-muted">
             {isVC ? "Access your fund's pipeline, discovery, and decisions." : "Apply to the fund and track your applications."}
@@ -122,7 +122,7 @@ function AuthForm({ persona, onAuthed }: { persona: Persona; onAuthed: () => voi
           {error && <p className="text-sm text-negative">{error}</p>}
 
           <button className="btn-primary w-full" disabled={busy}>
-            {busy ? "Please wait…" : mode === "login" ? "Sign In" : "Create Account"}
+            {busy ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}
           </button>
         </form>
 

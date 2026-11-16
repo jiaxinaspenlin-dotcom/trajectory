@@ -435,7 +435,7 @@ function ResultCard({
         {oppId != null ? (
           <>
             <Link href={`/vc/opportunities/${oppId}`} className="btn-secondary btn-sm">Open lead</Link>
-            <Link href={`/vc/map?focus=${oppId}`} className="btn-ghost btn-sm">View on map</Link>
+            <Link href={`/vc/map?focus=${oppId}`} className="btn-ghost btn-sm">View on Map</Link>
             {r.existing && r.existing.evidence_added > 0 && !r.saved_opportunity_id && (
               <span className="text-xs text-ink-muted">+{r.existing.evidence_added} new {r.existing.evidence_added === 1 ? "source" : "sources"} added</span>
             )}

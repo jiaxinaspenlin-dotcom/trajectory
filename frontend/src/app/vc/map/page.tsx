@@ -319,7 +319,7 @@ function OpportunityMap() {
       </div>
 
       <p className={`pointer-events-none absolute bottom-6 right-4 z-10 hidden text-xs uppercase tracking-[0.08em] text-ink-muted 2xl:block ${selected ? "2xl:hidden" : ""}`}>
-        Drag orbit · Right-drag pan · Scroll zoom · Click focus
+        Drag to orbit · right-drag to pan · scroll to zoom · click to focus
       </p>
 
       {selected && (
@@ -343,7 +343,7 @@ function OpportunityMap() {
       )}
       {!data!.has_thesis && (
         <p className="hud absolute bottom-20 right-4 z-10 max-w-xs px-4 py-3 text-sm text-caution">
-          No active thesis — thesis fit can&apos;t be plotted. <Link href="/vc/fund" className="underline">Set up the fund thesis</Link>.
+          No active thesis — thesis fit can&apos;t be plotted. <Link href="/vc/fund" className="underline">Set up your Fund thesis</Link>.
         </p>
       )}
     </>
@@ -399,7 +399,7 @@ function AxisPanel({ x, y, z, options, onChange }: {
 }) {
   const choices: { axis: "x" | "y" | "z"; value: AxisChoice }[] = [{ axis: "x", value: x }, { axis: "y", value: y }, { axis: "z", value: z }];
   return (
-    <div className="hud pointer-events-auto grid w-[min(36rem,calc(100vw-1.5rem))] grid-cols-3 gap-2 p-3 sm:gap-3" data-testid="axis-panel" aria-label="Custom axes">
+    <div className="hud pointer-events-auto grid w-[min(36rem,calc(100vw-1.5rem))] grid-cols-3 gap-2 p-3 sm:gap-3" data-testid="axis-panel" aria-label="Custom Axes">
       {choices.map(({ axis, value }) => (
         <label key={axis} className="min-w-0">
           <span className="mb-1 block text-[13px] font-semibold text-ink">{axis.toUpperCase()} axis</span>

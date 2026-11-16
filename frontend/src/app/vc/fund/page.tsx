@@ -119,7 +119,7 @@ function Fund() {
       {staleFits > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-caution/30 bg-caution-wash px-4 py-3 text-[15px] text-caution" data-testid="stale-fit">
           <span>
-            {staleFits === 1 ? "1 thesis fit score was" : `${staleFits} thesis fit scores were`} calculated with an earlier thesis. They stay as they are until you recalculate.
+            {staleFits === 1 ? "1 thesis fit score doesn't" : `${staleFits} thesis fit scores don't`} reflect your current thesis. They stay as they are until you recalculate.
           </span>
           <button className="btn-secondary btn-sm" onClick={recalculate} disabled={recalculating}>
             {recalculating ? "Recalculating…" : `Recalculate ${staleFits} score${staleFits === 1 ? "" : "s"}`}
@@ -192,7 +192,7 @@ function Profile({ t }: { t: Thesis }) {
           </dl>
         </Section>
         {weights.length > 0 && (
-          <Section title="Founder score weights" subtitle="How the Founder Score is composed">
+          <Section title="Founder Score weights" subtitle="How the Founder Score is composed">
             <ul className="space-y-2">
               {weights.map(([k, w]) => (
                 <li key={k}>
