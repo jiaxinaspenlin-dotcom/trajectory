@@ -33,7 +33,7 @@ export function PageHeader({ title, subtitle, actions, eyebrow }: { title: React
   }, []);
   return (
     <>
-      <div className="sticky top-14 z-30 -mx-4 h-0 sm:-mx-6 lg:top-0 lg:-mx-10" aria-hidden={!pinned} {...((!pinned ? { inert: "" } : {}) as object)}>
+      <div className="sticky top-14 z-30 !m-0 -mx-4 h-0 sm:-mx-6 lg:top-0 lg:-mx-10" aria-hidden={!pinned} {...((!pinned ? { inert: "" } : {}) as object)}>
         <div
           className={`flex h-14 items-center justify-between gap-4 border-b border-line bg-white/90 px-4 backdrop-blur-md transition-[opacity,transform] duration-base ease-out sm:px-6 lg:px-10 ${
             pinned ? "translate-y-0 opacity-100" : "pointer-events-none -translate-y-2 opacity-0"}`}
@@ -43,7 +43,7 @@ export function PageHeader({ title, subtitle, actions, eyebrow }: { title: React
           {actions && <div className="hidden shrink-0 items-center gap-2 sm:flex">{actions}</div>}
         </div>
       </div>
-      <div ref={ref} className="animate-rise flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+      <div ref={ref} className="animate-rise !mt-0 flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
         <div className="min-w-0">
           {eyebrow && <div className="eyebrow mb-1.5">{eyebrow}</div>}
           <h1 className="text-[1.625rem] font-[650] leading-8 tracking-[-0.025em] text-ink sm:text-page">{title}</h1>

@@ -93,6 +93,18 @@ export function parseStage(v: string | null): string {
   return v && (PIPELINE_STAGES as readonly string[]).includes(v) ? v : "all";
 }
 
+// The kind of work a deal is waiting on (its next action), from ?next= (Dashboard groups).
+export const NEXT_ACTION_LABELS: Record<string, string> = {
+  review_recommendation: "Recommendations to Review",
+  review_application: "Applications to Review",
+  resolve_diligence: "Open Diligence",
+  run_analysis: "To Analyze",
+  generate_memo: "Memos to Generate",
+};
+export function parseNext(v: string | null): string | null {
+  return v && v in NEXT_ACTION_LABELS ? v : null;
+}
+
 export function parseSource(v: string | null): SourceFilter {
   return v === "inbound" || v === "outbound" ? v : "all";
 }

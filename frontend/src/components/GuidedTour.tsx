@@ -129,7 +129,7 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
     left: pos ? pos.left : -9999,
     maxHeight: "calc(100vh - 32px)",
     opacity: pos ? 1 : 0,
-    transition: prefersReducedMotion() ? "none" : "top 0.18s ease, left 0.18s ease",
+    transition: prefersReducedMotion() ? "none" : "opacity 200ms var(--ease-out)",
   };
 
   return (
@@ -143,12 +143,13 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
         ref={cardRef}
         tabIndex={-1}
         style={cardStyle}
-        className="relative z-10 flex w-[380px] max-w-[92vw] flex-col overflow-hidden rounded-xl border border-brand/30 bg-white shadow-raised ring-1 ring-black/5 focus:outline-none"
+        key={i}
+        className="menu-enter relative z-10 flex w-[380px] max-w-[92vw] flex-col overflow-hidden rounded-xl bg-white shadow-overlay ring-1 ring-black/5 focus:outline-none"
         data-testid="tour-card"
       >
         {/* header — fixed */}
         <div className="flex shrink-0 items-center gap-3 border-b border-line px-4 py-3">
-          <div className="shrink-0 motion-safe:animate-[bounce_0.9s_ease-in-out_1]">
+          <div className="shrink-0">
             <RefereeCharacter state="pointing" size={44} />
           </div>
           <div className="min-w-0 flex-1">
@@ -191,9 +192,9 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
 }
 
 export const DASHBOARD_TOUR: TourStep[] = [
-  { target: "action-queue", title: "Start with What Needs Attention", body: "Welcome to your investor workspace. This is the short list of what to do next — the most urgent first. Each row's button opens the right part of that opportunity: its decision, its analysis, or its diligence." },
-  { target: "overview", title: "Your Pipeline at a Glance", body: "Deals by stage — Sourcing, Screening, Diligence, Decision. Click a stage to open those records." },
-  { target: "evidence", title: "Recent Evidence", body: "The latest sources collected from GitHub, the web, and pitch decks. Every claim in Trajectory links back to stored evidence like this, with its own verification status." },
-  { target: "nav", title: "Everything Else Is One Click Away", body: "Map shows every lead and deal in one view. Founders ranks the leads you've sourced, Pipeline holds the full application queue, and Fund keeps your thesis — every score is evaluated against it." },
-  { target: "action-queue", title: "Open an Opportunity to Go Deeper", body: "Each opportunity has tabs — Overview, Founder, Screening, Arena, Claims, Evidence, and Decision. The button at the top of a record is always its next step; you approve or override every recommendation." },
+  { target: "action-queue", title: "Start with What to Do Right Now", body: "Welcome to your investor workspace. The most urgent task is always here, with one button that opens the right part of that opportunity: its decision, its analysis or its diligence." },
+  { target: "waiting", title: "Everything Else, Grouped", body: "What else is waiting, by kind of work: recommendations to review, applications, new leads. Each group opens a filtered list." },
+  { target: "overview", title: "Where Everything Stands", body: "Every lead and deal by stage: Sourcing, Screening, Diligence, Decision. Hover a stage to see what's in it; click it to open those records." },
+  { target: "nav", title: "Everything Else Is One Click Away", body: "Map shows every lead and deal in one view. Founders ranks the leads you've sourced, Pipeline holds every active deal, and Fund keeps your thesis that every score is evaluated against." },
+  { target: "action-queue", title: "Open an Opportunity to Go Deeper", body: "Each opportunity has tabs: Overview, Founder, Screening, Arena, Claims, Evidence and Decision. The button at the top of a record is always its next step; you approve or override every recommendation." },
 ];
