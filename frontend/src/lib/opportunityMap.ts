@@ -2,7 +2,7 @@
 // position the same MapNode records (stable opportunity IDs) in one 3D scene;
 // these functions decide where, without touching WebGL.
 
-import { humanStatus, titleCase } from "./format";
+import { asSentence, humanStatus, sectorLabel } from "./format";
 import { MapLink, MapNode } from "./types";
 
 export type MapView = "graph" | "axes";
@@ -94,19 +94,19 @@ export const METRICS: Record<MetricKey, MetricDef> = {
   fit: {
     key: "fit", label: "Thesis Fit", short: "Thesis Fit", unit: "/100",
     value: (n) => n.thesis_fit.value,
-    reason: (n) => titleCase(n.thesis_fit.reason ?? "Not computed"),
+    reason: (n) => asSentence(n.thesis_fit.reason ?? "Not computed"),
     format: (v) => `${Math.round(v)}`,
   },
   momentum: {
     key: "momentum", label: "Founder Momentum (30d)", short: "Momentum", unit: "pts",
     value: (n) => n.momentum.value,
-    reason: (n) => titleCase(n.momentum.reason ?? "Not computed"),
+    reason: (n) => asSentence(n.momentum.reason ?? "Not computed"),
     format: (v) => `${v > 0 ? "+" : ""}${round1(v)}`,
   },
   score: {
     key: "score", label: "Founder Score", short: "Founder Score", unit: "/100",
     value: (n) => n.founder_score,
-    reason: (n) => (n.founder ? "Founder Not Scored Yet" : "No Linked Founder to Score"),
+    reason: (n) => (n.founder ? "The founder hasn't been scored yet." : "No linked founder to score."),
     format: (v) => `${Math.round(v)}`,
   },
   evidence: {
@@ -173,7 +173,7 @@ export function axesLayout(nodes: MapNode[], axes: { x: MetricKey; y: MetricKey;
   const excluded: Excluded[] = [];
   for (const n of nodes) {
     const missing = keys.filter(({ key }) => METRICS[key].value(n) == null);
-    if (missing.length) excluded.push({ node: n, reasons: missing.map(({ key }) => `${METRICS[key].label} Unavailable: ${METRICS[key].reason(n)}`) });
+    if (missing.length) excluded.push({ node: n, reasons: missing.map(({ key }) => `${METRICS[key].label}: ${METRICS[key].reason(n)}`) });
     else plotted.push(n);
   }
   const domains: AxisDomain[] = keys.map(({ axis, key }) => {
@@ -213,7 +213,7 @@ export interface MapGroup {
 export function groupNodes(nodes: MapNode[]): MapGroup[] {
   const by = new Map<string, MapGroup>();
   for (const n of nodes) {
-    const g = by.get(n.group.key) ?? { key: n.group.key, label: n.group.label, field: n.group.field, ids: [] };
+    const g = by.get(n.group.key) ?? { key: n.group.key, label: groupLabel(n.group), field: n.group.field, ids: [] };
     g.ids.push(n.id);
     by.set(n.group.key, g);
   }
@@ -223,10 +223,10 @@ export function groupNodes(nodes: MapNode[]): MapGroup[] {
   );
 }
 
-// Sector groups are named by the companies themselves (content, shown as typed);
-// language and "ungrouped" group labels are generated, so they're labels.
-export function isContentGroup(field: string | null): boolean {
-  return field === "company.sector";
+// A group's display name. Sector groups carry the sector as typed ("ai/ml"); like
+// every group name it is a label, so it is shown as one ("AI/ML").
+export function groupLabel(g: { label: string; field: string | null }): string {
+  return g.field === "company.sector" ? sectorLabel(g.label) : g.label;
 }
 
 export function groupFieldLabel(field: string | null): string {

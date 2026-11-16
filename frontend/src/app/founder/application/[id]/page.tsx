@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useFetch } from "@/lib/useFetch";
+import { sectorLabel } from "@/lib/format";
 import { Badge, ErrorState, Section, Spinner, Stat } from "@/components/ui";
 
 interface ApplicationDetail {
@@ -49,7 +50,7 @@ export default function ApplicationStatus() {
             <h1 className="text-2xl font-semibold tracking-[-0.015em] text-ink" data-content>{data.company_name}</h1>
             <Badge tone="bg-brand-wash text-brand">Under Review</Badge>
           </div>
-          <p className="mt-0.5 text-sm text-ink-muted">{data.sector ? <span data-content>{data.sector}</span> : "Sector Not Set"} · {data.geography ? <span data-content>{data.geography}</span> : "Location Not Set"}</p>
+          <p className="mt-0.5 text-sm text-ink-muted">{data.sector ? sectorLabel(data.sector) : "Sector Not Set"} · {data.geography ? <span data-content>{data.geography}</span> : "Location Not Set"}</p>
         </div>
         {!deckReady && <Link href="/founder" className="btn-primary">Finish Your Application</Link>}
       </div>

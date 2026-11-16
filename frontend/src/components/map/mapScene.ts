@@ -6,6 +6,7 @@
 
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { axisTitle, type SceneLine } from "./sceneText";
 
 export type Vec3 = [number, number, number];
 
@@ -61,8 +62,8 @@ export interface SceneLayout {
 
 export interface SceneCallbacks {
   onSelect: (id: number | null) => void;
-  // a line marked content (a sector name) is shown as typed and skipped by copy checks
-  describe: (id: number) => { title: string; lines: (string | { text: string; content: true })[] };
+  // a line marked content (a name) is shown as typed and skipped by copy checks
+  describe: (id: number) => { title: string; lines: SceneLine[] };
 }
 
 const ACCENT = "#1f4fd8";
@@ -280,6 +281,17 @@ export class MapScene {
     return p.behind ? null : { x: p.x, y: p.y };
   }
 
+  // Every string the renderer has drawn, for copy checks in browser walks.
+  renderedText(): { text: string; kind: string; content: boolean }[] {
+    const read = (el: HTMLElement, kind: string) => ({ text: el.textContent ?? "", kind, content: el.dataset.content !== undefined });
+    return [
+      ...[...this.nodeLabelEls.values()].map((el) => read(el, "node")),
+      ...[...this.clusterEls.values()].map((el) => read(el, "cluster")),
+      ...this.axisEls.map((el) => read(el, "axis")),
+      ...[...this.tooltip.children].map((el) => read(el as HTMLElement, "tooltip")),
+    ];
+  }
+
   // Camera state summary (tests verify orbit / zoom / reset actually moved it).
   insetsState() {
     return { ...this.insets, offset: { ...this.offset } };
@@ -335,6 +347,7 @@ export class MapScene {
       const el = document.createElement("div");
       el.className = "pointer-events-none absolute left-0 top-0 whitespace-nowrap rounded bg-white/85 px-1 text-xs font-medium text-ink";
       el.textContent = s.node.label; // textContent: names come from public profiles
+      el.dataset.content = "";
       el.style.display = "none";
       this.labelLayer.appendChild(el);
       this.nodeLabelEls.set(s.node.id, el);
@@ -627,7 +640,7 @@ export class MapScene {
         this.labelLayer.appendChild(el);
         this.axisEls.push(el);
       };
-      tag(`${a.axis.toUpperCase()} · ${a.label} ${a.maxLabel}`, at(L * 1.07), true);
+      tag(axisTitle(a), at(L * 1.07), true);
       // origin is shared by every axis, so value labels skip t = 0
       for (const tk of a.ticks) tag(tk.text, at(tk.t * L * (Math.abs(tk.t) === 1 ? 1.07 : 1)), false);
     }

@@ -72,10 +72,10 @@ describe("Custom Axes layout", () => {
     expect([...l.positions.keys()]).toEqual([3]);
     expect(l.values.get(3)).toEqual({ fit: 88, momentum: 16 });
     expect(l.excluded.find((e) => e.node.id === 1)!.reasons).toEqual([
-      "Thesis Fit Unavailable: No Company Yet — Thesis Fit Is a Placeholder",
-      "Founder Momentum (30d) Unavailable: Insufficient Momentum History (Needs 30+ Days of Score Snapshots; Has 1 Spanning 0 Days)",
+      "Thesis Fit: No company yet — thesis fit is a placeholder.",
+      "Founder Momentum (30d): Insufficient momentum history (needs 30+ days of score snapshots; has 1 spanning 0 days).",
     ]);
-    expect(l.excluded.find((e) => e.node.id === 2)!.reasons).toEqual(["Founder Momentum (30d) Unavailable: No Linked Founder to Track Momentum For"]);
+    expect(l.excluded.find((e) => e.node.id === 2)!.reasons).toEqual(["Founder Momentum (30d): No linked founder to track momentum for."]);
   });
 
   it("maps actual values onto axes centred on the domain midpoint, with z=none as a plane", () => {
@@ -114,7 +114,8 @@ describe("Relationships layout", () => {
 
   it("anchors one labelled cluster per group, above its members, with stable distinct colors", () => {
     const { clusters, positions } = relationshipLayout([node(), inbound, plotted]);
-    expect(clusters.map((c) => c.label).sort()).toEqual(["Rust Projects", "fintech"]);
+    // sector groups are shown as labels; the stored sector is unchanged
+    expect(clusters.map((c) => c.label).sort()).toEqual(["Fintech", "Rust Projects"]);
     const fintech = clusters.find((c) => c.key === "sector:fintech")!;
     expect(fintech.labelAt[1]).toBeGreaterThan(Math.max(positions.get(2)![1], positions.get(3)![1]));
     const colors = clusterColors([node(), inbound, plotted]);
@@ -134,8 +135,8 @@ describe("MapDrawer", () => {
     const panel = screen.getByTestId("map-node-panel");
     expect(within(panel).getByRole("link", { name: /Open Opportunity/ })).toHaveAttribute("href", "/vc/opportunities/1");
     const why = within(panel).getByTestId("drawer-not-plotted");
-    expect(why).toHaveTextContent("Thesis Fit Unavailable: No Company Yet");
-    expect(why).toHaveTextContent("Has 1 Spanning 0 Days");
+    expect(why).toHaveTextContent("Thesis Fit: No company yet");
+    expect(why).toHaveTextContent("has 1 spanning 0 days).");
     fireEvent.click(within(panel).getByText("PayMesh"));
     expect(onSelect).toHaveBeenCalledWith(3);
   });
@@ -163,7 +164,7 @@ describe("MapValuesPanel", () => {
     expect(within(table).getByText((_, el) => el?.textContent === "Same Point as ForgeTools" && el.tagName === "SPAN" && !!el.firstElementChild)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Not Plotted 1/ }));
     const ex = screen.getByTestId("excluded-list");
-    expect(within(ex).getByText(/Insufficient Momentum History/)).toBeInTheDocument();
+    expect(within(ex).getByText(/Insufficient momentum history/)).toBeInTheDocument();
     fireEvent.click(within(ex).getByText("Ada Builder"));
     expect(onSelect).toHaveBeenCalledWith(1);
   });

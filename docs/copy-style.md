@@ -75,8 +75,8 @@ Screening, Diligence, Decision, Founder Score.
 
 Leave user and third-party content exactly as it is: company and founder names,
 GitHub handles, company one-liners and headlines, evidence titles and quotes,
-source page titles, search queries, sectors (including the Map's sector
-groups), file names and anything an investor or founder typed.
+source page titles, search queries, repo paths, file names and anything an
+investor or founder typed in a free-text field.
 
 Placeholders that show an example value are content, and they say so: they
 start with "e.g." ("e.g. fintech, ai/ml, devtools") or are a URL or email
@@ -87,6 +87,27 @@ Mark content in the markup with `data-content` on the element that holds it,
 so copy checks skip it. When a name would otherwise sit inside an
 `aria-label`, label the region by its heading with `aria-labelledby` instead
 ("Record Sections", not "{name} Sections").
+
+## Sectors and groups are labels
+
+A sector or group name is a label wherever it is shown as one: a Map group,
+cluster, legend, filter or tooltip, a thesis chip on Fund, a web result, the
+founder portal. Show it through `sectorLabel()` (and on the Map,
+`groupLabel()`): "fintech" → "Fintech", "ai/ml" → "AI/ML", "devtools" →
+"Developer Tools", "b2b saas" → "B2B SaaS". This is display only: the thesis
+and company profiles keep what was typed, and filters match on the stored
+value. Acronyms in the name map stay as written: AI, ML, API, SaaS, B2B, B2C,
+LLM, DevOps.
+
+## The Map's 3D view
+
+The Map draws node names, cluster labels, axis titles and tick values and
+hover tooltips over its WebGL canvas. All of that text is built in
+`components/map/sceneText.ts`, which the canvas and the copy test both use:
+names are content, everything else is a label. Reasons a record isn't plotted
+on the chosen axes are sentences ("Thesis Fit: No company yet — thesis fit is
+a placeholder."). In development the scene's `renderedText()` returns what it
+actually drew, for browser walks.
 
 ## Generated text
 
@@ -120,9 +141,7 @@ shown in the house style without changing its words:
   so records already in the database match new ones.
 - **CSS.** Labels are not uppercased through CSS; what is in the source is
   what is shown. The one exception is decoration: the "Bull vs Bear" intro of
-  the full debate. The Map's sector clusters are content and are shown as
-  typed; its generated groups are labels ("Go Projects", "Not Enough Data to
-  Group").
+  the full debate.
 
 ## Guarding it
 
@@ -131,7 +150,8 @@ shown in the house style without changing its words:
 sourcing lead and a deal with no linked founder; drawers, menus, the guided
 tour, the decision form and its errors, the Fund editor and its errors, web
 search results, loading and error states, the founder portal steps, sign-in
-and toasts. It reads every element that has text, not only buttons and
+and toasts. For the Map it also checks every string the 3D renderer draws, in
+Relationships and Custom Axes. It reads every element that has text, not only buttons and
 headings, plus accessible names, tooltips and placeholders, and fails on:
 - a label that isn't Title Case (for example "Review recommendation" or
   "Loading dashboard…");

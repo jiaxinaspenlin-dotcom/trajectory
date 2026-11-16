@@ -16,6 +16,7 @@ def test_title_case_rule():
     assert title_case("log out") == "Log Out"
     assert title_case("opt in to updates") == "Opt In to Updates"
     assert title_case("7 in pipeline") == "7 in Pipeline"
+    assert title_case("b2b saas for llm devops") == "B2B SaaS for LLM DevOps"
     assert title_case("Recommended: Continue diligence") == "Recommended: Continue Diligence"
     assert title_case("New inbound application · waiting 4d") == "New Inbound Application · Waiting 4d"
     assert title_case("evidence-backed 30-day") == "Evidence-Backed 30-Day"

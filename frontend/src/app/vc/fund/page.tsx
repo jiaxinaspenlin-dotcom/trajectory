@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
-import { humanStatus } from "@/lib/format";
+import { humanStatus, sectorLabel } from "@/lib/format";
 import { Thesis } from "@/lib/types";
 import Link from "next/link";
 import { Badge, Drawer, EmptyState, ErrorState, PageHeader, Section, Spinner } from "@/components/ui";
@@ -160,7 +160,7 @@ function Profile({ t }: { t: Thesis }) {
       <div className="space-y-6">
         <Section title="Investment Focus" subtitle="Matches raise a company's thesis fit score.">
           <dl className="grid gap-4 sm:grid-cols-3">
-            <Chips label="Sectors" items={t.sectors} />
+            <Chips label="Sectors" items={t.sectors} sectors />
             <Chips label="Stages" items={t.stages} />
             <Chips label="Geographies" items={t.geographies} />
           </dl>
@@ -175,7 +175,7 @@ function Profile({ t }: { t: Thesis }) {
 
         <Section title="Exclusions" subtitle="Companies that match any of these get a very low fit score (5–8 of 100).">
           <dl className="grid gap-4 sm:grid-cols-3">
-            <Chips label="Sectors" items={t.excluded_sectors} tone="bg-negative-wash text-negative" empty="None" />
+            <Chips label="Sectors" items={t.excluded_sectors} tone="bg-negative-wash text-negative" empty="None" sectors />
             <Chips label="Geographies" items={t.excluded_geographies} tone="bg-negative-wash text-negative" empty="None" />
             <Chips label="Business Models" items={t.excluded_business_models} tone="bg-negative-wash text-negative" empty="None" />
           </dl>
@@ -208,12 +208,13 @@ function Profile({ t }: { t: Thesis }) {
   );
 }
 
-function Chips({ label, items, tone, empty = "Any" }: { label: string; items: string[]; tone?: string; empty?: string }) {
+// Typed values (geographies, business models) are content; sectors are labels.
+function Chips({ label, items, tone, empty = "Any", sectors = false }: { label: string; items: string[]; tone?: string; empty?: string; sectors?: boolean }) {
   return (
     <div>
       <dt className="label">{label}</dt>
       <dd className="mt-1.5 flex flex-wrap gap-1">
-        {items.length ? items.map((s) => <span key={s} data-content><Badge tone={tone}>{s}</Badge></span>) : <span className="text-sm text-ink-faint">{empty}</span>}
+        {items.length ? items.map((s) => sectors ? <Badge key={s} tone={tone}>{sectorLabel(s)}</Badge> : <span key={s} data-content><Badge tone={tone}>{s}</Badge></span>) : <span className="text-sm text-ink-faint">{empty}</span>}
       </dd>
     </div>
   );

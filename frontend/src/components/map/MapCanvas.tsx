@@ -1,12 +1,10 @@
 "use client";
 
 import { MutableRefObject, useEffect, useMemo, useRef } from "react";
-import { humanStatus } from "@/lib/format";
-import {
-  AxesLayout, AXIS_LENGTH, formatMetric, isContentGroup, MetricKey, METRICS, nodeColor, nodeKindLabel, nodeSize, RelationshipLayout,
-} from "@/lib/opportunityMap";
+import { AxesLayout, nodeColor, nodeSize, RelationshipLayout } from "@/lib/opportunityMap";
 import { MapLink, MapNode } from "@/lib/types";
 import { MapScene, SceneLayout, SceneLink, SceneNode } from "./mapScene";
+import { describeNode, sceneLayout } from "./sceneText";
 
 export interface MapCanvasHandle {
   zoom: (factor: number) => void;
@@ -64,7 +62,7 @@ export function MapCanvas(props: {
     try {
       scene = new MapScene(container, labels, tooltip, {
         onSelect: (id) => live.current.onSelect(id),
-        describe: (id) => describe(id, live.current),
+        describe: (id) => describeNode(id, live.current),
       });
     } catch {
       live.current.onUnavailable();
@@ -92,30 +90,7 @@ export function MapCanvas(props: {
     () => links.map((l) => ({ source: l.source, target: l.target, color: LINK_COLORS[l.kind] })),
     [links]
   );
-  const layout: SceneLayout = useMemo(() => {
-    if (mode === "axes") {
-      const hasZ = axes.domains.length === 3;
-      return {
-        positions: axes.positions,
-        clusters: [],
-        axes: axes.domains.map((d) => ({
-          axis: d.axis,
-          label: METRICS[d.key].label,
-          maxLabel: formatMetric(d.key, d.max),
-          ticks: [-1, -0.5, 0.5].map((t) => ({ t, text: formatMetric(d.key, d.min + ((t + 1) / 2) * (d.max - d.min)) })),
-        })),
-        axisLength: AXIS_LENGTH,
-        viewDir: hasZ ? [0.55, 0.34, 1] : [0.16, 0.1, 1],
-      };
-    }
-    return {
-      positions: relationships.positions,
-      clusters: relationships.clusters.map((c) => ({ key: c.key, label: c.label, color: colors.get(c.key) ?? "#98a2b3", center: c.labelAt })),
-      axes: null,
-      axisLength: AXIS_LENGTH,
-      viewDir: [0.2, 0.42, 1],
-    };
-  }, [mode, axes, relationships, colors]);
+  const layout: SceneLayout = useMemo(() => sceneLayout({ mode, axes, relationships, colors }), [mode, axes, relationships, colors]);
 
   // data + layout first, so a ?focus= selection below lands on placed nodes
   useEffect(() => {
@@ -182,23 +157,4 @@ export function MapCanvas(props: {
       <div ref={tooltipRef} data-testid="map-tooltip" className="pointer-events-none absolute z-20 hidden max-w-[240px] rounded-md border border-line bg-white px-2.5 py-1.5 shadow-raised" />
     </div>
   );
-}
-
-function describe(id: number, p: { nodes: MapNode[]; mode: "graph" | "axes"; axes: AxesLayout }) {
-  const n = p.nodes.find((x) => x.id === id);
-  if (!n) return { title: "", lines: [] };
-  const lines: (string | { text: string; content: true })[] = [
-    `${nodeKindLabel(n)} · ${humanStatus(n.entry_type)}`,
-    isContentGroup(n.group.field) ? { text: n.group.label, content: true } : n.group.label,
-  ];
-  if (n.new_evidence_count) lines.unshift(`New Evidence · ${n.new_evidence_count}`);
-  if (p.mode === "axes") {
-    const vals = p.axes.values.get(id) ?? {};
-    lines.push(p.axes.domains.map((d) => `${METRICS[d.key].label}: ${formatMetric(d.key as MetricKey, vals[d.key]!)}`).join(" · "));
-    const same = p.axes.overlaps.find((ids) => ids.includes(id))?.filter((o) => o !== id) ?? [];
-    if (same.length) lines.push(`Same Point: ${same.map((o) => p.nodes.find((x) => x.id === o)?.name).join(", ")}`);
-  } else {
-    lines.push(n.founder_score != null ? `Founder Score ${Math.round(n.founder_score)} · ${n.evidence_count} Evidence` : `Not Scored · ${n.evidence_count} Evidence`);
-  }
-  return { title: n.name, lines };
 }

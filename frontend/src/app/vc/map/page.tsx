@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useFetch } from "@/lib/useFetch";
 import {
-  AxisChoice, availableMetrics, axesLayout, clusterColors, filterNodes, groupNodes, hasWebGL, isContentGroup, MapKind, MapSource,
+  AxisChoice, availableMetrics, axesLayout, clusterColors, filterNodes, groupLabel, groupNodes, hasWebGL, MapKind, MapSource,
   MapState, mapStateToQuery, matchesSearch, MetricKey, METRICS, parseMapState, relationshipLayout,
 } from "@/lib/opportunityMap";
 import { MapData } from "@/lib/types";
@@ -211,7 +211,7 @@ function OpportunityMap() {
                     }}
                   >
                     <span className="truncate font-medium text-ink" data-content>{n.name}</span>
-                    <span className="shrink-0 text-[13px] text-ink-muted" data-content={isContentGroup(n.group.field) || undefined}>{n.group.label}</span>
+                    <span className="shrink-0 text-[13px] text-ink-muted">{groupLabel(n.group)}</span>
                   </button>
                 </li>
               )) : <li className="px-4 py-2 text-sm text-ink-muted">No Matches in the Current Filters</li>}
@@ -372,7 +372,7 @@ function Legend({ nodes, colors, open, onToggle }: {
             {groups.slice(0, 12).map((g) => (
               <li key={g.key} className="flex items-center gap-2">
                 <i className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colors.get(g.key) }} />
-                <span className="truncate" data-content={isContentGroup(g.field) || undefined}>{g.label}</span>
+                <span className="truncate">{g.label}</span>
                 <span className="num ml-auto text-ink-muted">{g.ids.length}</span>
               </li>
             ))}

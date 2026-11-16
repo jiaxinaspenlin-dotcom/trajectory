@@ -28,7 +28,8 @@ PHRASAL = frozenset(
 NAMES = {
     "github": "GitHub", "openai": "OpenAI", "tavily": "Tavily", "ai": "AI", "url": "URL", "urls": "URLs",
     "pdf": "PDF", "yc": "YC", "hn": "HN", "swot": "SWOT", "kpi": "KPI", "kpis": "KPIs", "api": "API",
-    "mau": "MAU", "id": "ID", "ids": "IDs", "tam": "TAM", "vc": "VC",
+    "mau": "MAU", "id": "ID", "ids": "IDs", "tam": "TAM", "vc": "VC", "ml": "ML", "saas": "SaaS",
+    "b2b": "B2B", "b2c": "B2C", "llm": "LLM", "llms": "LLMs", "devops": "DevOps",
 }
 UNITS = frozenset({"pt", "pts"})  # left lowercase like 3d or 30d
 BREAKS = frozenset({"·", "—", "–", "/", "|", "→", "←"})
@@ -36,11 +37,11 @@ _WORD = re.compile(r"^([^A-Za-z0-9@$]*)(.*?)([^A-Za-z0-9%]*)$")
 
 
 def _case_part(part: str, edge: bool, after_verb: bool = False) -> str:
+    if part.lower() in NAMES:
+        return NAMES[part.lower()]
     # units, values, handles, domains and abbreviations (3d, $250K, @ada, insforge.dev, e.g.)
     if not re.search(r"[A-Za-z]", part) or re.search(r"\d", part) or part.startswith("@") or re.search(r"\.[A-Za-z]", part):
         return part
-    if part.lower() in NAMES:
-        return NAMES[part.lower()]
     if part in UNITS:
         return part
     if re.search(r"[A-Z]", part[1:]):

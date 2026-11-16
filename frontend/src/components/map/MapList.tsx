@@ -1,7 +1,7 @@
 "use client";
 
 import { humanStatus } from "@/lib/format";
-import { groupFieldLabel, groupNodes, isContentGroup, matchesSearch, nodeColor, nodeKindLabel } from "@/lib/opportunityMap";
+import { groupFieldLabel, groupNodes, matchesSearch, nodeColor, nodeKindLabel } from "@/lib/opportunityMap";
 import { MapNode } from "@/lib/types";
 
 // Same nodes and grouping as the canvas, as a keyboard-friendly list. Used when
@@ -25,7 +25,7 @@ export function MapList({
         <section key={g.key} aria-labelledby={`map-group-${g.key}`}>
           <h3 id={`map-group-${g.key}`} className="flex items-center gap-1.5 px-1 text-xs font-semibold text-ink">
             <span aria-hidden className="h-2 w-2 rounded-full" style={{ background: colors.get(g.key) }} />
-            <span data-content={isContentGroup(g.field) || undefined}>{g.label}</span> · {g.ids.length}
+            {g.label} · {g.ids.length}
           </h3>
           <p className="px-1 text-xs text-ink-muted">Grouped by {groupFieldLabel(g.field)}</p>
           <ul className="mt-1 divide-y divide-line overflow-hidden rounded-md border border-line bg-white">

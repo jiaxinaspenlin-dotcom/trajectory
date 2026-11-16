@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
-import { asSentence, labelPhrase } from "@/lib/format";
+import { asSentence, labelPhrase, sectorLabel } from "@/lib/format";
 import { setPipelineStatus } from "@/lib/myWorkspace";
 import { WebEvidence, WebResult, WebSearchResponse, WebSearchStatus, WebSource } from "@/lib/types";
 import { useToast } from "./Toast";
@@ -392,7 +392,7 @@ function ResultCard({
             {r.website
               ? <a href={r.website} target="_blank" rel="noreferrer" title={r.website_basis ? asSentence(r.website_basis) : undefined} className="text-brand hover:underline" data-content>{r.domain} ↗</a>
               : <span>Website Unknown</span>}
-            {r.sector && <span>· <span data-content>{r.sector}</span></span>}
+            {r.sector && <span>· {sectorLabel(r.sector)}</span>}
           </p>
         </div>
         {oppId != null && (

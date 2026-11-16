@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { humanStatus, titleCase, trajectoryTone } from "@/lib/format";
+import { asSentence, humanStatus, trajectoryTone } from "@/lib/format";
 import {
-  AxesLayout, formatMetric, groupFieldLabel, isContentGroup, linksFor, METRICS, nodeColor, nodeKindLabel,
+  AxesLayout, formatMetric, groupFieldLabel, groupLabel, linksFor, METRICS, nodeColor, nodeKindLabel,
 } from "@/lib/opportunityMap";
 import { nextActionHref } from "@/lib/pipeline";
 import { MapLink, MapNode } from "@/lib/types";
@@ -107,12 +107,12 @@ export function MapDrawer({
 
         <dl className="mt-3 divide-y divide-line text-sm">
           <Row label="Group">
-            <span data-content={isContentGroup(node.group.field) || undefined}>{node.group.label}</span>
+            <span>{groupLabel(node.group)}</span>
             <span className="block text-xs text-ink-muted">{groupFieldLabel(node.group.field)}</span>
           </Row>
           <Row label="Founder Score">{node.founder_score != null ? <span className="num">{Math.round(node.founder_score)}</span> : <Muted>Not Scored</Muted>}</Row>
           <Row label="Thesis Fit">
-            {node.thesis_fit.value != null ? <span className="num">{Math.round(node.thesis_fit.value)} / 100</span> : <Muted>{titleCase(node.thesis_fit.reason ?? "Not computed")}</Muted>}
+            {node.thesis_fit.value != null ? <span className="num">{Math.round(node.thesis_fit.value)} / 100</span> : <Muted>{asSentence(node.thesis_fit.reason ?? "Not computed")}</Muted>}
           </Row>
           <Row label="Momentum">
             {node.momentum.value != null ? (
@@ -120,7 +120,7 @@ export function MapDrawer({
                 <span className="num">{formatMetric("momentum", node.momentum.value)} / 30d</span>
                 {node.momentum.trajectory && <Badge tone={trajectoryTone(node.momentum.trajectory)}>{humanStatus(node.momentum.trajectory)}</Badge>}
               </span>
-            ) : <Muted>{titleCase(node.momentum.reason ?? "Not computed")}</Muted>}
+            ) : <Muted>{asSentence(node.momentum.reason ?? "Not computed")}</Muted>}
           </Row>
           <Row label="Evidence">
             {node.evidence_count ? (
@@ -166,7 +166,7 @@ export function MapDrawer({
           ) : (
             <p className="mt-1 text-xs text-ink-muted">
               No named relationships yet.
-              {node.group.field && <> Clustered with its <span data-content={isContentGroup(node.group.field) || undefined}>{node.group.label}</span> group.</>}
+              {node.group.field && <> Clustered with its {groupLabel(node.group)} group.</>}
             </p>
           )}
         </div>

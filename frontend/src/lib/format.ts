@@ -66,7 +66,7 @@ const PHRASAL = new Set(
 const NAMES: Record<string, string> = {
   github: "GitHub", openai: "OpenAI", tavily: "Tavily", ai: "AI", url: "URL", urls: "URLs", pdf: "PDF",
   yc: "YC", hn: "HN", swot: "SWOT", kpi: "KPI", kpis: "KPIs", api: "API", mau: "MAU", id: "ID", ids: "IDs",
-  tam: "TAM", vc: "VC",
+  tam: "TAM", vc: "VC", ml: "ML", saas: "SaaS", b2b: "B2B", b2c: "B2C", llm: "LLM", llms: "LLMs", devops: "DevOps",
 };
 // unit words, left lowercase like 3d or 30d ("+16.4 pts")
 const UNITS = new Set(["pt", "pts"]);
@@ -74,10 +74,10 @@ const UNITS = new Set(["pt", "pts"]);
 const BREAKS = new Set(["·", "—", "–", "/", "|", "→", "←"]);
 
 function casePart(part: string, edge: boolean, afterVerb = false): string {
-  // units, values, handles, domains and abbreviations (3d, $250K, @ada, insforge.dev, e.g.)
-  if (!/[a-z]/i.test(part) || /\d/.test(part) || part.startsWith("@") || /\.[a-z]/i.test(part)) return part;
   const name = NAMES[part.toLowerCase()];
   if (name) return name;
+  // units, values, handles, domains and abbreviations (3d, $250K, @ada, insforge.dev, e.g.)
+  if (!/[a-z]/i.test(part) || /\d/.test(part) || part.startsWith("@") || /\.[a-z]/i.test(part)) return part;
   if (UNITS.has(part)) return part;
   if (/[A-Z]/.test(part.slice(1))) return part; // mixed case or acronym: a name, keep it
   const lower = part.toLowerCase();
@@ -143,6 +143,15 @@ export function sourceName(name: string): string {
   const demo = / \(demo\)$/i.test(name);
   const base = demo ? name.slice(0, -" (demo)".length) : name;
   return `${OWN_SOURCES[base] ?? base}${demo ? " (Demo)" : ""}`;
+}
+
+// Sector and group names are labels wherever they are shown: "fintech" -> "Fintech",
+// "ai/ml" -> "AI/ML", "devtools" -> "Developer Tools". Display only: the thesis and
+// company profiles keep what was typed.
+const SECTORS: Record<string, string> = { devtools: "Developer Tools", "dev tools": "Developer Tools", "dev-tools": "Developer Tools" };
+export function sectorLabel(sector: string): string {
+  const t = sector.trim();
+  return SECTORS[t.toLowerCase()] ?? t.split("/").map((p) => titleCase(p.trim())).join("/");
 }
 
 // Display text for stored values (enums, recommended actions, missing fields):

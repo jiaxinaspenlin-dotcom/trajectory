@@ -7,7 +7,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
-import { humanStatus, sourceName, titleCase } from "@/lib/format";
+import { humanStatus, sectorLabel, sourceName, titleCase } from "@/lib/format";
 import { assessment, debate, momentum } from "@/test/fixtures";
 
 // ---- the check ---------------------------------------------------------------
@@ -17,7 +17,7 @@ import { assessment, debate, momentum } from "@/test/fixtures";
 // accessible name ("Review ada"): never re-cased, so the check skips it.
 const CONTENT = [
   "Ada Builder", "Demo Investor", "Northwind Labs", "Northstar Ventures", "Northstar", "San Francisco", "Boston",
-  "ledgerkit repository", "Ledgerkit", "Payments", "fintech", "payments", "ada",
+  "ledgerkit repository", "Ledgerkit", "Payments", "payments", "ada", "Quill AI", "Gridline",
 ];
 
 // A sentence (descriptions, hints, errors, toasts) ends with . ? or ! and isn't
@@ -302,6 +302,18 @@ describe("titleCase", () => {
   });
 });
 
+describe("sectorLabel", () => {
+  it("shows sectors as labels without changing what is stored", () => {
+    expect(sectorLabel("fintech")).toBe("Fintech");
+    expect(sectorLabel("ai/ml")).toBe("AI/ML");
+    expect(sectorLabel("devtools")).toBe("Developer Tools");
+    expect(sectorLabel("climate")).toBe("Climate");
+    expect(sectorLabel("b2b saas")).toBe("B2B SaaS");
+    expect(sectorLabel("llm devops")).toBe("LLM DevOps");
+    expect(sectorLabel("api tooling")).toBe("API Tooling");
+  });
+});
+
 describe("humanStatus", () => {
   it("writes stored values as Title Case, with names and acronyms intact", () => {
     expect(humanStatus("idea_vs_market")).toBe("Idea vs Market");
@@ -522,6 +534,44 @@ describe("every route uses Title Case labels", () => {
     }
     if (tab === "decision") fireEvent.change(screen.getByRole("combobox"), { target: { value: screen.getAllByRole("option")[1].getAttribute("value") } });
     expectCleanCopy();
+  });
+
+  // The 3D renderer draws its text outside the React tree, so its strings are
+  // checked from the same builder the canvas uses, in both views.
+  const mapNodes = [
+    mapNode, sparseNode,
+    { ...mapNode, id: 3, name: "Quill AI", company: { ...mapNode.company, name: "Quill AI", sector: "ai/ml" }, group: { key: "ai/ml", label: "ai/ml", field: "company.sector" }, new_evidence_count: 2 },
+    { ...mapNode, id: 4, name: "Gridline", company: { ...mapNode.company, name: "Gridline", sector: "devtools" }, group: { key: "devtools", label: "devtools", field: "company.sector" }, momentum: { ...mapNode.momentum, value: -3 } },
+    { ...sparseNode, id: 5, name: "ada", group: { key: "language:go", label: "Go Projects", field: "github_repo.language" } },
+  ];
+  it("/vc/map: every string the 3D renderer draws, in Relationships and Custom Axes", async () => {
+    const { axesLayout, clusterColors, relationshipLayout } = await import("@/lib/opportunityMap");
+    const { rendererStrings } = await import("@/components/map/sceneText");
+    const nodes = mapNodes as never[];
+    const colors = clusterColors(nodes);
+    const strings = (["graph", "axes"] as const).flatMap((mode) => [{ x: "fit", y: "momentum", z: "score" }, { x: "evidence", y: "fit", z: "none" }].flatMap((ax) =>
+      rendererStrings({ nodes, mode, colors, relationships: relationshipLayout(nodes), axes: axesLayout(nodes, ax as never) })));
+    expect(strings.filter((s) => s.kind === "cluster").map((s) => s.text)).toEqual(expect.arrayContaining(["Fintech", "AI/ML", "Developer Tools", "Go Projects", "Not Enough Data to Group"]));
+    expect(strings.some((s) => s.kind === "axis")).toBe(true);
+    expect(strings.some((s) => s.kind === "tick")).toBe(true);
+    // names (nodes, tooltip titles) are content and are never re-cased
+    expect(strings.filter((s) => s.kind === "node").every((s) => s.content)).toBe(true);
+    expect(strings.filter((s) => !s.content).flatMap((s) => copyProblems(s.text))).toEqual([]);
+  });
+
+  it("/vc/map: Custom Axes with the values panel, filters and the not-plotted reasons", async () => {
+    search = new URLSearchParams("view=axes&focus=2");
+    fetched["/api/map"] = { has_thesis: true, links: [], items: mapNodes };
+    const { default: MapPage } = await import("@/app/vc/map/page");
+    render(<MapPage />);
+    await screen.findByTestId("map-node-panel");
+    expectCleanCopy();
+    // reasons are sentences: a capital first letter and a period
+    const reasons = [...document.querySelectorAll("[data-testid='map-node-panel'] li")].map((li) => li.textContent ?? "");
+    expect(reasons.length).toBeGreaterThan(0);
+    for (const r of reasons) expect(r).toMatch(/^[A-Z].*\.$/);
+    for (const label of ["Fintech", "AI/ML", "Developer Tools", "Go Projects"]) expect(screen.getAllByText(new RegExp(label.replace("/", "\\/"))).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/^fintech|^ai\/ml|^devtools/)).toBeNull();
   });
 
   it("/vc/opportunities/[id]: a recorded decision", async () => {
