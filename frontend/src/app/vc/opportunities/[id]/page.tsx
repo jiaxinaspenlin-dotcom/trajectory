@@ -19,6 +19,7 @@ import { decisionReasons } from "@/lib/decision";
 import { dashboardCardHref, nextCard } from "@/lib/deck";
 import { useDeck } from "@/lib/useDeck";
 import { DeckStrip } from "@/components/DeckStrip";
+import { ApplicationDetail, ApplicationScreen, LeadEvidence } from "@/components/RecordFocus";
 import { Claim, Evidence, Opportunity } from "@/lib/types";
 import { LeadWebCheck } from "@/components/WebSourcing";
 import { humanStatus, labelPhrase, sourceName, verificationTone } from "@/lib/format";
@@ -79,6 +80,12 @@ function OpportunityRecord() {
     ? `founder_id=${o.founder.id}`
     : null;
   const claims = useFetch<{ items: Claim[] }>(scope ? `/api/claims?${scope}` : null);
+  // an inbound application waiting for review: its first-pass screen leads the record.
+  // The applications list has no company id, so the application is matched by name.
+  const reviewingApplication = o?.next_step?.key === "review_application";
+  const apps = useFetch<{ items: { id: number; company_name: string }[] }>(reviewingApplication ? "/api/applications" : null);
+  const appId = apps.data?.items.find((a) => a.company_name === o?.company?.name)?.id;
+  const application = useFetch<ApplicationDetail>(reviewingApplication && appId ? `/api/applications/${appId}` : null);
   const contradictions = useFetch<{ items: any[] }>(scope ? `/api/contradictions?${scope}` : null);
   const [busy, setBusy] = useState(false);
   const [confirmRegen, setConfirmRegen] = useState(false);
@@ -87,6 +94,7 @@ function OpportunityRecord() {
   const [fitBusy, setFitBusy] = useState(false);
   const [confirmScreening, setConfirmScreening] = useState(false);
   const [screeningError, setScreeningError] = useState<string | null>(null);
+  const [moving, setMoving] = useState(false);
   const notify = useToast();
   // per-browser workspace overlay for this opportunity
   const [myStatus, setMyStatus] = useState<PipelineStatus | null>(null);
@@ -211,8 +219,13 @@ function OpportunityRecord() {
 
   // the ONE primary action for this record, from its next step
   const arrow = <ArrowRightIcon size={16} className="transition-transform duration-base ease-out group-hover:translate-x-0.5" />;
+  // a lead (still in Sourcing) is reviewed by deciding whether it enters the
+  // Pipeline: Move to Screening, which asks first
+  const isLead = !inPipeline && step?.key !== "review_recommendation";
   const primary =
-    step?.key === "run_analysis" || step?.key === "review_application"
+    isLead
+      ? <Button variant="primary" onClick={() => setConfirmScreening(true)}>Move to Screening</Button>
+    : step?.key === "run_analysis" || step?.key === "review_application"
       ? <Button variant="primary" onClick={() => setConfirmRegen(true)} busy={busy}>Run Analysis</Button>
     // already on the Decision tab: the form is the action, so no button points back at it
     : step?.key === "review_recommendation" && tab === "decision"
@@ -269,6 +282,17 @@ function OpportunityRecord() {
         </header>
       </div>
 
+      {confirmScreening && (
+        <div className="animate-rise rounded-xl bg-brand-wash px-5 py-4" role="region" aria-label="Confirm Move to Screening">
+          <p className="text-sm text-ink-soft">Move <span data-content>{name}</span> into the fund&apos;s Pipeline at Screening? No outreach is sent.</p>
+          <div className="mt-3 flex gap-2">
+            <Button variant="primary" size="sm" busy={moving} onClick={async () => { setMoving(true); try { await moveToScreening(); } finally { setMoving(false); } }}>Confirm Move</Button>
+            <button className="btn-ghost btn-sm" onClick={() => { setConfirmScreening(false); setScreeningError(null); }} disabled={moving}>Cancel</button>
+          </div>
+          {screeningError && <p className="field-error" role="alert">{screeningError}</p>}
+        </div>
+      )}
+
       {confirmRegen && (
         <div className="animate-rise rounded-xl bg-brand-wash px-5 py-4" role="region" aria-label="Confirm Analysis">
           <p className="text-sm text-ink-soft">
@@ -294,6 +318,8 @@ function OpportunityRecord() {
         {tab === "overview" && (
           <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] [&>*]:min-w-0">
             <div className="space-y-8">
+              {reviewingApplication && <ApplicationScreen o={o} app={application.data} evidence={evidence} />}
+              {isLead && <LeadEvidence o={o} evidence={evidence} onRunAnalysis={() => setConfirmRegen(true)} />}
               <Section title="Summary" card={false}>
                 <div className="max-w-prose space-y-4 text-[15px] leading-7 text-ink-soft">
                   {o.company?.description || o.company?.one_liner || o.founder?.headline
@@ -305,7 +331,8 @@ function OpportunityRecord() {
                       : o.identity?.founder_named ? <>Founder Named on a Source: <span data-content>{o.identity.founder_named}</span> · <span className="text-caution">Unverified</span></> : "Founder Not Linked Yet"}
                     {o.company?.website && <> · <a href={o.company.website} target="_blank" rel="noreferrer" className="link text-ink-muted" data-content>{o.company.website.replace(/^https?:\/\/(www\.)?/, "")} ↗</a></>}
                   </p>
-                  {o.surfaced_reason && (
+                  {/* the focus panel above already says why it surfaced */}
+                  {o.surfaced_reason && !reviewingApplication && !isLead && (
                     <div className="border-l-2 border-brand/40 pl-4">
                       <p className="label">Why It Surfaced</p>
                       <p className="mt-1 text-sm leading-6">{o.surfaced_reason}</p>
@@ -325,8 +352,6 @@ function OpportunityRecord() {
             </div>
             <StatusCard
               o={o} inPipeline={inPipeline} shortlist={shortlist}
-              confirmScreening={confirmScreening} setConfirmScreening={setConfirmScreening}
-              moveToScreening={moveToScreening} screeningError={screeningError}
               setShortlist={setShortlist} suggestOutreach={suggestOutreach}
             />
           </div>
@@ -414,7 +439,7 @@ function OpportunityRecord() {
               right={analyzed && <button className="btn-secondary btn-sm" onClick={() => setConfirmRegen(true)} disabled={busy}>Regenerate Analysis</button>}
             >
               {o.assessment ? <ThreeAxes assessment={o.assessment} /> : (
-                <EmptyState title="No Assessment Yet" hint="Use Run Analysis at the top of this record to generate the three screening axes." />
+                <EmptyState title="No Assessment Yet" hint="Run Analysis scores the three screening axes and drafts the debate and memo." action={<button className="btn-secondary" onClick={() => setConfirmRegen(true)} disabled={busy}>Run Analysis</button>} />
               )}
             </Section>
           </div>
@@ -476,34 +501,19 @@ function Fact({ label, value, note, tab, pathname }: { label: string; value: str
 // Screening) and, for outbound leads, my personal shortlist. The next step lives
 // in the header with the record's one primary button.
 function StatusCard({
-  o, inPipeline, shortlist, confirmScreening, setConfirmScreening, moveToScreening, screeningError, setShortlist, suggestOutreach,
+  o, inPipeline, shortlist, setShortlist, suggestOutreach,
 }: {
   o: Opportunity; inPipeline: boolean; shortlist: ReturnType<typeof shortlistOf>;
-  confirmScreening: boolean; setConfirmScreening: (v: boolean) => void; moveToScreening: () => Promise<void>;
-  screeningError: string | null; setShortlist: (s: PipelineStatus) => void; suggestOutreach: () => void;
+  setShortlist: (s: PipelineStatus) => void; suggestOutreach: () => void;
 }) {
-  const [moving, setMoving] = useState(false);
   return (
     <aside aria-label="Stage and Shortlist" className="space-y-8 lg:border-l lg:border-line lg:pl-8">
       <div>
         <p className="label">Stage</p>
         <StageTrack stage={o.stage} />
         <p className="mt-2 text-[13px] text-ink-muted">Source · {sourceLabel(o.entry_type)}</p>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          {!inPipeline && (confirmScreening ? (
-            <div className="animate-rise w-full rounded-lg bg-surface-sunken p-3">
-              <p className="text-[13px] text-ink-soft">Move into the fund&apos;s Pipeline at Screening? No outreach is sent.</p>
-              <div className="mt-2 flex gap-2">
-                <Button variant="primary" size="sm" busy={moving} onClick={async () => { setMoving(true); try { await moveToScreening(); } finally { setMoving(false); } }}>Confirm Move</Button>
-                <button className="btn-ghost btn-sm" onClick={() => setConfirmScreening(false)}>Cancel</button>
-              </div>
-            </div>
-          ) : (
-            <button className="btn-secondary btn-sm" onClick={() => setConfirmScreening(true)}>Move to Screening</button>
-          ))}
-          {inPipeline && <Link href={`/vc/pipeline?stage=${o.stage}`} className="link text-sm">Open in Pipeline</Link>}
-          {screeningError && <p className="field-error w-full" role="alert">{screeningError}</p>}
-        </div>
+        {/* moving a lead to Screening is the record's primary action (header) */}
+        {inPipeline && <div className="mt-3"><Link href={`/vc/pipeline?stage=${o.stage}`} className="link text-sm">Open in Pipeline</Link></div>}
       </div>
 
       {o.entry_type === "outbound" && (

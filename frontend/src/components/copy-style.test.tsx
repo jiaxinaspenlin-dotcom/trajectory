@@ -182,12 +182,15 @@ const claims = { items: [{ id: 1, text: "1,200 users", category: "traction", pro
 const queueItem = {
   opportunity_id: 1, name: "Ledgerkit", founder_name: "Ada Builder", entry_type: "outbound", stage: "screening",
   next_action: "Review Recommendation", next_action_key: "review_recommendation", next_action_detail: "Recommended: Continue Diligence", priority: 1, age_days: 3,
+  waiting_since: "2026-11-01T00:00:00Z", group: "recommendation",
 };
 const dashboard = {
   thesis: { fund_name: "Northstar", sectors: [], stages: [], geographies: [] },
   stage_counts: { sourcing: 2, screening: 1, diligence: 1, decision: 0 },
   top_outbound_prospects: [], recent_inbound_applications: [], highest_momentum: [],
-  action_queue: [queueItem, { ...queueItem, opportunity_id: 2, entry_type: "inbound", next_action: "Review Application", next_action_key: "review_application", next_action_detail: "New Inbound Application", priority: 2, age_days: 0 }],
+  action_queue: [queueItem, { ...queueItem, opportunity_id: 2, entry_type: "inbound", next_action: "Review Application", next_action_key: "review_application", next_action_detail: "New Inbound Application", priority: 2, age_days: 0, group: "application" }],
+  queue_groups: [{ key: "recommendation", count: 1, first_opportunity_id: 1 }, { key: "application", count: 1, first_opportunity_id: 2 }],
+  stage_names: { sourcing: ["CareBridge", "ForgeTools"], screening: ["Ledgerkit"], diligence: ["PayMesh"] },
   recent_evidence: [{ id: 1, kind: "github_repo", title: "ledgerkit repository", source_name: "GitHub (demo)", collected_at: "2026-11-01T00:00:00Z", opportunity_id: 1, opportunity_name: "Ledgerkit" }],
   connectors: { live: [], planned: [] },
 };
@@ -615,6 +618,41 @@ describe("every route uses Title Case labels", () => {
     // tabs keep the deck context
     fireEvent.click(screen.getByRole("tab", { name: /Claims/ }));
     expect(nav.push).toHaveBeenLastCalledWith("/vc/opportunities/1?tab=claims&from=deck", { scroll: false });
+    expectCleanCopy();
+  });
+
+  it("/vc/opportunities/[id]: an application lands on its first-pass screen", async () => {
+    const application = { ...opportunity, entry_type: "inbound", stage: "screening", assessment: null, debate: null, current_recommendation: null,
+      next_step: { key: "review_application", label: "Review Application", detail: "New Inbound Application", priority: 2 } };
+    fetched["/api/applications"] = { items: [{ id: 9, company_name: "Ledgerkit" }] };
+    fetched["/api/applications/9"] = { id: 9, company_name: "Ledgerkit", github_profile: "ada", website: null, product_link: "https://ledgerkit.dev",
+      missing_fields: ["pitch_deck"], current_revenue: null, num_users: 1200, funding_requested: 1500000, document: null };
+    await recordWith(application, "overview");
+    const screenPanel = screen.getByTestId("application-screen");
+    expect(screenPanel).toHaveTextContent("First-Pass Screen");
+    expect(screenPanel).toHaveTextContent("1,200 UsersFounder-Reported");
+    expect(screenPanel).toHaveTextContent("Raising $1.5MFounder-Reported");
+    expect(screenPanel).toHaveTextContent("Pitch Deck");
+    // the one next action
+    expect([...document.querySelectorAll(".btn-primary")].map((b) => b.textContent)).toEqual(["Run Analysis"]);
+    expect(screen.queryByTestId("lead-evidence")).toBeNull();
+    expectCleanCopy();
+  });
+
+  it("/vc/opportunities/[id]: a lead lands on its evidence, and Move to Screening asks first", async () => {
+    await recordWith({ ...lead, company: opportunity.company }, "overview");
+    const panel = screen.getByTestId("lead-evidence");
+    expect(panel).toHaveTextContent("Evidence Summary");
+    expect(within(panel).getAllByRole("link")[0].getAttribute("href")).toMatch(/\?tab=evidence&evidence=\d+$/);
+    const primaries = [...document.querySelectorAll(".btn-primary")];
+    expect(primaries.map((b) => b.textContent)).toEqual(["Move to Screening"]);
+    fireEvent.click(primaries[0]);
+    const confirm = screen.getByRole("region", { name: "Confirm Move to Screening" });
+    expect(confirm).toHaveTextContent("No outreach is sent.");
+    const { api } = await import("@/lib/api");
+    expect(api.post).not.toHaveBeenCalledWith(expect.stringContaining("/action"), expect.anything());
+    fireEvent.click(within(confirm).getByRole("button", { name: "Confirm Move" }));
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith("/api/sourcing/prospects/1/action", { action: "invite_to_apply" }));
     expectCleanCopy();
   });
 
