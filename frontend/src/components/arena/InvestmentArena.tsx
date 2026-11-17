@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Debate, Memo } from "@/lib/types";
 import { asSentence, humanStatus, labelPhrase, pct } from "@/lib/format";
 import { MemoView } from "@/components/MemoView";
+import { Button } from "@/components/ui";
 import { BullCharacter, BearCharacter, RefereeCharacter, CharState } from "./Characters";
 import { DebatePlayer } from "./DebatePlayer";
 import { ArenaBackdrop, Emblem, Flourish, Pedestal, RefereeBadge } from "./stage";
@@ -105,7 +106,7 @@ export function InvestmentArena({
             type="button"
             aria-pressed={pinned === role}
             aria-label={`${meta.name}. ${bubbleFor(role)} Activate to pin the detailed analysis.`}
-            className="rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+            className="press rounded-xl transition-transform duration-base ease-out hover:-translate-y-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
             onMouseEnter={() => setHovered(role)}
             onMouseLeave={() => setHovered(null)}
             onFocus={() => setHovered(role)}
@@ -188,7 +189,7 @@ export function InvestmentArena({
         <div className="border-t border-line" data-testid="arena-memo">
           <button
             type="button"
-            className="flex w-full items-center justify-between px-5 py-3 text-left transition-colors hover:bg-surface-sunken"
+            className="press flex w-full items-center justify-between px-5 py-3 text-left transition-colors duration-fast hover:bg-surface-sunken"
             aria-expanded={memoOpen}
             onClick={() => setMemoOpen((v) => !v)}
           >
@@ -198,24 +199,18 @@ export function InvestmentArena({
                 Full evidence-backed write-up — every standard section, missing data labeled, never invented.
               </span>
             </span>
-            <span className={`text-ink-muted transition-transform ${memoOpen ? "rotate-180" : ""}`}>▾</span>
+            <span className={`text-ink-muted transition-transform duration-base ease-out ${memoOpen ? "rotate-180" : ""}`}>▾</span>
           </button>
 
           {memoOpen && (
-            <div className="border-t border-line bg-surface-sunken/40 px-5 py-4">
+            <div className="animate-fade border-t border-line bg-surface-sunken/40 px-5 py-4">
               {memo ? (
                 <MemoView memo={memo} />
               ) : (
                 <div className="rounded-lg border border-line bg-white p-4 text-sm text-ink-muted">
                   No memo generated yet.{" "}
                   {onGenerateMemo ? (
-                    <button
-                      className="btn-primary ml-1"
-                      onClick={onGenerateMemo}
-                      disabled={memoBusy}
-                    >
-                      {memoBusy ? "Generating…" : "Generate Memo"}
-                    </button>
+                    <Button variant="primary" className="ml-1" onClick={onGenerateMemo} busy={memoBusy}>Generate Memo</Button>
                   ) : (
                     <span>Run analysis to generate the full memo.</span>
                   )}
