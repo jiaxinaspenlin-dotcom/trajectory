@@ -131,7 +131,11 @@ export function useIndicator(container: RefObject<HTMLElement>, selector: string
     const measure = () => {
       const el = root.querySelector<HTMLElement>(selector);
       if (!el) { setBox(null); return; }
-      setBox({ x: el.offsetLeft, w: el.offsetWidth, y: el.offsetTop, h: el.offsetHeight });
+      // relative to the container itself (offsetLeft/Top would be relative to the
+      // nearest positioned ancestor, which may be the item's own wrapper)
+      const c = root.getBoundingClientRect();
+      const r = el.getBoundingClientRect();
+      setBox({ x: r.left - c.left + root.scrollLeft, w: el.offsetWidth, y: r.top - c.top + root.scrollTop, h: el.offsetHeight });
     };
     measure();
     if (typeof ResizeObserver === "undefined") return;

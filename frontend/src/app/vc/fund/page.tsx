@@ -5,8 +5,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { humanStatus, sectorLabel } from "@/lib/format";
 import { Thesis } from "@/lib/types";
-import Link from "next/link";
-import { Badge, Drawer, EmptyState, ErrorState, PageHeader, Section, Spinner } from "@/components/ui";
+import { Badge, Button, Drawer, EmptyState, ErrorState, Meter, PageHeader, PageSkeleton, Section } from "@/components/ui";
+import { FundIcon } from "@/components/icons";
 import { useToast } from "@/components/Toast";
 import { Tabs, tabPanelProps } from "@/components/Tabs";
 
@@ -47,7 +47,7 @@ const money = (n: number) =>
 
 export default function FundPage() {
   return (
-    <Suspense fallback={<Spinner label="Loading Fund…" />}>
+    <Suspense fallback={<PageSkeleton label="Loading Fund…" />}>
       <Fund />
     </Suspense>
   );
@@ -57,7 +57,6 @@ function Fund() {
   const [thesis, setThesis] = useState<Thesis | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [impact, setImpact] = useState<string | null>(null);
   // stored fit scores that no longer match the active thesis
   const [staleFits, setStaleFits] = useState(0);
   const [recalculating, setRecalculating] = useState(false);
@@ -95,41 +94,30 @@ function Fund() {
 
   const header = (
     <PageHeader
+      eyebrow={thesis ? <span data-content>{thesis.fund_name}</span> : undefined}
       title="Investment Thesis"
-      subtitle={thesis
-        ? `${thesis.fund_name} · What We Look For`
-        : "What Your Fund Looks For"}
+      subtitle="What your fund looks for. Every lead's thesis fit is scored against it."
       actions={thesis && <button className="btn-primary" onClick={() => setEditing(true)}>Edit Thesis</button>}
     />
   );
 
   return (
     // a reading width for the fund profile, even on wide screens
-    <div className="max-w-[1280px] space-y-6">
+    <div className="space-y-10">
       {header}
-      {impact && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-positive/30 bg-positive-wash px-4 py-3 text-[15px] text-positive" role="status">
-          <span><strong className="font-semibold">Thesis saved.</strong> {impact}</span>
-          <span className="flex gap-2">
-            <Link href="/vc/founders?source=open" className="btn-secondary btn-sm">Source Founders</Link>
-            <button className="btn-ghost btn-sm" onClick={() => setImpact(null)}>Dismiss</button>
-          </span>
-        </div>
-      )}
       {staleFits > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-caution/30 bg-caution-wash px-4 py-3 text-[15px] text-caution" data-testid="stale-fit">
+        <div className="animate-rise flex flex-wrap items-center justify-between gap-3 rounded-xl bg-caution-wash px-4 py-3 text-[15px] text-caution" data-testid="stale-fit">
           <span>
             {staleFits === 1 ? "1 thesis fit score doesn't" : `${staleFits} thesis fit scores don't`} reflect your current thesis. They stay as they are until you recalculate.
           </span>
-          <button className="btn-secondary btn-sm" onClick={recalculate} disabled={recalculating}>
-            {recalculating ? "Recalculating…" : `Recalculate ${staleFits} Score${staleFits === 1 ? "" : "s"}`}
-          </button>
+          <Button size="sm" onClick={recalculate} busy={recalculating}>{`Recalculate ${staleFits} Score${staleFits === 1 ? "" : "s"}`}</Button>
         </div>
       )}
-      {loading ? <Spinner label="Loading Fund…" /> : loadError ? <ErrorState message={loadError} onRetry={load} /> : thesis ? (
+      {loading ? <PageSkeleton label="Loading Fund…" rows={4} /> : loadError ? <ErrorState message={loadError} onRetry={load} /> : thesis ? (
         <Profile t={thesis} />
       ) : (
         <EmptyState
+          icon={<FundIcon size={20} />}
           title="No Investment Thesis Yet"
           hint="Start with your sectors, stages, and geographies. Trajectory uses them to score each company's thesis fit and to plan lead searches."
           action={<button className="btn-primary" onClick={() => setEditing(true)}>Create Thesis</button>}
@@ -142,11 +130,15 @@ function Fund() {
         onSaved={(t, created, stale) => {
           setThesis(t);
           setStaleFits(stale);
-          setImpact(created
-            ? "New leads and applications get a thesis fit score against it."
-            : "New leads and applications are scored against these changes; existing fit scores stay as they are until you recalculate.");
           setEditing(false);
-          notify({ message: created ? "Thesis created." : "Thesis saved." });
+          // one confirmation that says what changed and offers the natural next step
+          notify({
+            message: created
+              ? "Thesis created. New leads and applications get a thesis fit score against it."
+              : "Thesis saved. New leads are scored against it; existing fit scores stay until you recalculate.",
+            href: "/vc/founders?source=open",
+            linkLabel: "Source Founders",
+          });
         }}
       />
     </div>
@@ -156,24 +148,24 @@ function Fund() {
 function Profile({ t }: { t: Thesis }) {
   const weights = Object.entries(t.score_weights || {}).filter(([, w]) => typeof w === "number");
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px] [&>*]:min-w-0">
-      <div className="space-y-6">
-        <Section title="Investment Focus" subtitle="Matches raise a company's thesis fit score.">
+    <div className="grid gap-12 xl:grid-cols-[minmax(0,1fr)_340px] [&>*]:min-w-0">
+      <div className="space-y-12">
+        <Section title="Investment Focus" subtitle="Matches raise a company's thesis fit score." card={false}>
           <dl className="grid gap-4 sm:grid-cols-3">
             <Chips label="Sectors" items={t.sectors} sectors />
             <Chips label="Stages" items={t.stages} />
             <Chips label="Geographies" items={t.geographies} />
           </dl>
           {t.custom_description && (
-            <p className="mt-4 max-w-prose border-t border-line pt-4 text-[15px] leading-7 text-ink-soft">{t.custom_description}</p>
+            <p className="mt-6 max-w-prose border-l-2 border-brand/40 pl-4 text-[15px] leading-7 text-ink-soft">{t.custom_description}</p>
           )}
-          <dl className="mt-4 grid gap-4 border-t border-line pt-4 sm:grid-cols-2">
+          <dl className="mt-6 grid gap-6 sm:grid-cols-2">
             <Text label="Founders We Look For" value={t.founder_preferences} />
             <Text label="Traction We Look For" value={t.traction_preferences} />
           </dl>
         </Section>
 
-        <Section title="Exclusions" subtitle="Companies that match any of these get a very low fit score (5–8 of 100).">
+        <Section title="Exclusions" subtitle="Companies that match any of these get a very low fit score (5–8 of 100)." card={false}>
           <dl className="grid gap-4 sm:grid-cols-3">
             <Chips label="Sectors" items={t.excluded_sectors} tone="bg-negative-wash text-negative" empty="None" sectors />
             <Chips label="Geographies" items={t.excluded_geographies} tone="bg-negative-wash text-negative" empty="None" />
@@ -182,8 +174,8 @@ function Profile({ t }: { t: Thesis }) {
         </Section>
       </div>
 
-      <div className="space-y-6">
-        <Section title="Terms" subtitle="For your reference; not used in scoring.">
+      <div className="space-y-12 xl:border-l xl:border-line xl:pl-10">
+        <Section title="Terms" subtitle="For your reference; not used in scoring." card={false}>
           <dl className="divide-y divide-line text-[15px]">
             <Term label="Check Size" value={t.min_check_size || t.max_check_size ? `${money(t.min_check_size)} – ${money(t.max_check_size)}` : "Not Set"} />
             <Term label="Target Ownership" value={t.target_ownership ? `${t.target_ownership}%` : "Not Set"} />
@@ -192,12 +184,12 @@ function Profile({ t }: { t: Thesis }) {
           </dl>
         </Section>
         {weights.length > 0 && (
-          <Section title="Founder Score Weights" subtitle="How the Founder Score Is Composed">
-            <ul className="space-y-2">
+          <Section title="Founder Score Weights" subtitle="How the Founder Score Is Composed" card={false}>
+            <ul className="space-y-3">
               {weights.map(([k, w]) => (
                 <li key={k}>
                   <div className="flex justify-between text-[13px]"><span className="text-ink-soft">{humanStatus(k)}</span><span className="num text-ink-muted">{Math.round(Number(w) * 100)}%</span></div>
-                  <div className="mt-1 h-1 rounded-full bg-line"><div className="h-1 rounded-full bg-brand" style={{ width: `${Math.min(100, Number(w) * 100)}%` }} /></div>
+                  <div className="mt-1.5"><Meter value={Math.min(1, Number(w))} /></div>
                 </li>
               ))}
             </ul>
@@ -337,7 +329,7 @@ function ThesisEditor({ open, existing, onClose, onSaved }: {
           type={opts.type ?? "text"}
           inputMode={opts.type === "number" ? "decimal" : undefined}
           min={opts.type === "number" ? 0 : undefined}
-          className={`input mt-1 ${err ? "border-negative focus:border-negative focus:ring-negative/15" : ""}`}
+          className="input mt-1"
           value={form[k] as string | number}
           placeholder={opts.ph}
           required={opts.required}
@@ -345,7 +337,7 @@ function ThesisEditor({ open, existing, onClose, onSaved }: {
           aria-describedby={[opts.hint && `${id}-hint`, err && `${id}-error`].filter(Boolean).join(" ") || undefined}
           onChange={(e) => setForm({ ...form, [k]: e.target.value })}
         />
-        {err && <p id={`${id}-error`} className="mt-1 text-[13px] text-negative">{err}</p>}
+        {err && <p id={`${id}-error`} className="field-error">{err}</p>}
         {opts.hint && <p id={`${id}-hint`} className="mt-1 text-[13px] text-ink-muted">{opts.hint}</p>}
       </div>
     );
@@ -360,9 +352,9 @@ function ThesisEditor({ open, existing, onClose, onSaved }: {
       subtitle="One draft across all three sections — switch freely, then save once. Separate lists with commas."
       footer={
         <>
-          {errorCount > 0 && <span className="mr-auto text-[13px] text-negative" role="alert">Fix {errorCount} {errorCount === 1 ? "field" : "fields"} to save.</span>}
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn-primary" onClick={save} disabled={saving}>{saving ? "Saving…" : existing ? "Save Changes" : "Create Thesis"}</button>
+          {errorCount > 0 && <span className="field-error mr-auto mt-0" role="alert">Fix {errorCount} {errorCount === 1 ? "field" : "fields"} to save.</span>}
+          <button className="btn-ghost" onClick={onClose}>Cancel</button>
+          <Button variant="primary" onClick={save} busy={saving}>{existing ? "Save Changes" : "Create Thesis"}</Button>
         </>
       }
     >
@@ -379,7 +371,7 @@ function ThesisEditor({ open, existing, onClose, onSaved }: {
             return { key: sec.key, label: sec.label, badge: n ? <span className="chip bg-negative-wash text-negative" aria-label={`${n} to Fix`}>{n}</span> : undefined };
           })}
         />
-        <div {...tabPanelProps("thesis", section)}>
+        <div key={section} {...tabPanelProps("thesis", section)}>
         {section === "focus" && (
         <fieldset className="space-y-4">
           <legend className="sr-only">Investment Focus</legend>
