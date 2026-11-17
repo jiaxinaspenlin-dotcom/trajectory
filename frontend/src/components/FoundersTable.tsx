@@ -123,8 +123,12 @@ export function FoundersTable({
   const rows = sortFounderLeads(leads, sort, overlay);
   const name = (l: FounderLead) => l.founder?.full_name || l.company?.name || `Opportunity #${l.id}`;
 
-  // The row's menu. Always in this order: the stage step, then my shortlist.
-  const menuItems = (l: FounderLead): RowMenuItem[] => [
+  // The row's menu. Always in this order: the stage step, then my shortlist. The
+  // current shortlist is the one the row's badge shows: mine, or the shared record's.
+  const menuItems = (l: FounderLead): RowMenuItem[] => {
+    const mine = overlay[l.id] ?? null;
+    const current = shortlistOf(l, mine);
+    return [
     inPipeline(l)
       ? { label: `View in Pipeline · ${humanStatus(l.stage)}`, href: `/vc/pipeline?stage=${l.stage}` }
       : {
@@ -139,11 +143,14 @@ export function FoundersTable({
     { separator: true, label: "My Shortlist" },
     ...STATUS_OPTIONS.map((o) => ({
       label: o.label,
-      checked: overlay[l.id] === o.value,
-      onSelect: () => onSetStatus(l.id, overlay[l.id] === o.value ? null : o.value),
+      checked: current === o.value,
+      // choosing my current value again clears it; a value held on the shared
+      // record can only be changed by choosing another (the page says so)
+      onSelect: () => onSetStatus(l.id, mine === o.value ? null : o.value),
     })),
-    ...(overlay[l.id] ? [{ label: "Remove from Shortlist", onSelect: () => onSetStatus(l.id, null) }] : []),
-  ];
+    ...(mine ? [{ label: "Remove from Shortlist", onSelect: () => onSetStatus(l.id, null) }] : []),
+    ];
+  };
 
   const errorLine = (l: FounderLead) =>
     rowError?.id === l.id && <p className="field-error" role="alert">{rowError.message}</p>;

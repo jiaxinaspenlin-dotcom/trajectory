@@ -145,11 +145,12 @@ export function HumanDecisionPanel({
           </fieldset>
           <div>
             <label htmlFor={`action-${opportunityId}`} className="label">Chosen Action <span className="text-negative" aria-hidden>*</span></label>
-            <div className="mt-1 flex flex-wrap gap-2">
+            {/* stacked on phones, so the chosen action is never cut off beside the button */}
+            <div className="mt-1 flex flex-col items-start gap-2 sm:flex-row sm:items-center">
               <select
                 id={`action-${opportunityId}`}
                 ref={actionRef}
-                className="select min-w-0 flex-1"
+                className="select w-full min-w-0 sm:flex-1"
                 value={action}
                 aria-invalid={!!err("action")}
                 onChange={(e) => setAction(e.target.value)}
@@ -158,7 +159,7 @@ export function HumanDecisionPanel({
                 {ACTIONS.map((a) => <option key={a} value={a}>{humanStatus(a)}{recommendation?.action === a ? " (Recommended)" : ""}</option>)}
               </select>
               {recommendation && action !== recommendation.action && (
-                <button type="button" className="btn-ghost btn-sm self-center" onClick={() => setAction(recommendation.action)}>Use Recommendation</button>
+                <button type="button" className="btn-ghost btn-sm" onClick={() => setAction(recommendation.action)}>Use Recommendation</button>
               )}
             </div>
             {err("action") && <p className="field-error">{err("action")}</p>}

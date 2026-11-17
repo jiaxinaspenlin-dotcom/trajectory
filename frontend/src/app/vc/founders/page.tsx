@@ -13,7 +13,7 @@ import { WebSourcing } from "@/components/WebSourcing";
 import { ArrowRightIcon, FoundersIcon, SearchIcon } from "@/components/icons";
 import { FounderLead } from "@/lib/types";
 import { clearPipelineStatus, getPipeline, PipelineStatus, setPipelineStatus } from "@/lib/myWorkspace";
-import { FOUNDER_VIEWS, FounderView, inPipeline, matchesFounderView, matchesQuery, sortLeads } from "@/lib/pipeline";
+import { FOUNDER_VIEWS, FounderView, inPipeline, matchesFounderView, matchesQuery, SHORTLIST_LABEL, sortLeads } from "@/lib/pipeline";
 
 interface Prospect {
   opportunity_id: number;
@@ -290,6 +290,12 @@ function FounderLeads({
   };
 
   function setStatus(id: number, status: PipelineStatus | null) {
+    const lead = (leads.data?.items ?? []).find((x) => x.id === id);
+    if (status && !overlay[id] && lead?.status === status) {
+      // shortlisted on the shared record (as on the record page): pick another value to change it
+      notify({ message: `Already ${SHORTLIST_LABEL[status]} — choose another option to change it.` });
+      return;
+    }
     if (status) setPipelineStatus(id, status);
     else clearPipelineStatus(id);
     setOverlay(getPipeline());
@@ -350,8 +356,8 @@ function FounderLeads({
           <input
             type="search"
             aria-label="Search Founders"
-            placeholder="Search Name, @handle, Company, Project"
-            className="input w-full pl-9 sm:w-72"
+            placeholder="Search Name, Company or @handle"
+            className="input w-full pl-9 sm:w-80"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />

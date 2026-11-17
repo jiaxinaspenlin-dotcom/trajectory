@@ -209,6 +209,27 @@ describe("FoundersTable row menu and phones", () => {
     expect(onSetStatus).toHaveBeenCalledWith(11, "monitoring");
   });
 
+  it("marks the shortlist value the row's badge shows, mine or the shared record's", async () => {
+    const onSetStatus = vi.fn();
+    const { unmount } = render(<FoundersTable leads={[lead({ status: "saved" })]} overlay={{}} onSetStatus={onSetStatus} onMoveToScreening={async () => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "More Actions for Ada Builder" }));
+    expect(await screen.findByRole("menuitemcheckbox", { name: /Saved/ })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("menuitemcheckbox", { name: /Monitoring/ })).toHaveAttribute("aria-checked", "false");
+    // held on the shared record: choosing it asks the page (which explains), never clears
+    fireEvent.click(screen.getByRole("menuitemcheckbox", { name: /Saved/ }));
+    expect(onSetStatus).toHaveBeenCalledWith(11, "saved");
+    unmount();
+
+    render(<FoundersTable leads={[lead({ status: "saved" })]} overlay={{ 11: "monitoring" }} onSetStatus={onSetStatus} onMoveToScreening={async () => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "More Actions for Ada Builder" }));
+    const mine = await screen.findByRole("menuitemcheckbox", { name: /Monitoring/ });
+    expect(mine).toHaveAttribute("aria-checked", "true");
+    expect(mine.querySelector("[aria-hidden]")).not.toHaveClass("invisible");
+    expect(screen.getByRole("menuitemcheckbox", { name: /Saved/ })).toHaveAttribute("aria-checked", "false");
+    fireEvent.click(mine);
+    expect(onSetStatus).toHaveBeenLastCalledWith(11, null);
+  });
+
   it("stacks each row on phones with the record and the menu reachable", () => {
     push.mockClear();
     render(<FoundersTable layout="stacked" leads={[lead({ evidence_count: 4 })]} overlay={{}} onSetStatus={() => {}} onMoveToScreening={async () => {}} />);
