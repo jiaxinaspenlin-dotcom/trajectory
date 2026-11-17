@@ -104,13 +104,18 @@ export default function DashboardPage() {
   const openDeals = (deals.data?.items ?? []).filter((d) => open(d.id));
   const newLeads = (leads.data?.items ?? []).filter((l) => l.stage === "sourcing" && l.status !== "dismissed" && open(l.id));
 
+  // "Also Waiting" is everything except the Right Now record, so "1 of N" is that
+  // record plus the groups (the dashboard's own queue is capped and can't count)
+  const alsoDeals = openDeals.filter((d) => d.id !== next?.opportunity_id);
+  const alsoLeads = newLeads.filter((l) => l.id !== next?.opportunity_id);
   const groups = [
     ...WORK.map((w) => {
-      const items = openDeals.filter((d) => d.next_action_key === w.key);
+      const items = alsoDeals.filter((d) => d.next_action_key === w.key);
       return { key: w.key, count: items.length, label: items.length === 1 ? w.one : w.many, href: w.href, names: items.map(opportunityName) };
     }),
-    { key: "new_leads", count: newLeads.length, label: newLeads.length === 1 ? "New Lead" : "New Leads", href: "/vc/founders", names: newLeads.map(opportunityName) },
+    { key: "new_leads", count: alsoLeads.length, label: alsoLeads.length === 1 ? "New Lead" : "New Leads", href: "/vc/founders", names: alsoLeads.map(opportunityName) },
   ].filter((g) => g.count > 0);
+  const waitingTotal = deals.data && leads.data ? 1 + groups.reduce((a, g) => a + g.count, 0) : queue.length;
 
   const byStage: Record<string, string[]> = {
     sourcing: newLeads.map(opportunityName),
@@ -134,7 +139,7 @@ export default function DashboardPage() {
       <section aria-labelledby="now-title" data-tour="action-queue">
         <h2 id="now-title" className="sr-only">Right Now</h2>
         {next ? (
-          <NextUp a={next} total={queue.length} onOpen={() => router.push(nextActionHref(next.opportunity_id, next.next_action_key))} />
+          <NextUp a={next} total={waitingTotal} onOpen={() => router.push(nextActionHref(next.opportunity_id, next.next_action_key))} />
         ) : empty && stepIndex >= 0 ? (
           <SetupStep step={stepIndex} total={setup.length} {...setup[stepIndex]} />
         ) : (

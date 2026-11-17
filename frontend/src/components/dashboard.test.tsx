@@ -65,11 +65,15 @@ describe("Dashboard", () => {
     await renderDashboard();
     const waiting = screen.getByRole("region", { name: "Also Waiting" });
     const links = within(waiting).getAllByRole("link");
+    // Inferra is Right Now: the groups leave it out, and "1 of N" is it plus the groups
     expect(links.map((l) => [l.getAttribute("href"), l.textContent])).toEqual([
-      ["/vc/pipeline?next=review_recommendation", expect.stringContaining("2Recommendations to Review")],
+      ["/vc/pipeline?next=review_recommendation", expect.stringContaining("1Recommendation to Review")],
       ["/vc/pipeline?next=review_application", expect.stringContaining("1Application to Review")],
       ["/vc/founders", expect.stringContaining("2New Leads")],
     ]);
+    expect(within(waiting).queryByText(/Inferra/)).toBeNull();
+    expect(within(waiting).getByText("PayMesh")).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "Right Now" })).getByText(/1 of 5/)).toBeInTheDocument();
     // no row per company with the same button
     expect(within(waiting).queryByRole("button")).toBeNull();
   });
