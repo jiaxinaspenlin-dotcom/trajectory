@@ -9,7 +9,7 @@ import {
 import { nextActionHref } from "@/lib/pipeline";
 import { MapLink, MapNode } from "@/lib/types";
 import { SourceBadge, StageBadge } from "../DealBadges";
-import { ArrowRightIcon, CloseIcon, LinkIcon } from "../icons";
+import { ArrowRightIcon, CheckIcon, CloseIcon, LinkIcon } from "../icons";
 import { Badge } from "../ui";
 
 // Selected-opportunity drawer over the map canvas: a right panel on desktop,
@@ -58,7 +58,7 @@ export function MapDrawer({
       data-testid="map-node-panel"
       aria-labelledby="map-drawer-name"
       data-map-inset="auto"
-      className="hud pointer-events-auto absolute inset-x-3 bottom-3 z-30 flex max-h-[58%] flex-col sm:inset-x-auto sm:bottom-4 sm:right-4 sm:top-4 sm:max-h-none sm:w-[400px]"
+      className="hud drawer-enter sheet-on-phone pointer-events-auto absolute inset-x-3 bottom-3 z-30 flex max-h-[58%] flex-col sm:inset-x-auto sm:bottom-4 sm:right-4 sm:top-4 sm:max-h-none sm:w-[400px]"
     >
       <div className="flex items-start justify-between gap-2 border-b border-line px-4 py-3">
         <div className="min-w-0">
@@ -156,7 +156,7 @@ export function MapDrawer({
             <ul className="mt-1 space-y-1">
               {related.map(({ other, link }) => (
                 <li key={`${link.kind}-${other}`} className="text-xs">
-                  <button type="button" className="font-medium text-brand hover:underline" onClick={() => onSelect(other)}>
+                  <button type="button" className="link" onClick={() => onSelect(other)}>
                     <span data-content>{nodesById.get(other)!.name}</span>
                   </button>
                   <span className="text-ink-muted"> — {link.label}</span>
@@ -173,11 +173,11 @@ export function MapDrawer({
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5 border-t border-line px-4 py-2.5">
-        <Link href={`/vc/opportunities/${node.id}`} className="btn-primary">Open Opportunity <ArrowRightIcon size={14} /></Link>
-        {node.in_pipeline && <Link href={`/vc/pipeline?stage=${node.stage}`} className="btn-secondary">Pipeline</Link>}
-        {node.in_founders && <Link href="/vc/founders" className="btn-secondary">Founders</Link>}
-        <button type="button" className="btn-ghost ml-auto" onClick={copyLink} aria-label="Copy Link to This Opportunity on the Map">
-          <LinkIcon size={14} /> {copied ? "Copied" : "Link"}
+        <Link href={`/vc/opportunities/${node.id}`} className="btn-primary group">Open Opportunity <ArrowRightIcon size={14} className="transition-transform duration-base ease-out group-hover:translate-x-0.5" /></Link>
+        {node.in_pipeline && <Link href={`/vc/pipeline?stage=${node.stage}`} className="btn-ghost">Pipeline</Link>}
+        {node.in_founders && <Link href="/vc/founders" className="btn-ghost">Founders</Link>}
+        <button type="button" className={`btn-ghost ml-auto ${copied ? "text-positive" : ""}`} onClick={copyLink} aria-label="Copy Link to This Opportunity on the Map">
+          {copied ? <CheckIcon size={14} className="check-draw" /> : <LinkIcon size={14} />} {copied ? "Copied" : "Link"}
         </button>
       </div>
     </aside>
