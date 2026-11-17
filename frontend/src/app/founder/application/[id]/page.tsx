@@ -6,7 +6,8 @@ import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useFetch } from "@/lib/useFetch";
 import { sectorLabel } from "@/lib/format";
-import { Badge, ErrorState, Section, Spinner, Stat } from "@/components/ui";
+import { Badge, Button, ErrorState, PageSkeleton, Section } from "@/components/ui";
+import { CheckIcon } from "@/components/icons";
 
 interface ApplicationDetail {
   id: number;
@@ -31,51 +32,59 @@ export default function ApplicationStatus() {
   const { id } = useParams<{ id: string }>();
   const { data, loading, error, reload } = useFetch<ApplicationDetail>(`/api/applications/${id}`);
 
-  if (loading) return <Spinner label="Loading Application…" />;
+  if (loading) return <PageSkeleton label="Loading Application…" rows={3} />;
   if (error) return <ErrorState message={error} onRetry={reload} />;
   if (!data) return null;
 
   const deckReady = data.document && data.document.status === "extracted";
 
   return (
-    <div className="space-y-5">
-      <nav aria-label="Breadcrumb" className="text-xs text-ink-muted">
-        <Link href="/founder/applications" className="hover:text-brand">My Applications</Link>
+    <div className="space-y-10">
+      <div className="animate-rise space-y-3">
+      <nav aria-label="Breadcrumb" className="text-meta text-ink-muted">
+        <Link href="/founder/applications" className="link text-ink-muted hover:text-ink">My Applications</Link>
         <span className="mx-1.5 text-ink-faint">/</span>
         <span className="text-ink-soft" data-content>{data.company_name}</span>
       </nav>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold tracking-[-0.015em] text-ink" data-content>{data.company_name}</h1>
+            <h1 className="text-[1.75rem] font-[650] leading-9 tracking-[-0.025em] text-ink sm:text-page" data-content>{data.company_name}</h1>
             <Badge tone="bg-brand-wash text-brand">Under Review</Badge>
           </div>
           <p className="mt-0.5 text-sm text-ink-muted">{data.sector ? sectorLabel(data.sector) : "Sector Not Set"} · {data.geography ? <span data-content>{data.geography}</span> : "Location Not Set"}</p>
         </div>
         {!deckReady && <Link href="/founder" className="btn-primary">Finish Your Application</Link>}
       </div>
-
-      {/* status timeline */}
-      <ol className="grid grid-cols-3 overflow-hidden rounded-lg border border-line bg-white text-sm" aria-label="Application Status">
-        {[
-          ["Application Received", true],
-          ["Pitch Deck Read", !!deckReady],
-          ["Human Review", false],
-        ].map(([label, done], i) => (
-          <li key={String(label)} className={`flex items-center gap-2 px-4 py-2.5 ${i > 0 ? "border-l border-line" : ""}`}>
-            <span className={`grid h-5 w-5 place-items-center rounded-full text-xs font-semibold ${done ? "bg-positive text-white" : i === 2 ? "bg-brand-wash text-brand" : "bg-line text-ink-muted"}`}>{done ? "✓" : i + 1}</span>
-            <span className={done ? "text-ink" : "text-ink-muted"}>{label}</span>
-          </li>
-        ))}
-      </ol>
-
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Stat label="Pitch Deck" value={deckReady ? "Received" : "Pending"} sub={data.document ? `${data.document.num_pages} Pages Parsed` : "Not Uploaded Yet"} tone={deckReady ? "text-positive" : "text-caution"} />
-        <Stat label="Users (Reported)" value={data.num_users ?? "—"} />
-        <Stat label="Funding Requested" value={data.funding_requested ? `$${data.funding_requested.toLocaleString()}` : "—"} />
       </div>
 
-      <Section title="First-Pass Screen" subtitle="Automated, Before Human Review">
+      {/* where it stands: three steps as one bar */}
+      <div>
+        <ol className="grid grid-cols-3 gap-2" aria-label="Application Status">
+          {([
+            ["Application Received", true],
+            ["Pitch Deck Read", !!deckReady],
+            ["Human Review", false],
+          ] as const).map(([label, done], i) => (
+            <li key={label}>
+              <span className="block h-1.5 overflow-hidden rounded-full bg-line" aria-hidden>
+                <span className={`block h-full origin-left rounded-full transition-transform duration-[500ms] ease-out ${done ? "bg-positive" : "bg-brand/50"}`}
+                  style={{ transform: `scaleX(${done ? 1 : i === 2 ? 0.35 : 0})`, transitionDelay: `${i * 100}ms` }} />
+              </span>
+              <span className={`mt-2 flex items-center gap-1.5 text-sm ${done ? "text-ink" : "text-ink-muted"}`}>
+                {done && <CheckIcon size={13} className="text-positive" />}{label}
+              </span>
+            </li>
+          ))}
+        </ol>
+        <dl className="mt-6 flex flex-wrap gap-x-8 gap-y-2 text-sm">
+          <div><dt className="label">Pitch Deck</dt><dd className={`mt-0.5 font-medium ${deckReady ? "text-positive" : "text-caution"}`}>{deckReady ? "Received" : "Pending"} <span className="font-normal text-ink-muted">· {data.document ? `${data.document.num_pages} Pages Parsed` : "Not Uploaded Yet"}</span></dd></div>
+          <div><dt className="label">Users (Reported)</dt><dd className="num mt-0.5 font-medium text-ink">{data.num_users ?? "—"}</dd></div>
+          <div><dt className="label">Funding Requested</dt><dd className="num mt-0.5 font-medium text-ink">{data.funding_requested ? `$${data.funding_requested.toLocaleString()}` : "—"}</dd></div>
+        </dl>
+      </div>
+
+      <Section title="First-Pass Screen" subtitle="Automated, Before Human Review" card={false}>
         <p className="text-sm leading-6 text-ink-soft">{data.screen_summary || "Your application is queued for screening."}</p>
       </Section>
 
@@ -151,6 +160,7 @@ function ProvideInfo({ app, onSaved }: { app: ApplicationDetail; onSaved: () => 
 
   return (
     <Section
+      card={false}
       title="What Would Help the Fund Decide"
       subtitle={app.missing_fields.length ? `${app.missing_fields.length} Item${app.missing_fields.length === 1 ? "" : "s"} Outstanding — Fill In What You Can` : "Everything Requested Has Been Provided"}
     >
@@ -177,17 +187,21 @@ function ProvideInfo({ app, onSaved }: { app: ApplicationDetail; onSaved: () => 
         />
       </label>
 
-      {error && <p className="mt-2 text-sm text-negative">{error}</p>}
-      {saved && !error && <p className="mt-2 text-sm text-positive">Saved — sent to the fund. Thank you!</p>}
+      {error && <p className="field-error">{error}</p>}
+      {saved && !error && <p className="animate-rise mt-3 flex items-center gap-1.5 text-sm text-positive" role="status"><CheckIcon size={14} className="check-draw" /> Saved — sent to the fund. Thank you!</p>}
 
-      <div className="mt-3 flex items-center gap-2">
-        <button className="btn-primary" onClick={submit} disabled={saving}>
-          {saving ? "Submitting…" : "Submit to the Fund"}
-        </button>
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <Button variant={deckDone(app) ? "primary" : "secondary"} onClick={submit} busy={saving}>Submit to the Fund</Button>
         <span className="text-xs text-ink-muted">
           Adding a GitHub username lets the fund verify your work with real public activity.
         </span>
       </div>
     </Section>
   );
+}
+
+// the status page has one primary action: finishing the deck if it's missing,
+// otherwise sending more details
+function deckDone(app: ApplicationDetail): boolean {
+  return !!app.document && app.document.status === "extracted";
 }

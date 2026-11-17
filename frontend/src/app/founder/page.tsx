@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { Badge, ErrorState, Section, Spinner } from "@/components/ui";
+import { Badge, Button, ErrorState } from "@/components/ui";
+import { CheckIcon, DocumentIcon } from "@/components/icons";
 import { addMyAppId } from "@/lib/myApps";
 import { humanStatus } from "@/lib/format";
 
@@ -61,21 +62,26 @@ export default function ApplyFlow() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-[-0.015em] text-ink">Apply to the Fund</h1>
-        <p className="mt-0.5 text-sm text-ink-muted">A company name and a PDF pitch deck are all you need. Everything else is optional.</p>
+    <div className="space-y-10">
+      <div className="animate-rise">
+        <h1 className="text-[1.75rem] font-[650] leading-9 tracking-[-0.025em] text-ink sm:text-page">Apply to the Fund</h1>
+        <p className="mt-1.5 text-body text-ink-muted">A company name and a PDF pitch deck are all you need. Everything else is optional.</p>
       </div>
 
-      {/* stepper */}
-      <ol className="grid grid-cols-3 overflow-hidden rounded-lg border border-line bg-white text-sm" aria-label="Application Steps">
-        {[["1", "Company"], ["2", "Pitch Deck"], ["3", "Submitted"]].map(([n, label], idx) => {
+      {/* progress: three steps as one bar that fills */}
+      <ol className="grid grid-cols-3 gap-2" aria-label="Application Steps">
+        {["Company", "Pitch Deck", "Submitted"].map((label, idx) => {
           const done = step > idx + 1;
           const current = step === idx + 1;
           return (
-            <li key={n} aria-current={current ? "step" : undefined} className={`flex items-center gap-2 px-4 py-2.5 ${idx > 0 ? "border-l border-line" : ""} ${current ? "bg-brand-wash" : ""}`}>
-              <span className={`num grid h-5 w-5 place-items-center rounded-full text-xs font-semibold ${done ? "bg-positive text-white" : current ? "bg-brand text-white" : "bg-line text-ink-muted"}`}>{done ? "✓" : n}</span>
-              <span className={current ? "font-medium text-ink" : "text-ink-muted"}>{label}</span>
+            <li key={label} aria-current={current ? "step" : undefined}>
+              <span className="block h-1.5 overflow-hidden rounded-full bg-line" aria-hidden>
+                <span className="block h-full origin-left rounded-full bg-brand transition-transform duration-[500ms] ease-out" style={{ transform: `scaleX(${done || current ? 1 : 0})` }} />
+              </span>
+              <span className={`mt-2 flex items-center gap-1.5 text-sm ${current ? "font-medium text-ink" : done ? "text-ink-soft" : "text-ink-muted"}`}>
+                {done && <CheckIcon size={13} className="text-positive" />}
+                <span className="num text-ink-faint">{idx + 1}</span> {label}
+              </span>
             </li>
           );
         })}
@@ -83,42 +89,46 @@ export default function ApplyFlow() {
 
       {error && <ErrorState message={error} />}
 
-      {/* Step 1: company */}
-      <Section title="Company" subtitle="Company name is required.">
-        <form onSubmit={(e) => { e.preventDefault(); if (companyName && !appResult) createApp(); }}>
-          <label className="block">
-            <span className="label">Company Name *</span>
-            <input
-              className="input mt-1"
-              value={companyName}
-              disabled={!!appResult}
-              onChange={(e) => setCompanyName(e.target.value)}
-              placeholder="e.g. Northwind Labs"
-            />
-          </label>
-          <details className="mt-3 group" open={Object.values(optional).some(Boolean)}>
-            <summary className="cursor-pointer text-sm font-medium text-ink-soft hover:text-ink">Add Optional Details</summary>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              {OPTIONAL.map(([k, label, ph]) => (
-                <label key={k} className="block">
-                  <span className="label">{label}</span>
-                  <input className="input mt-1" placeholder={ph} value={optional[k]} disabled={!!appResult} onChange={(e) => setOptional({ ...optional, [k]: e.target.value })} />
-                </label>
-              ))}
-            </div>
-          </details>
-          {!appResult && (
-            <button type="submit" className="btn-primary mt-4" disabled={!companyName || status === "creating"}>
-              {status === "creating" ? "Starting…" : "Continue to Pitch Deck"}
-            </button>
-          )}
-        </form>
-      </Section>
+      {/* Step 1: company (a one-line summary once it's done) */}
+      {appResult ? (
+        <p className="animate-fade flex items-center gap-2 text-body text-ink-soft">
+          <span className="grid h-6 w-6 place-items-center rounded-full bg-positive-wash text-positive"><CheckIcon size={13} /></span>
+          Company: <span className="font-medium text-ink" data-content>{companyName}</span>
+        </p>
+      ) : (
+        <section aria-labelledby="step-company" className="animate-rise">
+          <h2 id="step-company" className="text-title text-ink">Company</h2>
+          <form className="mt-4" onSubmit={(e) => { e.preventDefault(); if (companyName && !appResult) createApp(); }}>
+            <label className="block">
+              <span className="label">Company Name *</span>
+              <input
+                className="input mt-1"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                placeholder="e.g. Northwind Labs"
+              />
+            </label>
+            <details className="group mt-4" open={Object.values(optional).some(Boolean)}>
+              <summary className="link cursor-pointer text-sm">Add Optional Details</summary>
+              <div className="animate-fade mt-3 grid gap-3 sm:grid-cols-2">
+                {OPTIONAL.map(([k, label, ph]) => (
+                  <label key={k} className="block">
+                    <span className="label">{label}</span>
+                    <input className="input mt-1" placeholder={ph} value={optional[k]} onChange={(e) => setOptional({ ...optional, [k]: e.target.value })} />
+                  </label>
+                ))}
+              </div>
+            </details>
+            <Button type="submit" variant="primary" size="lg" className="mt-6 w-full sm:w-auto" disabled={!companyName} busy={status === "creating"}>Continue to Pitch Deck</Button>
+          </form>
+        </section>
+      )}
 
       {/* Step 1 result: first-pass screen */}
       {appResult && (
-        <Section title="First-Pass Screen" subtitle="Automatic, Before the Deck">
-          <p className="text-sm leading-6 text-ink-soft">{appResult.screen_summary}</p>
+        <section aria-labelledby="step-screen" className="animate-rise rounded-2xl bg-surface-sunken px-5 py-4">
+          <h2 id="step-screen" className="text-section text-ink">First-Pass Screen</h2>
+          <p className="mt-1 text-sm leading-6 text-ink-soft">{appResult.screen_summary}</p>
           {appResult.missing_fields?.length > 0 && (
             <div className="mt-3">
               <span className="label">Information That Would Help</span>
@@ -127,47 +137,50 @@ export default function ApplyFlow() {
               </div>
             </div>
           )}
-        </Section>
+        </section>
       )}
 
       {/* Step 2: pitch deck */}
       {appResult && !uploadResult && (
-        <Section title="Pitch Deck" subtitle="PDF Only — Validated, Stored Securely, and Read Automatically">
-          <div className="flex flex-wrap items-center gap-3">
-            <label className="btn-secondary cursor-pointer">
-              <input type="file" accept="application/pdf" className="sr-only" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-              {file ? "Change File" : "Choose PDF"}
-            </label>
-            <span className="text-sm text-ink-muted">{file ? <span data-content>{file.name}</span> : "No File Selected"}</span>
-          </div>
-          <button className="btn-primary mt-4" onClick={uploadDeck} disabled={!file || status === "uploading"}>
-            {status === "uploading" ? "Uploading & Reading…" : "Submit Application"}
-          </button>
-          {status === "uploading" && <div className="mt-2"><Spinner label="Reading Your Deck…" /></div>}
-        </Section>
+        <section aria-labelledby="step-deck" className="animate-rise">
+          <h2 id="step-deck" className="text-title text-ink">Pitch Deck</h2>
+          <p className="mt-1 text-meta text-ink-muted">PDF only. Validated, stored securely, and read automatically.</p>
+          <label className={`press mt-4 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-6 py-10 text-center transition-colors duration-base focus-within:border-brand ${
+            file ? "border-brand/50 bg-brand-wash" : "border-line-strong hover:border-brand/50 hover:bg-surface-sunken"}`}>
+            <input type="file" accept="application/pdf" className="sr-only" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+            <span className={`grid h-11 w-11 place-items-center rounded-full ${file ? "bg-brand text-white" : "bg-white text-brand shadow-card"}`}><DocumentIcon size={20} /></span>
+            <span className="text-body font-medium text-ink">{file ? <span data-content>{file.name}</span> : "Choose PDF"}</span>
+            <span className="text-meta text-ink-muted">{file ? "Change File" : "No File Selected"}</span>
+          </label>
+          <Button variant="primary" size="lg" className="mt-6 w-full sm:w-auto" onClick={uploadDeck} disabled={!file} busy={status === "uploading"}>Submit Application</Button>
+          {status === "uploading" && <p className="mt-2 text-meta text-ink-muted" role="status">Reading Your Deck…</p>}
+        </section>
       )}
 
       {/* Step 3: submitted */}
       {uploadResult && (
-        <div ref={submittedRef} tabIndex={-1} className="scroll-mt-6 focus:outline-none">
-        <Section title="Application Submitted" subtitle="The fund will review it.">
-          <p className="text-sm leading-6 text-ink-soft">
+        <div ref={submittedRef} tabIndex={-1} className="animate-rise scroll-mt-6 rounded-2xl bg-positive-wash px-5 py-6 focus:outline-none sm:px-7">
+          <p className="flex items-center gap-2.5 text-title text-ink">
+            <span className="grid h-8 w-8 place-items-center rounded-full bg-positive text-white"><CheckIcon size={16} className="check-draw" /></span>
+            Application Submitted
+          </p>
+          <p className="mt-3 text-sm leading-6 text-ink-soft">
             We read <strong>{uploadResult.num_pages}</strong> page(s) of your deck ({uploadResult.extraction_status}).
             {uploadResult.extracted_fields?.missing?.length > 0 && (
               <> The deck appears to be missing: {uploadResult.extracted_fields.missing.join(", ")}.</>
             )}
           </p>
-          <h3 className="mt-4 text-[15px] font-semibold text-ink">What Happens Next</h3>
+          <h3 className="mt-5 text-[15px] font-semibold text-ink">What Happens Next</h3>
           <ol className="mt-2 list-decimal space-y-1 pl-5 text-[15px] text-ink-soft">
             <li>Your application is now with the fund, waiting for review.</li>
             <li>An investor reviews it — a person makes every decision.</li>
             <li>Check its status any time. If the fund needs more, it&apos;s listed under <em>What Would Help the Fund Decide</em>.</li>
           </ol>
-          <div className="mt-4 flex gap-2">
-            <Link href={`/founder/application/${appResult.application_id}`} className="btn-primary">View Application Status →</Link>
-            <Link href="/founder/applications" className="btn-secondary">My Applications</Link>
+          {/* wraps on phones, so the page never scrolls sideways */}
+          <div className="mt-6 flex flex-wrap gap-2">
+            <Link href={`/founder/application/${appResult.application_id}`} className="btn-primary">View Application Status</Link>
+            <Link href="/founder/applications" className="btn-ghost">My Applications</Link>
           </div>
-        </Section>
         </div>
       )}
     </div>
