@@ -11,42 +11,36 @@ function trustTone(score: number): string {
   return "text-negative";
 }
 
+// One claim per row: the claim itself first, then how far to trust it and the
+// evidence it rests on. Stacks on any width, so nothing scrolls sideways.
 export function ClaimsTable({ claims }: { claims: Claim[] }) {
   if (!claims.length) {
     return <p className="text-sm text-ink-muted">No claims recorded yet.</p>;
   }
   return (
-    <div className="relative overflow-x-auto" data-testid="claims-table">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-left text-xs text-ink-muted">
-            <th className="py-1 pr-2">Claim</th>
-            <th className="pr-2">Category</th>
-            <th className="pr-2">Source</th>
-            <th className="pr-2">Status</th>
-            <th className="pr-2">Trust Score</th>
-            <th>Evidence</th>
-          </tr>
-        </thead>
-        <tbody>
-          {claims.map((c) => (
-            <tr key={c.id} className="border-t border-line align-top">
-              <td className="py-2 pr-2 text-ink-soft" data-content>{c.text}</td>
-              <td className="pr-2 text-ink-muted">{humanStatus(c.category)}</td>
-              <td className="pr-2 text-xs text-ink-muted">
-                {c.provenance === "independent" ? "Independent" : "Founder-Reported"}
-              </td>
-              <td className="pr-2"><Badge tone={verificationTone(c.verification_status)}>{humanStatus(c.verification_status)}</Badge></td>
-              <td className={`pr-2 font-semibold ${trustTone(c.trust_score)}`}>{Math.round(c.trust_score)}</td>
-              <td className="text-xs text-ink-muted">
+    <ol className="divide-y divide-line" data-testid="claims-table" aria-label="Claims">
+      {claims.map((c, i) => (
+        <li key={c.id} className="animate-rise grid gap-x-6 gap-y-2 py-4 sm:grid-cols-[minmax(0,1fr)_auto]" style={{ "--i": i } as React.CSSProperties}>
+          <div className="min-w-0">
+            <p className="text-[15px] leading-6 text-ink" data-content>{c.text}</p>
+            <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-ink-muted">
+              <span>{humanStatus(c.category)}</span>
+              <span aria-hidden>·</span>
+              <span>{c.provenance === "independent" ? "Independent" : "Founder-Reported"}</span>
+              <span aria-hidden>·</span>
+              <span className="text-xs">
                 {c.supporting_evidence_ids.length
                   ? c.supporting_evidence_ids.map((id) => <EvidenceRef key={id} id={id} />)
-                  : "—"}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+                  : "No Evidence Cited"}
+              </span>
+            </p>
+          </div>
+          <div className="flex items-center gap-3 sm:flex-col sm:items-end sm:gap-1">
+            <Badge tone={verificationTone(c.verification_status)}>{humanStatus(c.verification_status)}</Badge>
+            <span className="text-[13px] text-ink-muted">Trust <span className={`num font-semibold ${trustTone(c.trust_score)}`}>{Math.round(c.trust_score)}</span></span>
+          </div>
+        </li>
+      ))}
+    </ol>
   );
 }

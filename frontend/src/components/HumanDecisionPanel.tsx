@@ -5,7 +5,8 @@ import { api } from "@/lib/api";
 import { humanStatus } from "@/lib/format";
 import { LocalDecision } from "@/lib/myWorkspace";
 import { useFetch } from "@/lib/useFetch";
-import { Badge, Spinner } from "./ui";
+import { Button, Skeleton } from "./ui";
+import { CheckIcon } from "./icons";
 
 const ACTIONS = [
   "Invite to Apply", "Schedule Interview", "Request Information",
@@ -102,8 +103,11 @@ export function HumanDecisionPanel({
       </div>
 
       {saved ? (
-        <div className="rounded-lg border border-positive/30 bg-positive-wash p-4 text-sm" role="status">
-          <Badge tone="bg-white text-positive">Recorded</Badge>
+        <div className="animate-rise rounded-xl bg-positive-wash p-4 text-sm" role="status">
+          <p className="flex items-center gap-2 font-medium text-positive">
+            <span className="grid h-6 w-6 place-items-center rounded-full bg-positive text-white"><CheckIcon size={13} className="check-draw" /></span>
+            Decision Recorded
+          </p>
           <p className="mt-1.5 text-ink-soft">
             <strong data-content>{saved.decided_by}</strong> chose <strong>{humanStatus(saved.chosen_action)}</strong> ({humanStatus(saved.decision)}).
           </p>
@@ -119,8 +123,8 @@ export function HumanDecisionPanel({
             <div className="mt-1.5 grid gap-2 sm:grid-cols-2">
               {OUTCOMES.map((o, i) => (
                 <label key={o.value}
-                  className={`flex cursor-pointer items-start gap-2.5 rounded-md border px-3 py-2.5 ${
-                    decision === o.value ? "border-brand bg-brand-wash" : err("decision") ? "border-negative/50" : "border-line-strong hover:border-ink-faint"}`}>
+                  className={`press flex cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2.5 transition-colors duration-fast ${
+                    decision === o.value ? "border-brand bg-brand-wash" : err("decision") ? "border-negative/50" : "border-line-strong hover:border-ink-faint/60 hover:bg-surface-sunken"}`}>
                   <input
                     ref={i === 0 ? outcomeRef : undefined}
                     type="radio"
@@ -137,7 +141,7 @@ export function HumanDecisionPanel({
                 </label>
               ))}
             </div>
-            {err("decision") && <p id="decision-error" className="mt-1 text-[13px] text-negative">{err("decision")}</p>}
+            {err("decision") && <p id="decision-error" className="field-error">{err("decision")}</p>}
           </fieldset>
           <div>
             <label htmlFor={`action-${opportunityId}`} className="label">Chosen Action <span className="text-negative" aria-hidden>*</span></label>
@@ -145,7 +149,7 @@ export function HumanDecisionPanel({
               <select
                 id={`action-${opportunityId}`}
                 ref={actionRef}
-                className={`select min-w-0 flex-1 ${err("action") ? "border-negative" : ""}`}
+                className="select min-w-0 flex-1"
                 value={action}
                 aria-invalid={!!err("action")}
                 onChange={(e) => setAction(e.target.value)}
@@ -157,27 +161,25 @@ export function HumanDecisionPanel({
                 <button type="button" className="btn-ghost btn-sm self-center" onClick={() => setAction(recommendation.action)}>Use Recommendation</button>
               )}
             </div>
-            {err("action") && <p className="mt-1 text-[13px] text-negative">{err("action")}</p>}
+            {err("action") && <p className="field-error">{err("action")}</p>}
           </div>
           <div>
             <label htmlFor={`by-${opportunityId}`} className="label">Decided By <span className="text-negative" aria-hidden>*</span></label>
-            <input id={`by-${opportunityId}`} ref={byRef} className="input mt-1" value={decidedBy} onChange={(e) => setDecidedBy(e.target.value)} />
-            {err("decidedBy") && <p className="mt-1 text-[13px] text-negative">{err("decidedBy")}</p>}
+            <input id={`by-${opportunityId}`} ref={byRef} className="input mt-1" aria-invalid={!!err("decidedBy")} value={decidedBy} onChange={(e) => setDecidedBy(e.target.value)} />
+            {err("decidedBy") && <p className="field-error">{err("decidedBy")}</p>}
           </div>
           <div>
             <label htmlFor={`notes-${opportunityId}`} className="label">Notes</label>
             <textarea id={`notes-${opportunityId}`} className="textarea mt-1" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
-          {error && <p className="text-[13px] text-negative" role="alert">{error}</p>}
-          <button type="submit" className="btn-primary" disabled={busy}>
-            {busy ? "Recording…" : "Record Decision"}
-          </button>
+          {error && <p className="field-error" role="alert">{error}</p>}
+          <Button type="submit" variant="primary" busy={busy}>Record Decision</Button>
         </form>
       )}
 
       <section aria-labelledby={`history-${opportunityId}`} className="border-t border-line pt-4">
         <h3 id={`history-${opportunityId}`} className="text-[15px] font-semibold text-ink">Decision History</h3>
-        {history.loading && !history.data ? <div className="mt-2"><Spinner label="Loading History…" /></div>
+        {history.loading && !history.data ? <div className="mt-2 space-y-2" role="status" aria-label="Loading History…"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-4 w-1/2" /></div>
           : history.data?.items.length ? (
           <ol className="mt-2 divide-y divide-line" data-testid="decision-history">
             {[...history.data.items].reverse().map((h, i) => (

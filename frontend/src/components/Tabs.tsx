@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyboardEvent, ReactNode, useRef } from "react";
+import { KeyboardEvent, ReactNode, useEffect, useRef } from "react";
 import { useIndicator } from "@/lib/motion";
 
 export interface TabItem<T extends string> {
@@ -28,6 +28,13 @@ export function Tabs<T extends string>({
   const listRef = useRef<HTMLDivElement>(null);
   // the active underline slides between tabs (transform only)
   const box = useIndicator(listRef, "[aria-selected='true']", [value, tabs.length]);
+  // keep the selected tab visible in a strip that scrolls sideways (phones), without moving the page
+  useEffect(() => {
+    const strip = listRef.current?.parentElement;
+    const el = refs.current[value];
+    if (!strip || !el || strip.scrollWidth <= strip.clientWidth) return;
+    strip.scrollTo({ left: el.offsetLeft - (strip.clientWidth - el.offsetWidth) / 2, behavior: "smooth" });
+  }, [value]);
 
   function onKeyDown(e: KeyboardEvent) {
     const i = tabs.findIndex((t) => t.key === value);

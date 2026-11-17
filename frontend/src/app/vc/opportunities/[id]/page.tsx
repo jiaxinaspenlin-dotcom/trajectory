@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useFetch } from "@/lib/useFetch";
-import { Badge, ConfidenceBar, DemoBadge, EmptyState, ErrorState, ScoreRing, Section, Spinner } from "@/components/ui";
-import { ShortlistBadge, SourceBadge, StageBadge } from "@/components/DealBadges";
+import { Badge, Button, ConfidenceBar, CountUp, DemoBadge, EmptyState, ErrorState, PageSkeleton, ScoreRing, Section, Segmented, Skeleton } from "@/components/ui";
+import { ShortlistBadge, StageBadge } from "@/components/DealBadges";
+import { ArrowRightIcon } from "@/components/icons";
 import { useToast } from "@/components/Toast";
 import { MomentumChart } from "@/components/MomentumChart";
 import { ThreeAxes } from "@/components/ThreeAxes";
@@ -17,7 +18,7 @@ import { HumanDecisionPanel } from "@/components/HumanDecisionPanel";
 import { Claim, Evidence, Opportunity } from "@/lib/types";
 import { LeadWebCheck } from "@/components/WebSourcing";
 import { humanStatus, labelPhrase, sourceName, verificationTone } from "@/lib/format";
-import { evidenceHref, OpportunityTab, parseOpportunityTab, SHORTLIST_LABEL, shortlistOf } from "@/lib/pipeline";
+import { evidenceHref, OpportunityTab, parseOpportunityTab, SHORTLIST_LABEL, shortlistOf, sourceLabel, stageDot } from "@/lib/pipeline";
 import { Tabs, tabPanelProps } from "@/components/Tabs";
 import { EvidenceLinkProvider } from "@/components/EvidenceRef";
 import {
@@ -28,7 +29,7 @@ import {
 export default function OpportunityPage() {
   // useSearchParams (the ?tab= state) needs a Suspense boundary
   return (
-    <Suspense fallback={<Spinner label="Loading Opportunity…" />}>
+    <Suspense fallback={<RecordSkeleton />}>
       <OpportunityRecord />
     </Suspense>
   );
@@ -137,7 +138,7 @@ function OpportunityRecord() {
     await reload();
   }
 
-  async function moveToScreening() {
+  async function moveToScreening(): Promise<void> {
     setScreeningError(null);
     try {
       // historically named invite_to_apply; it moves this opportunity to Screening and sends nothing
@@ -180,7 +181,7 @@ function OpportunityRecord() {
   }
 
   // reloads keep the page (and in-flight messages) mounted; only the first load shows a spinner
-  if (loading && !o) return <Spinner label="Loading Opportunity…" />;
+  if (loading && !o) return <RecordSkeleton />;
   if (error) return <ErrorState message={error} onRetry={reload} />;
   if (!o) return null;
 
@@ -197,15 +198,19 @@ function OpportunityRecord() {
   const claimCount = claims.data?.items.length ?? 0;
 
   // the ONE primary action for this record, from its next step
+  const arrow = <ArrowRightIcon size={16} className="transition-transform duration-base ease-out group-hover:translate-x-0.5" />;
   const primary =
     step?.key === "run_analysis" || step?.key === "review_application"
-      ? <button className="btn-primary" onClick={() => setConfirmRegen(true)} disabled={busy}>{busy ? "Analyzing…" : "Run Analysis"}</button>
+      ? <Button variant="primary" onClick={() => setConfirmRegen(true)} busy={busy}>Run Analysis</Button>
+    // already on the Decision tab: the form is the action, so no button points back at it
+    : step?.key === "review_recommendation" && tab === "decision"
+      ? null
     : step?.key === "review_recommendation"
-      ? <Link href={`${pathname}?tab=decision`} scroll={false} className="btn-primary">Review Recommendation</Link>
+      ? <Link href={`${pathname}?tab=decision`} scroll={false} className="btn-primary group">Review Recommendation{arrow}</Link>
     : step?.key === "resolve_diligence"
-      ? <Link href={`/vc/opportunities/${id}/diligence`} className="btn-primary">Open Diligence</Link>
+      ? <Link href={`/vc/opportunities/${id}/diligence`} className="btn-primary group">Open Diligence{arrow}</Link>
     : step?.key === "generate_memo"
-      ? <Link href={`/vc/opportunities/${id}/memo`} className="btn-primary">Open Memo</Link>
+      ? <Link href={`/vc/opportunities/${id}/memo`} className="btn-primary group">Open Memo{arrow}</Link>
     : null;
 
   const tabs = (Object.keys(TAB_LABELS) as OpportunityTab[]).map((k) => ({
@@ -213,8 +218,8 @@ function OpportunityRecord() {
     label: TAB_LABELS[k],
     badge:
       k === "evidence" && newIds.size ? <span className="chip bg-signal-wash text-caution" aria-label={`${newIds.size} New`}>{newIds.size} New</span>
-      : k === "evidence" ? <span className="num text-[13px] text-ink-muted">{evidence.length}</span>
-      : k === "claims" && claimCount ? <span className="num text-[13px] text-ink-muted">{claimCount}</span>
+      : k === "evidence" ? <span className="num text-[13px] text-ink-faint">{evidence.length}</span>
+      : k === "claims" && claimCount ? <span className="num text-[13px] text-ink-faint">{claimCount}</span>
       : k === "decision" && step?.key === "review_recommendation" ? <span className="h-2 w-2 rounded-full bg-brand" aria-label="Awaiting Your Review" />
       : undefined,
   }));
@@ -222,45 +227,49 @@ function OpportunityRecord() {
   return (
     <EvidenceLinkProvider href={(eid) => evidenceHref(o.id, eid)}>
     {/* capped so long analysis text keeps a comfortable line length on wide screens */}
-    <div className="max-w-[1480px] space-y-5">
-      <nav aria-label="Breadcrumb" className="flex items-center text-[13px] text-ink-muted">
-        {o.entry_type === "outbound" && <><Link href="/vc/founders" className="hover:text-brand">Founders</Link><span className="mx-1.5 text-ink-faint">/</span></>}
-        {inPipeline && <><Link href={`/vc/pipeline?stage=${o.stage}`} className="hover:text-brand">Pipeline</Link><span className="mx-1.5 text-ink-faint">/</span></>}
-        <span className="truncate text-ink-soft" data-content>{name}</span>
-        <Link href={`/vc/map?focus=${o.id}`} className="ml-auto shrink-0 pl-3 hover:text-brand">View on Map →</Link>
-      </nav>
+    <div className="space-y-8">
+      <div className="animate-rise space-y-3">
+        <nav aria-label="Breadcrumb" className="flex items-center text-[13px] text-ink-muted">
+          {o.entry_type === "outbound" && <><Link href="/vc/founders" className="link text-ink-muted hover:text-ink">Founders</Link><span className="mx-1.5 text-ink-faint">/</span></>}
+          {inPipeline && <><Link href={`/vc/pipeline?stage=${o.stage}`} className="link text-ink-muted hover:text-ink">Pipeline</Link><span className="mx-1.5 text-ink-faint">/</span></>}
+          <span className="truncate text-ink-soft" data-content>{name}</span>
+          <Link href={`/vc/map?focus=${o.id}`} className="link ml-auto shrink-0 pl-3 text-ink-muted hover:text-ink">View on Map</Link>
+        </nav>
 
-      {/* compact header: name, source, stage, one primary next action */}
-      <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <h1 className="mr-1 text-2xl font-semibold tracking-[-0.015em] text-ink" data-content>{name}</h1>
-            <SourceBadge entryType={o.entry_type} />
-            <StageBadge stage={o.stage} />
-            {shortlist && <ShortlistBadge shortlist={shortlist} />}
-            {o.is_demo && <DemoBadge />}
+        {/* name, where it stands, and the one next action */}
+        <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="mr-1 text-[1.75rem] font-[650] leading-9 tracking-[-0.025em] text-ink sm:text-page" data-content>{name}</h1>
+              <StageBadge stage={o.stage} />
+              {shortlist && <ShortlistBadge shortlist={shortlist} />}
+              {o.is_demo && <DemoBadge />}
+            </div>
+            {o.company?.one_liner && <p className="mt-1.5 max-w-3xl text-body text-ink-soft" data-content>{o.company.one_liner}</p>}
+            <p className="mt-1 text-meta text-ink-muted">
+              {sourceLabel(o.entry_type)}
+              {step && <> · Next Step: <span className="font-medium text-ink-soft">{step.label}</span>{step.detail ? ` · ${step.detail}` : ""}</>}
+            </p>
           </div>
-          {o.company?.one_liner && <p className="mt-1 max-w-3xl text-[15px] text-ink-soft" data-content>{o.company.one_liner}</p>}
-          {step && <p className="mt-1 text-[13px] text-ink-muted">Next Step: <span className="font-medium text-ink-soft">{step.label}</span>{step.detail ? ` · ${step.detail}` : ""}</p>}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {step?.key !== "generate_memo" && <Link href={`/vc/opportunities/${id}/memo`} className="btn-ghost">Memo</Link>}
-          {step?.key !== "resolve_diligence" && <Link href={`/vc/opportunities/${id}/diligence`} className="btn-ghost">Diligence Workspace</Link>}
-          {primary}
-        </div>
-      </header>
+          <div className="flex flex-wrap items-center gap-2">
+            {step?.key !== "generate_memo" && <Link href={`/vc/opportunities/${id}/memo`} className="btn-ghost">Memo</Link>}
+            {step?.key !== "resolve_diligence" && <Link href={`/vc/opportunities/${id}/diligence`} className="btn-ghost">Diligence</Link>}
+            {primary}
+          </div>
+        </header>
+      </div>
 
       {confirmRegen && (
-        <div className="rounded-lg border border-brand/25 bg-brand-wash px-4 py-3" role="region" aria-label="Confirm Analysis">
-          <p className="text-sm text-brand">
+        <div className="animate-rise rounded-xl bg-brand-wash px-5 py-4" role="region" aria-label="Confirm Analysis">
+          <p className="text-sm text-ink-soft">
             {analyzed ? "Regenerate" : "Generate"} the assessment, diligence questions, Arena debate, and memo with OpenAI? Prior versions are kept — nothing is overwritten.
           </p>
-          <div className="mt-2 flex gap-2">
-            <button className="btn-primary btn-sm" onClick={regenerate} disabled={busy}>{busy ? "Analyzing…" : analyzed ? "Regenerate" : "Run Analysis"}</button>
-            <button className="btn-secondary btn-sm" onClick={() => setConfirmRegen(false)} disabled={busy}>Cancel</button>
+          <div className="mt-3 flex gap-2">
+            <Button variant="primary" size="sm" onClick={regenerate} busy={busy}>{analyzed ? "Regenerate" : "Run Analysis"}</Button>
+            <button className="btn-ghost btn-sm" onClick={() => setConfirmRegen(false)} disabled={busy}>Cancel</button>
           </div>
           {regenError && (
-            <p className="mt-2 text-sm text-negative" role="alert">
+            <p className="field-error" role="alert">
               {regenError.includes("OPENAI") || regenError.toLowerCase().includes("ai provider")
                 ? "AI is not configured. Set OPENAI_API_KEY on the backend to enable analysis. Deterministic scores and the seeded demo analysis remain available."
                 : regenError}
@@ -271,18 +280,12 @@ function OpportunityRecord() {
 
       <Tabs label="Record Sections" idPrefix="opp" tabs={tabs} value={tab} onChange={setTab} />
 
-      <div {...tabPanelProps("opp", tab)}>
+      <div key={tab} {...tabPanelProps("opp", tab)}>
         {tab === "overview" && (
-          <div className="space-y-6">
-            <StatusCard
-              o={o} inPipeline={inPipeline} shortlist={shortlist} step={step}
-              confirmScreening={confirmScreening} setConfirmScreening={setConfirmScreening}
-              moveToScreening={moveToScreening} screeningError={screeningError}
-              setShortlist={setShortlist} suggestOutreach={suggestOutreach}
-            />
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] [&>*]:min-w-0">
-              <Section title="Summary">
-                <div className="max-w-prose space-y-3 text-[15px] leading-7 text-ink-soft">
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] [&>*]:min-w-0">
+            <div className="space-y-8">
+              <Section title="Summary" card={false}>
+                <div className="max-w-prose space-y-4 text-[15px] leading-7 text-ink-soft">
                   {o.company?.description || o.company?.one_liner || o.founder?.headline
                     ? <p data-content>{o.company?.description || o.company?.one_liner || o.founder?.headline}</p>
                     : <p>No description yet.</p>}
@@ -290,33 +293,39 @@ function OpportunityRecord() {
                     {o.founder
                       ? <span data-content>{[o.founder.full_name, o.founder.location].filter(Boolean).join(" · ")}</span>
                       : o.identity?.founder_named ? <>Founder Named on a Source: <span data-content>{o.identity.founder_named}</span> · <span className="text-caution">Unverified</span></> : "Founder Not Linked Yet"}
-                    {o.company?.website && <> · <a href={o.company.website} target="_blank" rel="noreferrer" className="hover:text-brand" data-content>{o.company.website.replace(/^https?:\/\/(www\.)?/, "")} ↗</a></>}
+                    {o.company?.website && <> · <a href={o.company.website} target="_blank" rel="noreferrer" className="link text-ink-muted" data-content>{o.company.website.replace(/^https?:\/\/(www\.)?/, "")} ↗</a></>}
                   </p>
                   {o.surfaced_reason && (
-                    <div>
+                    <div className="border-l-2 border-brand/40 pl-4">
                       <p className="label">Why It Surfaced</p>
                       <p className="mt-1 text-sm leading-6">{o.surfaced_reason}</p>
                     </div>
                   )}
                 </div>
               </Section>
-              <Section title="At a Glance" flush>
-                <dl className="divide-y divide-line">
-                  <Fact label="Thesis Fit" value={o.company ? `${Math.round(o.thesis_fit_score)} / 100${o.thesis_fit_stale ? " · Not Current" : ""}` : "Needs a Company"} tab="screening" pathname={pathname} />
+              <Section title="At a Glance" card={false}>
+                <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  <Fact label="Thesis Fit" value={o.company ? `${Math.round(o.thesis_fit_score)}` : "Needs a Company"} note={o.company ? (o.thesis_fit_stale ? "Not Current" : "of 100") : undefined} tab="screening" pathname={pathname} />
                   <Fact label="Founder Score" value={o.founder_score ? `${Math.round(o.founder_score.score)}` : "Not Scored"} tab="founder" pathname={pathname} />
-                  <Fact label="Evidence" value={`${evidence.length} ${evidence.length === 1 ? "Item" : "Items"}${newIds.size ? ` · ${newIds.size} New` : ""}`} tab="evidence" pathname={pathname} />
+                  <Fact label="Evidence" value={`${evidence.length}`} note={newIds.size ? `${newIds.size} New` : evidence.length === 1 ? "Item" : "Items"} tab="evidence" pathname={pathname} />
                   <Fact label="Claims" value={claims.data ? `${claimCount}` : "…"} tab="claims" pathname={pathname} />
                   <Fact label="Analysis" value={analyzed ? "Done" : "Not Run Yet"} tab="screening" pathname={pathname} />
                 </dl>
               </Section>
             </div>
+            <StatusCard
+              o={o} inPipeline={inPipeline} shortlist={shortlist}
+              confirmScreening={confirmScreening} setConfirmScreening={setConfirmScreening}
+              moveToScreening={moveToScreening} screeningError={screeningError}
+              setShortlist={setShortlist} suggestOutreach={suggestOutreach}
+            />
           </div>
         )}
 
         {tab === "founder" && (
           o.founder ? (
-            <div className="space-y-6">
-              <Section title="Founder">
+            <div className="space-y-10">
+              <Section title="Founder" card={false}>
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-lg font-semibold text-ink" data-content>{o.founder.full_name}</p>
@@ -334,8 +343,8 @@ function OpportunityRecord() {
                   ) : <Badge tone="bg-caution-wash text-caution">No Public Profile Linked</Badge>}
                 </div>
               </Section>
-              <div className="grid gap-6 lg:grid-cols-2 [&>*]:min-w-0">
-                <Section title="Founder Score" subtitle="Deterministic, from Public Evidence · Persists Across Companies">
+              <div className="grid gap-10 lg:grid-cols-2 [&>*]:min-w-0">
+                <Section title="Founder Score" subtitle="Deterministic, from Public Evidence · Persists Across Companies" card={false}>
                   {o.founder_score ? (
                     <div className="flex gap-4">
                       <div className="flex flex-col items-center gap-1.5">
@@ -349,13 +358,13 @@ function OpportunityRecord() {
                     </div>
                   ) : <EmptyState title="No Score Yet" hint="The Founder Score is computed from the founder's public GitHub evidence. Sync their GitHub profile from Founders → Source Founders." />}
                 </Section>
-                <Section title="Momentum" subtitle="Direction and Rate of Change Over Time">
+                <Section title="Momentum" subtitle="Direction and Rate of Change Over Time" card={false}>
                   {o.momentum ? <MomentumChart momentum={o.momentum} /> : <EmptyState title="No Momentum History" hint="Momentum appears after the Founder Score has been computed more than once." />}
                 </Section>
               </div>
             </div>
           ) : (
-            <Section title="Founder">
+            <Section title="Founder" card={false}>
               <div className="max-w-prose space-y-3" data-testid="founder-missing">
                 <p className="text-base font-semibold text-ink">No Founder Linked Yet</p>
                 <p className="text-[15px] leading-7 text-ink-soft">
@@ -371,29 +380,27 @@ function OpportunityRecord() {
         )}
 
         {tab === "screening" && (
-          <div className="space-y-6">
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] [&>*]:min-w-0">
-              <Section title="Thesis Fit" subtitle="Against Your Fund Thesis">
+          <div className="space-y-10">
+            <div className="grid gap-10 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] [&>*]:min-w-0">
+              <Section title="Thesis Fit" subtitle="Against Your Fund Thesis" card={false}>
                 {o.company ? (
-                  <div className="num text-3xl font-semibold text-ink">{Math.round(o.thesis_fit_score)}<span className="text-base font-normal text-ink-muted"> / 100</span></div>
+                  <div className="text-[2.5rem] font-semibold leading-none tracking-tight text-ink"><CountUp value={o.thesis_fit_score} /><span className="text-base font-normal text-ink-muted"> / 100</span></div>
                 ) : <p className="text-sm text-ink-muted">Not computed — fit is evaluated from a company, and this lead has none yet.</p>}
                 {o.company && o.thesis_fit_stale && (
-                  <div className="mt-3 rounded-md bg-caution-wash px-3 py-2 text-sm text-caution" data-testid="fit-stale">
+                  <div className="mt-3 rounded-lg bg-caution-wash px-3 py-2.5 text-sm text-caution" data-testid="fit-stale">
                     <p>Not scored against your current thesis.</p>
-                    <button className="btn-secondary btn-sm mt-2" onClick={recalculateFit} disabled={fitBusy}>
-                      {fitBusy ? "Recalculating…" : "Recalculate Fit"}
-                    </button>
+                    <Button size="sm" className="mt-2" onClick={recalculateFit} busy={fitBusy}>Recalculate Fit</Button>
                   </div>
                 )}
-                <Link href="/vc/fund" className="mt-3 inline-block text-sm text-brand hover:underline">View Thesis →</Link>
+                <Link href="/vc/fund" className="link mt-3 inline-block text-sm">View Thesis</Link>
               </Section>
-              <Section title="Gaps to Investigate" subtitle="Missing Information and Contradictions, Most Important First">
+              <Section title="Gaps to Investigate" subtitle="Missing Information and Contradictions, Most Important First" card={false}>
                 <Gaps assessment={o.assessment ?? null} contradictions={contradictions.data?.items ?? []} />
               </Section>
             </div>
             <Section
               title="Assessment"
-              subtitle="Three Independent Axes — Founder · Market · Idea vs Market, Never Averaged"
+              card={false}
               right={analyzed && <button className="btn-secondary btn-sm" onClick={() => setConfirmRegen(true)} disabled={busy}>Regenerate Analysis</button>}
             >
               {o.assessment ? <ThreeAxes assessment={o.assessment} /> : (
@@ -408,8 +415,8 @@ function OpportunityRecord() {
         )}
 
         {tab === "claims" && (
-          <Section title="Claims" subtitle="Each claim's verification status and trust score. Citations open the supporting evidence.">
-            {claims.data ? <ClaimsTable claims={claims.data.items} /> : claims.error ? <ErrorState message={claims.error} onRetry={claims.reload} /> : <Spinner />}
+          <Section title="Claims" subtitle="Each claim's verification status and trust score. Citations open the supporting evidence." card={false}>
+            {claims.data ? <ClaimsTable claims={claims.data.items} /> : claims.error ? <ErrorState message={claims.error} onRetry={claims.reload} /> : <div role="status" aria-label="Loading Claims…" className="space-y-2"><Skeleton className="h-10" /><Skeleton className="h-10" /></div>}
           </Section>
         )}
 
@@ -423,7 +430,7 @@ function OpportunityRecord() {
 
         {tab === "decision" && (
           <div className="max-w-3xl">
-            <Section title="Recommendation & Decision" subtitle="The system recommends; a person decides.">
+            <Section title="Recommendation & Decision" subtitle="The system recommends; a person decides." card={false}>
               <HumanDecisionPanel
                 opportunityId={o.id}
                 recommendation={o.current_recommendation || null}
@@ -440,92 +447,71 @@ function OpportunityRecord() {
   );
 }
 
-function Fact({ label, value, tab, pathname }: { label: string; value: string; tab: OpportunityTab; pathname: string }) {
+function Fact({ label, value, note, tab, pathname }: { label: string; value: string; note?: string; tab: OpportunityTab; pathname: string }) {
   return (
-    <div className="flex items-center justify-between gap-3 px-5 py-3">
-      <dt className="text-sm text-ink-muted">{label}</dt>
-      <dd>
-        <Link href={`${pathname}?tab=${tab}`} scroll={false} className="num text-[15px] font-medium text-ink hover:text-brand">
-          {value} <span aria-hidden className="text-ink-faint">→</span>
-        </Link>
+    <Link href={`${pathname}?tab=${tab}`} scroll={false} className="card-interactive group block rounded-xl border border-line px-4 py-3">
+      <dt className="flex items-center justify-between text-meta text-ink-muted">{label}<ArrowRightIcon size={14} className="slide-arrow" /></dt>
+      <dd className="mt-1 flex items-baseline gap-1.5">
+        <span className="num text-xl font-semibold text-ink">{value}</span>
+        {note && <span className="text-meta text-ink-muted">{note}</span>}
       </dd>
-    </div>
+    </Link>
   );
 }
 
+// Where the record stands: the shared stage (and the deliberate move into
+// Screening) and, for outbound leads, my personal shortlist. The next step lives
+// in the header with the record's one primary button.
 function StatusCard({
-  o, inPipeline, shortlist, step, confirmScreening, setConfirmScreening, moveToScreening, screeningError, setShortlist, suggestOutreach,
+  o, inPipeline, shortlist, confirmScreening, setConfirmScreening, moveToScreening, screeningError, setShortlist, suggestOutreach,
 }: {
   o: Opportunity; inPipeline: boolean; shortlist: ReturnType<typeof shortlistOf>;
-  step: Opportunity["next_step"] | null;
-  confirmScreening: boolean; setConfirmScreening: (v: boolean) => void; moveToScreening: () => void;
+  confirmScreening: boolean; setConfirmScreening: (v: boolean) => void; moveToScreening: () => Promise<void>;
   screeningError: string | null; setShortlist: (s: PipelineStatus) => void; suggestOutreach: () => void;
 }) {
+  const [moving, setMoving] = useState(false);
   return (
-    <section aria-label="Stage, Next Step, and Shortlist" className="card grid gap-x-6 gap-y-4 p-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_auto]">
+    <aside aria-label="Stage and Shortlist" className="space-y-8 lg:border-l lg:border-line lg:pl-8">
       <div>
         <p className="label">Stage</p>
         <StageTrack stage={o.stage} />
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {!inPipeline && (confirmScreening ? (
-            <>
-              <span className="w-full text-[13px] text-ink-soft">Move into the fund&apos;s Pipeline at Screening? No outreach is sent.</span>
-              <button className="btn-primary btn-sm" onClick={moveToScreening}>Confirm Move</button>
-              <button className="btn-ghost btn-sm" onClick={() => setConfirmScreening(false)}>Cancel</button>
-            </>
+            <div className="animate-rise w-full rounded-lg bg-surface-sunken p-3">
+              <p className="text-[13px] text-ink-soft">Move into the fund&apos;s Pipeline at Screening? No outreach is sent.</p>
+              <div className="mt-2 flex gap-2">
+                <Button variant="primary" size="sm" busy={moving} onClick={async () => { setMoving(true); try { await moveToScreening(); } finally { setMoving(false); } }}>Confirm Move</Button>
+                <button className="btn-ghost btn-sm" onClick={() => setConfirmScreening(false)}>Cancel</button>
+              </div>
+            </div>
           ) : (
             <button className="btn-secondary btn-sm" onClick={() => setConfirmScreening(true)}>Move to Screening</button>
           ))}
-          {inPipeline && <Link href={`/vc/pipeline?stage=${o.stage}`} className="btn-ghost btn-sm">Open in Pipeline →</Link>}
-          {screeningError && <span className="text-[13px] text-negative" role="alert">{screeningError}</span>}
+          {inPipeline && <Link href={`/vc/pipeline?stage=${o.stage}`} className="link text-sm">Open in Pipeline</Link>}
+          {screeningError && <p className="field-error w-full" role="alert">{screeningError}</p>}
         </div>
       </div>
 
-      <div className="border-line lg:border-l lg:pl-6">
-        <p className="label">Next Step</p>
-        {step ? (
-          <>
-            <p className="mt-1.5 text-base font-semibold text-ink">{step.label}</p>
-            <p className="text-[13px] text-ink-muted">
-              {step.key === "run_analysis"
-                ? "Evidence and the Founder Score are ready; analysis adds the screening axes, debate, and memo."
-                : step.key === "review_application"
-                ? "Read the application and its evidence, then run analysis."
-                : step.detail}
-            </p>
-            <p className="mt-1 text-[13px] text-ink-muted">Use the button at the top of this record.</p>
-          </>
-        ) : (
-          <p className="mt-1.5 text-[15px] text-ink-soft">{o.status === "decided" ? "Decided — no further steps." : "No open steps."}</p>
-        )}
-      </div>
-
       {o.entry_type === "outbound" && (
-        <div className="border-line lg:border-l lg:pl-6">
-          <p className="label" id="shortlist-label">My Shortlist</p>
-          <div className="mt-1.5 inline-flex rounded-md border border-line-strong bg-white p-0.5" role="group" aria-labelledby="shortlist-label">
-            {(["saved", "monitoring", "dismissed"] as const).map((st) => (
-              <button
-                key={st}
-                type="button"
-                aria-pressed={shortlist === st}
-                onClick={() => setShortlist(st)}
-                className={`h-8 rounded-[4px] px-3 text-[13px] font-medium ${shortlist === st ? "bg-ink text-white" : "text-ink-soft hover:bg-neutral-wash"}`}
-              >
-                {SHORTLIST_LABEL[st]}
-              </button>
-            ))}
-          </div>
-          <p className="mt-1.5 max-w-[16rem] text-xs text-ink-muted">Only you see this (saved in this browser). It doesn&apos;t change the stage.</p>
+        <div>
+          <p className="label mb-1.5" id="shortlist-label">My Shortlist</p>
+          <Segmented<PipelineStatus | "none">
+            size="sm"
+            label="My Shortlist"
+            value={shortlist ?? "none"}
+            onChange={(v) => v !== "none" && setShortlist(v)}
+            options={(["saved", "monitoring", "dismissed"] as const).map((st) => ({ value: st, label: SHORTLIST_LABEL[st] }))}
+          />
+          <p className="mt-2 text-xs text-ink-muted">Only you see this (saved in this browser). It doesn&apos;t change the stage.</p>
           {!inPipeline && (
-            <button className="btn-ghost btn-sm -ml-3 mt-1" onClick={suggestOutreach}
+            <button className="link mt-3 text-sm" onClick={suggestOutreach}
               title="Adds an 'Invite to Apply' suggestion for you to approve. Nothing is sent.">
               Suggest Outreach
             </button>
           )}
         </div>
       )}
-    </section>
+    </aside>
   );
 }
 
@@ -543,8 +529,8 @@ function Gaps({ assessment, contradictions }: { assessment: Opportunity["assessm
   return (
     <ul className="space-y-2" data-testid="screening-gaps">
       {contradictions.slice(0, 3).map((c) => (
-        <li key={`c${c.id}`} className="flex items-start gap-2 rounded-md border border-negative/20 bg-negative-wash px-3 py-2 text-sm text-negative">
-          <Badge tone="bg-white text-negative">Contradiction · {humanStatus(c.severity)}</Badge><span>{c.description}</span>
+        <li key={`c${c.id}`} className="flex items-start gap-2 text-sm text-ink-soft">
+          <Badge tone="bg-negative-wash text-negative">Contradiction · {humanStatus(c.severity)}</Badge><span>{c.description}</span>
         </li>
       ))}
       {unique.slice(0, Math.max(0, 6 - Math.min(3, contradictions.length))).map((m) => (
@@ -592,47 +578,48 @@ function EvidencePanel({
       flush
     >
       {focusId && (
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-brand-wash px-5 py-2.5 text-sm text-brand" role="status">
+        <div className="animate-fade flex flex-wrap items-center justify-between gap-2 border-b border-line bg-brand-wash px-5 py-2.5 text-sm text-brand" role="status">
           <span>{focusIndex >= 0 ? <>Showing cited evidence <strong className="font-mono">E{focusId}</strong>.</> : <>Evidence <strong className="font-mono">E{focusId}</strong> isn&apos;t part of this record&apos;s evidence.</>}</span>
           <button className="btn-ghost btn-sm" onClick={onClearFocus}>Clear</button>
         </div>
       )}
       {evidence.length ? (
-        <div className="relative overflow-x-auto">
-          <table className="table min-w-[680px]">
-            <thead><tr><th>Evidence</th><th>Source</th><th>Status</th><th className="text-right">Date</th><th className="text-right">ID</th></tr></thead>
-            <tbody>
-              {shown.map((e) => {
-                const quote = ((e.structured_value ?? {}) as { quote?: string }).quote;
-                const focused = e.id === focusId;
-                return (
-                  <tr
-                    key={e.id}
-                    id={`evidence-row-${e.id}`}
-                    tabIndex={focused ? -1 : undefined}
-                    aria-current={focused ? "true" : undefined}
-                    className={`scroll-mt-24 focus:outline-none ${focused ? "bg-brand-wash shadow-[inset_3px_0_0_#1f4fd8]" : newIds.has(e.id) ? "bg-signal-wash/60" : ""}`}
-                    data-testid={focused ? "evidence-focused-row" : newIds.has(e.id) ? "evidence-new-row" : undefined}
-                  >
-                    <td className="max-w-[380px]">
+        <div>
+          <ol className="divide-y divide-line" aria-label="Evidence Items">
+            {shown.map((e) => {
+              const quote = ((e.structured_value ?? {}) as { quote?: string }).quote;
+              const focused = e.id === focusId;
+              return (
+                <li
+                  key={e.id}
+                  id={`evidence-row-${e.id}`}
+                  tabIndex={focused ? -1 : undefined}
+                  aria-current={focused ? "true" : undefined}
+                  className={`scroll-mt-28 px-5 py-3.5 transition-colors duration-base focus:outline-none ${focused ? "bg-brand-wash shadow-[inset_3px_0_0_#3047e8]" : newIds.has(e.id) ? "bg-signal-wash/60" : "hover:bg-surface-sunken"}`}
+                  data-testid={focused ? "evidence-focused-row" : newIds.has(e.id) ? "evidence-new-row" : undefined}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
                       {newIds.has(e.id) && <Badge tone="mr-1.5 bg-signal-wash text-caution">New</Badge>}
                       {e.source_url
                         ? <a href={e.source_url} target="_blank" rel="noreferrer" className="text-ink hover:text-brand" data-content>{e.title} <span className="text-ink-faint">↗</span></a>
                         : <span className="text-ink" data-content>{e.title}</span>}
                       {quote && <span className="mt-1 block border-l-2 border-line pl-2 text-[13px] italic text-ink-muted" data-content>“{quote}”</span>}
-                    </td>
-                    <td className="text-[13px] text-ink-muted" data-content>{sourceName(e.source_name)}</td>
-                    <td><Badge tone={verificationTone(e.verification_status)}>{humanStatus(e.verification_status)}</Badge></td>
-                    <td className="num text-right text-[13px] text-ink-muted"><EvidenceDate e={e} /></td>
-                    <td className="text-right font-mono text-xs text-ink-faint">E{e.id}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    </div>
+                    <span className="shrink-0 font-mono text-xs text-ink-faint">E{e.id}</span>
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-ink-muted">
+                    <span data-content>{sourceName(e.source_name)}</span>
+                    <Badge tone={verificationTone(e.verification_status)}>{humanStatus(e.verification_status)}</Badge>
+                    <span className="num"><EvidenceDate e={e} /></span>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
           {evidence.length > shown.length && (
-            <div className="border-t border-line px-5 py-2.5 text-[13px] text-ink-muted">
-              Showing {shown.length} of {evidence.length}. <button className="font-medium text-brand hover:underline" onClick={() => setShowAll(true)}>Show All</button>
+            <div className="border-t border-line px-5 py-3 text-[13px] text-ink-muted">
+              Showing {shown.length} of {evidence.length}. <button className="link" onClick={() => setShowAll(true)}>Show All</button>
             </div>
           )}
         </div>
@@ -661,16 +648,40 @@ const STAGE_ORDER = ["sourcing", "screening", "diligence", "decision"] as const;
 function StageTrack({ stage }: { stage: string }) {
   const at = STAGE_ORDER.indexOf(stage as (typeof STAGE_ORDER)[number]);
   return (
-    <ol className="mt-2 flex flex-wrap items-center gap-1.5 text-[13px]" aria-label={`Stage: ${humanStatus(stage)}`}>
-      {STAGE_ORDER.map((s, i) => (
-        <li key={s} className="flex items-center gap-1.5" aria-current={i === at ? "step" : undefined}>
-          {i > 0 && <span aria-hidden className={`h-px w-4 ${i <= at ? "bg-brand" : "bg-line-strong"}`} />}
-          <span className={`rounded-full px-2.5 py-1 font-medium ${
-            i === at ? "bg-brand text-white" : i < at ? "bg-brand-wash text-brand" : "bg-neutral-wash text-ink-muted"}`}>
-            {humanStatus(s)}
-          </span>
-        </li>
-      ))}
-    </ol>
+    <div className="mt-2.5">
+      <ol className="grid grid-cols-4 gap-1" aria-label={`Stage: ${humanStatus(stage)}`}>
+        {STAGE_ORDER.map((s, i) => (
+          <li key={s} aria-current={i === at ? "step" : undefined} title={humanStatus(s)}>
+            <span className="sr-only">{humanStatus(s)}{i < at ? " (Done)" : ""}</span>
+            <span className="block h-1.5 overflow-hidden rounded-full bg-line" aria-hidden>
+              <span className={`block h-full origin-left rounded-full transition-transform duration-[600ms] ease-out ${stageDot(s)}`}
+                style={{ transform: `scaleX(${i <= at ? 1 : 0})`, transitionDelay: `${i * 80}ms` }} />
+            </span>
+          </li>
+        ))}
+      </ol>
+      <p className="mt-2 text-sm" aria-hidden>
+        <span className="font-semibold text-ink">{humanStatus(stage)}</span>
+        <span className="text-ink-muted"> · Step {at + 1} of {STAGE_ORDER.length}</span>
+      </p>
+    </div>
+  );
+}
+
+function RecordSkeleton() {
+  return (
+    <div role="status" aria-label="Loading Opportunity…" className="space-y-8">
+      <span className="sr-only">Loading Opportunity…</span>
+      <div className="space-y-3" aria-hidden>
+        <Skeleton className="h-3 w-40" />
+        <Skeleton className="h-9 w-72 max-w-full" />
+        <Skeleton className="h-4 w-96 max-w-full" />
+      </div>
+      <Skeleton className="h-11 w-full" />
+      <div className="grid gap-10 lg:grid-cols-[1fr_20rem]" aria-hidden>
+        <div className="space-y-3"><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-5/6" /><Skeleton className="h-4 w-2/3" /></div>
+        <Skeleton className="h-40 rounded-xl" />
+      </div>
+    </div>
   );
 }

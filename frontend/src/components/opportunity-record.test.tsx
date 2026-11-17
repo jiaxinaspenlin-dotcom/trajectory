@@ -81,7 +81,7 @@ describe("HumanDecisionPanel", () => {
     await waitFor(() => expect(post).toHaveBeenCalledWith("/api/opportunities/5/decision", {
       decided_by: "Demo Investor", decision: "approved", chosen_action: "Continue Diligence", notes: "",
     }));
-    expect(await screen.findByText("Recorded")).toBeInTheDocument();
+    expect(await screen.findByText("Decision Recorded")).toBeInTheDocument();
   });
 
   it("shows existing decision history", async () => {

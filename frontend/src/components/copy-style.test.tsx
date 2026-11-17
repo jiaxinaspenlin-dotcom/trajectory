@@ -584,7 +584,7 @@ describe("every route uses Title Case labels", () => {
     fireEvent.change(screen.getByRole("combobox"), { target: { value: screen.getAllByRole("option")[1].getAttribute("value") } });
     fireEvent.change(document.getElementById("by-1")!, { target: { value: "Demo Investor" } });
     fireEvent.click(screen.getByRole("button", { name: "Record Decision" }));
-    await screen.findByText("Recorded");
+    await screen.findByText("Decision Recorded");
     expectCleanCopy();
   });
 
