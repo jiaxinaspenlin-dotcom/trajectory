@@ -145,7 +145,7 @@ export function InvestmentArena({
             <h3 className="text-center text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">Investment Arena</h3>
             <Flourish side="right" />
           </div>
-          <p className="mt-1 text-center text-xs text-ink-muted">
+          <p data-print-hide className="mt-1 text-center text-xs text-ink-muted">
             Hover or focus a character for its case; click to pin the full analysis.
           </p>
 

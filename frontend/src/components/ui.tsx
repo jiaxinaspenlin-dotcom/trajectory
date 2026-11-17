@@ -49,7 +49,7 @@ export function PageHeader({ title, subtitle, actions, eyebrow }: { title: React
           <h1 className="text-[1.625rem] font-[650] leading-8 tracking-[-0.025em] text-ink sm:text-page">{title}</h1>
           {subtitle && <p className="mt-1.5 max-w-3xl text-body text-ink-muted">{subtitle}</p>}
         </div>
-        {actions && <div className="flex min-w-0 flex-wrap items-center gap-2">{actions}</div>}
+        {actions && <div data-print-hide className="flex min-w-0 flex-wrap items-center gap-2">{actions}</div>}
       </div>
     </>
   );

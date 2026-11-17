@@ -25,7 +25,7 @@ export function FounderHeader() {
           <span className="text-[15px] font-semibold text-ink">Trajectory</span>
           <span className="hidden text-sm text-ink-muted sm:inline">· Founder Portal</span>
         </Link>
-        <nav ref={nav} className="relative flex items-center gap-0.5" aria-label="Founder Portal">
+        <nav ref={nav} data-print-hide className="relative flex items-center gap-0.5" aria-label="Founder Portal">
           {box && <span aria-hidden className="absolute left-0 top-0 rounded-md bg-brand-wash transition-transform duration-slow ease-out"
             style={{ width: box.w, height: box.h, transform: `translate(${box.x}px, ${box.y}px)` }} />}
           {LINKS.map((l) => {

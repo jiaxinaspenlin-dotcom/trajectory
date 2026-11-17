@@ -68,7 +68,7 @@ export default function Landing() {
             <TrajectoryLogo size={22} />
             <span className="text-base font-semibold text-ink">Trajectory</span>
           </Link>
-          <nav className="flex items-center gap-1" aria-label="Primary">
+          <nav data-print-hide className="flex items-center gap-1" aria-label="Primary">
             <Link href="/founder" className="btn-ghost hidden sm:inline-flex">For Founders</Link>
             <Link href="/vc" className="btn-ghost">Investor Workspace</Link>
           </nav>

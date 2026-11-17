@@ -101,7 +101,7 @@ export function InvestorShell({ children }: { children: React.ReactNode }) {
     <ToastProvider>
     <div className="min-h-[100dvh] lg:flex">
       {/* desktop rail */}
-      <aside className="sticky top-0 hidden h-[100dvh] w-60 shrink-0 flex-col border-r border-line bg-white px-3 py-5 lg:flex">
+      <aside data-print-hide className="sticky top-0 hidden h-[100dvh] w-60 shrink-0 flex-col border-r border-line bg-white px-3 py-5 lg:flex">
         <Link href="/vc" className="press mb-6 flex h-10 items-center gap-2.5 px-3">
           <TrajectoryLogo size={22} />
           <span className="text-base font-semibold text-ink">Trajectory</span>
@@ -113,7 +113,7 @@ export function InvestorShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* phone / tablet top bar */}
-      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-line bg-white/90 px-4 backdrop-blur-md lg:hidden">
+      <header data-print-hide className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-line bg-white/90 px-4 backdrop-blur-md lg:hidden">
         <Link href="/vc" className="flex items-center gap-2">
           <TrajectoryLogo size={22} />
           <span className="text-base font-semibold text-ink">Trajectory</span>
@@ -131,7 +131,7 @@ export function InvestorShell({ children }: { children: React.ReactNode }) {
         </button>
       </header>
       {menu.mounted && (
-        <div className="fixed inset-0 top-14 z-40 lg:hidden">
+        <div data-print-hide className="fixed inset-0 top-14 z-40 lg:hidden">
           <div className={`absolute inset-0 bg-ink/25 scrim-${menu.state}`} onClick={() => setMenuOpen(false)} aria-hidden />
           <nav id="investor-mobile-nav" aria-label="Investor Workspace" className={`rail-${menu.state} relative h-full w-72 max-w-[85vw] bg-white p-3 shadow-overlay`}>
             <NavLinks pathname={pathname} onNavigate={() => setMenuOpen(false)} />

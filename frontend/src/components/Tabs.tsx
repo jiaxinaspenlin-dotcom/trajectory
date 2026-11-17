@@ -52,7 +52,7 @@ export function Tabs<T extends string>({
   }
 
   return (
-    <div className="max-w-full overflow-x-auto border-b border-line [scrollbar-width:none]">
+    <div data-print-hide className="max-w-full overflow-x-auto border-b border-line [scrollbar-width:none]">
       <div ref={listRef} role="tablist" aria-label={label} className="relative flex min-w-max gap-1" onKeyDown={onKeyDown}>
         {box && (
           <span

@@ -134,6 +134,44 @@ html {
   .reveal-wait { opacity: 1; transform: none; }
 }
 
+/* print: everything that would wait for a scroll reveal or an entrance animation
+   prints fully visible; navigation and controls are left out; a section is kept
+   on one page where it fits. Mark anything else to leave out with data-print-hide. */
+@media print {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .reveal-wait,
+  .reveal-in,
+  .animate-rise,
+  .animate-fade,
+  .animate-page {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  [data-print-hide],
+  [data-condensed-header],
+  .btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-ghost,
+  .btn-danger,
+  .icon-btn,
+  select {
+    display: none !important;
+  }
+  section,
+  [data-print-keep] {
+    break-inside: avoid;
+  }
+  h1, h2, h3 {
+    break-after: avoid;
+  }
+}
+
 @layer base {
   h1, h2, h3 {
     letter-spacing: -0.011em;
