@@ -30,20 +30,31 @@ const STEPS = [
 ];
 const STAGE_NAMES = ["Sourcing", "Screening", "Diligence", "Decision"];
 
+function currentStep(cards: (HTMLElement | null)[], viewportHeight: number): number {
+  let step = 0;
+  cards.forEach((el, i) => { if (el && el.getBoundingClientRect().top <= viewportHeight / 2) step = i; });
+  return step;
+}
+
 export default function Landing() {
   const scrolled = useScrolled(8);
   const [active, setActive] = useState(0);
   const stepRefs = useRef<(HTMLElement | null)[]>([]);
   const lineRef = useRef<SVGSVGElement>(null);
 
-  // which step is in the middle of the screen (drives the pinned stage panel)
+  // the current step is the last card whose top has passed the middle of the
+  // screen, worked out from the scroll position itself (not from crossings), so
+  // the pinned heading, the bar and the lit card agree however the page got there
   useEffect(() => {
-    if (typeof IntersectionObserver === "undefined") return;
-    const io = new IntersectionObserver((entries) => {
-      for (const e of entries) if (e.isIntersecting) setActive(Number((e.target as HTMLElement).dataset.step));
-    }, { rootMargin: "-45% 0px -45% 0px" });
-    stepRefs.current.forEach((el) => el && io.observe(el));
-    return () => io.disconnect();
+    let raf = 0;
+    const measure = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => setActive(currentStep(stepRefs.current, window.innerHeight)));
+    };
+    measure();
+    window.addEventListener("scroll", measure, { passive: true });
+    window.addEventListener("resize", measure);
+    return () => { window.removeEventListener("scroll", measure); window.removeEventListener("resize", measure); cancelAnimationFrame(raf); };
   }, []);
 
   // a light parallax on the hero's trajectory line (off under reduced motion)
