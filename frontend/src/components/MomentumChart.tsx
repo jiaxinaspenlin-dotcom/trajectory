@@ -3,12 +3,12 @@
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Momentum } from "@/lib/types";
 import { Badge } from "./ui";
-import { momentumWindow, trajectoryTone, humanStatus } from "@/lib/format";
+import { momentumWindow, signedPoints, trajectoryTone, humanStatus } from "@/lib/format";
 
 export function MomentumChart({ momentum }: { momentum: Momentum }) {
   const data = momentum.series.map((s) => ({
     date: new Date(s.date).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
-    score: s.score,
+    score: Math.round(s.score), // whole points, as the dial and the Founders table
   }));
   const days30 = momentum.change_30d_window_days;
   const w30 = momentumWindow(days30, 30);
@@ -21,18 +21,18 @@ export function MomentumChart({ momentum }: { momentum: Momentum }) {
       <div className="flex flex-wrap items-center gap-3">
         <div>
           <div className="label">Current</div>
-          <div className="text-2xl font-semibold text-ink">{momentum.current_score}</div>
+          <div className="text-2xl font-semibold text-ink">{Math.round(momentum.current_score)}</div>
         </div>
         <div>
           <div className="label">{w30.long}</div>
           <div className={`text-lg font-semibold ${(momentum.change_30d ?? 0) >= 0 ? "text-positive" : "text-negative"}`}>
-            {momentum.change_30d === null ? "—" : `${momentum.change_30d >= 0 ? "+" : ""}${momentum.change_30d}`}
+            {momentum.change_30d === null ? "—" : signedPoints(momentum.change_30d)}
           </div>
         </div>
         <div>
           <div className="label">90-Day</div>
           <div className={`text-lg font-semibold ${change90 === null ? "text-ink-muted" : change90 >= 0 ? "text-positive" : "text-negative"}`}>
-            {change90 === null ? "—" : `${change90 >= 0 ? "+" : ""}${change90}`}
+            {change90 === null ? "—" : signedPoints(change90)}
           </div>
         </div>
         <Badge tone={trajectoryTone(momentum.trajectory)}>{humanStatus(momentum.trajectory)}</Badge>
@@ -68,7 +68,7 @@ export function MomentumChart({ momentum }: { momentum: Momentum }) {
               <li key={t.key} className="flex items-center justify-between rounded bg-surface-sunken px-2 py-1 text-xs">
                 <span className="text-ink-soft">{humanStatus(t.label)}</span>
                 <span className={t.direction === "up" ? "text-positive" : t.direction === "down" ? "text-negative" : "text-ink-muted"}>
-                  {t.direction === "up" ? "▲" : t.direction === "down" ? "▼" : "▬"} {t.change >= 0 ? "+" : ""}{t.change}
+                  {t.direction === "up" ? "▲" : t.direction === "down" ? "▼" : "▬"} {signedPoints(t.change)}
                 </span>
               </li>
             ))}

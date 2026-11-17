@@ -178,6 +178,12 @@ export function pct(v: number): string {
   return `${Math.round(v * 100)}%`;
 }
 
+// A momentum change in whole points, signed: "+10", "-3", "0".
+export function signedPoints(n: number): string {
+  const r = Math.round(n);
+  return r > 0 ? `+${r}` : String(r); // String(-0) is "0"
+}
+
 // Name the window a momentum change really covers. Young histories fall back
 // to the first snapshot, so a "30-day" change can span only a few days.
 export function momentumWindow(days: number | null | undefined, nominal = 30): { short: string; long: string; partial: boolean } {

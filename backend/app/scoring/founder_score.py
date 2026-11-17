@@ -10,7 +10,7 @@ evidence count, confidence, missingness, and contribution to the final score.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from app.models.sources import Evidence
 
@@ -239,6 +239,24 @@ def compute_founder_score(
         components=components,
         evidence_ids=sorted(set(all_ev_ids)),
         explanation=explanation,
+    )
+
+
+def scale_founder_score(result: FounderScoreResult, factor: float) -> FounderScoreResult:
+    """The same result with every component value and contribution scaled by
+    `factor` (0..1), so the score, its breakdown and its explanation still agree.
+    Used by the demo seed to simulate growth across historical versions."""
+    components = [
+        replace(c, value=c.value * factor, contribution=c.contribution * factor)
+        for c in result.components
+    ]
+    score = round(max(0.0, min(100.0, sum(c.contribution for c in components))), 2)
+    present = [c for c in components if c.evidence_count > 0]
+    return replace(
+        result,
+        score=score,
+        components=components,
+        explanation=_build_explanation(score, result.confidence, components, present),
     )
 
 

@@ -42,7 +42,7 @@ from app.models.workflow import (
     RefereeDecision,
     TourProgress,
 )
-from app.scoring.founder_score import compute_founder_score
+from app.scoring.founder_score import compute_founder_score, scale_founder_score
 from app.seed.data import COMPANIES, FOUNDERS
 from app.services.context import build_opportunity_context
 from app.services.thesis import compute_thesis_fit
@@ -187,8 +187,9 @@ def _score_versions(db: Session, founder_id: int, evidence: list[Evidence], stre
         cutoff = NOW - timedelta(days=days_ago)
         visible = [e for e in ev_sorted if (e.event_date or NOW) <= cutoff]
         # apply a growth factor so later snapshots are stronger
-        result = compute_founder_score(visible)
-        adj = round(min(100.0, result.score * (0.7 + 0.3 * (version / 4)) * (0.6 + 0.4 * growth)), 2)
+        # scale the whole result, so the stored score, breakdown and explanation agree
+        result = scale_founder_score(compute_founder_score(visible), (0.7 + 0.3 * (version / 4)) * (0.6 + 0.4 * growth))
+        adj = result.score
         db.add(FounderScore(
             founder_id=founder_id, version=version, score=adj, confidence=result.confidence,
             components=result.components_as_dict(), explanation=result.explanation,

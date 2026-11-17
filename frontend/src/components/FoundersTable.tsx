@@ -4,7 +4,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { humanStatus, momentumWindow } from "@/lib/format";
+import { humanStatus, momentumWindow, signedPoints } from "@/lib/format";
 import { PipelineStatus } from "@/lib/myWorkspace";
 import { inPipeline, leadStatus, shortlistOf } from "@/lib/pipeline";
 import { FounderLead } from "@/lib/types";
@@ -308,7 +308,7 @@ function MomentumCell({ l }: { l: FounderLead }) {
       <span className={`font-medium ${tone}`}>{humanStatus(m.trajectory)}</span>
       {m.change_30d != null && (
         <span className={`num text-xs ${up ? "text-positive" : "text-negative"}`}>
-          {up ? "+" : ""}{Math.round(m.change_30d)} / {momentumWindow(m.change_30d_window_days).short}
+          {signedPoints(m.change_30d)} / {momentumWindow(m.change_30d_window_days).short}
         </span>
       )}
     </span>

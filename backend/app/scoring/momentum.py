@@ -228,7 +228,8 @@ def _explain(
             + ", ".join(t.label for t in downs[:2])
             + " decreased"
         )
-    delta = f" ({window_label(window_30)} {change_30:+.1f})" if change_30 is not None else ""
+    # whole points, as the score itself and every momentum figure in the product are shown
+    delta = f" ({window_label(window_30)} {round(change_30):+d})" if change_30 is not None else ""
     if reasons:
         return f"{lead} {' '.join(reasons)}{delta}."
     return f"{lead}{delta}."
