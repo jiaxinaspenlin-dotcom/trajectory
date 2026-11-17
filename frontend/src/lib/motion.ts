@@ -21,10 +21,16 @@ const canObserve = () => typeof window !== "undefined" && "IntersectionObserver"
 // that: data arriving, a page navigated to, a panel opened.
 let hydrated = false;
 export const isHydrated = () => hydrated;
+export const ENTRANCE = ".animate-rise, .animate-fade, .animate-page";
 export function markHydrated() {
-  // what the server rendered has already arrived: never fade it out and back in
-  document.querySelectorAll(".animate-rise, .animate-fade, .animate-page").forEach((el) => el.setAttribute("data-arrived", ""));
   document.documentElement.setAttribute("data-motion", "");
+  // What the server rendered has already arrived: its entrances (which start now)
+  // finish at once, before the next paint. Nothing in the DOM is touched, so parts
+  // of the page that hydrate later (Suspense) still match the server HTML.
+  for (const a of document.getAnimations?.() ?? []) {
+    const target = (a.effect as KeyframeEffect | null)?.target;
+    if (target instanceof Element && target.matches(ENTRANCE)) a.finish();
+  }
   hydrated = true;
 }
 

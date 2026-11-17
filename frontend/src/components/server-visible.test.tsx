@@ -1,7 +1,7 @@
 // Server HTML is final: nothing the server renders waits on scripts to become
 // visible. Entrance motion only applies after hydration, and never to what the
 // server already rendered.
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { renderToString } from "react-dom/server";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -16,7 +16,7 @@ describe("server HTML", () => {
     const rules = [...css.matchAll(/([^{}]*\.animate-(?:rise|fade|page)[^{}]*)\{([^}]*)\}/g)].filter(([, , body]) => /animation\s*:\s*(?!none)/.test(body));
     expect(rules.length).toBe(3);
     for (const [, selector] of rules) {
-      expect(selector.trim()).toMatch(/^html\[data-motion\] \.animate-\w+:not\(\[data-arrived\]\)$/);
+      expect(selector.trim()).toMatch(/^html\[data-motion\] \.animate-\w+$/);
     }
   });
 
@@ -28,11 +28,18 @@ describe("server HTML", () => {
     expect(html).toMatch(/aria-hidden="true">31</);
   });
 
-  it("marks what the server rendered as arrived before switching motion on", () => {
-    document.body.innerHTML = `<h1 class="animate-rise">Hero</h1><div class="animate-page">Page</div>`;
+  it("finishes the entrances of what the server rendered, without touching the DOM", () => {
+    document.body.innerHTML = `<h1 class="animate-rise">Hero</h1><div class="skeleton">Loading</div>`;
+    const hero = { effect: { target: document.querySelector("h1") }, finish: vi.fn() };
+    const pulse = { effect: { target: document.querySelector(".skeleton") }, finish: vi.fn() };
+    const before = document.body.innerHTML;
+    (document as { getAnimations?: () => unknown[] }).getAnimations = () => [hero, pulse];
     markHydrated();
     expect(document.documentElement).toHaveAttribute("data-motion");
-    for (const el of document.querySelectorAll(".animate-rise, .animate-page")) expect(el).toHaveAttribute("data-arrived");
+    expect(hero.finish).toHaveBeenCalled();
+    expect(pulse.finish).not.toHaveBeenCalled();
+    expect(document.body.innerHTML).toBe(before);
+    delete (document as { getAnimations?: unknown }).getAnimations;
     document.body.innerHTML = "";
   });
 });
