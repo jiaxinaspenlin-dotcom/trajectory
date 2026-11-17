@@ -15,6 +15,19 @@ export function prefersReducedMotion(): boolean {
 
 const canObserve = () => typeof window !== "undefined" && "IntersectionObserver" in window;
 
+// Server HTML is final: whatever the server rendered shows fully, without waiting
+// for scripts. Entrance motion switches on once the first page has hydrated
+// (MotionReady sets data-motion on <html>), and only for content that mounts after
+// that: data arriving, a page navigated to, a panel opened.
+let hydrated = false;
+export const isHydrated = () => hydrated;
+export function markHydrated() {
+  // what the server rendered has already arrived: never fade it out and back in
+  document.querySelectorAll(".animate-rise, .animate-fade, .animate-page").forEach((el) => el.setAttribute("data-arrived", ""));
+  document.documentElement.setAttribute("data-motion", "");
+  hydrated = true;
+}
+
 // Reveal an element the first time it scrolls into view, once. Elements already
 // on screen when they mount are left alone (no flash); those below the fold are
 // hidden until they arrive, then fade and rise.
@@ -37,13 +50,16 @@ export function useReveal<T extends HTMLElement>(): RefObject<T> {
   return ref;
 }
 
-// True once the element has been on screen (stays true).
+// True once the element has been on screen (stays true). Starts true, as the
+// server renders it; only something mounted after hydration starts empty and fills
+// in when seen.
 export function useSeen<T extends HTMLElement>(): [RefObject<T>, boolean] {
   const ref = useRef<T>(null);
-  const [seen, setSeen] = useState(false);
-  useEffect(() => {
+  const [seen, setSeen] = useState(true);
+  useIsoLayoutEffect(() => {
     const el = ref.current;
-    if (!el || !canObserve()) { setSeen(true); return; }
+    if (!el || !canObserve() || !isHydrated() || prefersReducedMotion()) return;
+    setSeen(false);
     const io = new IntersectionObserver(([e]) => {
       if (e.isIntersecting) { setSeen(true); io.disconnect(); }
     }, { rootMargin: "0px 0px -5% 0px" });
@@ -54,14 +70,15 @@ export function useSeen<T extends HTMLElement>(): [RefObject<T>, boolean] {
 }
 
 // A number that counts up from zero the first time it is seen. The final value is
-// what renders on the server, in tests and under reduced motion.
+// what renders on the server, in tests and under reduced motion, and stays put for
+// numbers already in the server HTML.
 export function useCountUp(value: number, ms = 500): [RefObject<HTMLSpanElement>, number] {
   const ref = useRef<HTMLSpanElement>(null);
   const [shown, setShown] = useState(value);
   const done = useRef(false);
   useIsoLayoutEffect(() => {
     const el = ref.current;
-    if (done.current || !el || !canObserve() || prefersReducedMotion() || !Number.isFinite(value) || value === 0) {
+    if (done.current || !el || !canObserve() || !isHydrated() || prefersReducedMotion() || !Number.isFinite(value) || value === 0) {
       setShown(value);
       return;
     }
