@@ -18,6 +18,7 @@ import { HumanDecisionPanel } from "@/components/HumanDecisionPanel";
 import { decisionReasons } from "@/lib/decision";
 import { dashboardCardHref, nextCard } from "@/lib/deck";
 import { useDeck } from "@/lib/useDeck";
+import { DeckStrip } from "@/components/DeckStrip";
 import { Claim, Evidence, Opportunity } from "@/lib/types";
 import { LeadWebCheck } from "@/components/WebSourcing";
 import { humanStatus, labelPhrase, sourceName, verificationTone } from "@/lib/format";
@@ -240,6 +241,7 @@ function OpportunityRecord() {
     {/* capped so long analysis text keeps a comfortable line length on wide screens */}
     <div className="space-y-8">
       <div className="animate-rise space-y-3">
+        {fromDeck && <DeckStrip items={deck} id={o.id} />}
         <nav aria-label="Breadcrumb" className="flex items-center text-[13px] text-ink-muted">
           {o.entry_type === "outbound" && <><Link href="/vc/founders" className="link text-ink-muted hover:text-ink">Founders</Link><span className="mx-1.5 text-ink-faint">/</span></>}
           {inPipeline && <><Link href={`/vc/pipeline?stage=${o.stage}`} className="link text-ink-muted hover:text-ink">Pipeline</Link><span className="mx-1.5 text-ink-faint">/</span></>}
@@ -257,14 +259,11 @@ function OpportunityRecord() {
               {o.is_demo && <DemoBadge />}
             </div>
             {o.company?.one_liner && <p className="mt-1.5 max-w-3xl text-body text-ink-soft" data-content>{o.company.one_liner}</p>}
-            <p className="mt-1 text-meta text-ink-muted">
-              {sourceLabel(o.entry_type)}
-              {step && <> · Next Step: <span className="font-medium text-ink-soft">{step.label}</span>{step.detail ? ` · ${step.detail}` : ""}</>}
-            </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {step?.key !== "generate_memo" && <Link href={`/vc/opportunities/${id}/memo`} className="btn-ghost">Memo</Link>}
-            {step?.key !== "resolve_diligence" && <Link href={`/vc/opportunities/${id}/diligence`} className="btn-ghost">Diligence</Link>}
+          {/* one primary action; Memo and Diligence as quiet links beside it */}
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            {step?.key !== "generate_memo" && <Link href={`/vc/opportunities/${id}/memo`} className="link text-sm text-ink-soft hover:text-ink">Memo</Link>}
+            {step?.key !== "resolve_diligence" && <Link href={`/vc/opportunities/${id}/diligence`} className="link text-sm text-ink-soft hover:text-ink">Diligence</Link>}
             {primary}
           </div>
         </header>
@@ -489,6 +488,7 @@ function StatusCard({
       <div>
         <p className="label">Stage</p>
         <StageTrack stage={o.stage} />
+        <p className="mt-2 text-[13px] text-ink-muted">Source · {sourceLabel(o.entry_type)}</p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {!inPipeline && (confirmScreening ? (
             <div className="animate-rise w-full rounded-lg bg-surface-sunken p-3">

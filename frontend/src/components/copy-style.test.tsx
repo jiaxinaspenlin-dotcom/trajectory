@@ -5,7 +5,7 @@
 // recommendation"), a capitalized minor word mid-phrase ("Idea Vs Market") and
 // miscased names ("Github").
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { humanStatus, sectorLabel, sourceName, titleCase } from "@/lib/format";
 import { assessment, debate, momentum } from "@/test/fixtures";
@@ -594,6 +594,27 @@ describe("every route uses Title Case labels", () => {
     fireEvent.click(screen.getAllByRole("radio")[0]);
     fireEvent.click(screen.getByTestId("confirm-decision"));
     await screen.findByText("Decision Recorded");
+    expectCleanCopy();
+  });
+
+  it("/vc/opportunities/[id]: opened from the Dashboard deck", async () => {
+    const card = (id: number, name: string) => ({ opportunity_id: id, name, founder_name: null, entry_type: "outbound", stage: "diligence", next_action: "Review Recommendation",
+      next_action_key: "review_recommendation", next_action_detail: "Recommended: Monitor", priority: 1, age_days: 0, waiting_since: "", group: "recommendation" });
+    fetched["/api/dashboard"] = { action_queue: [card(3, "Inferra"), card(1, "PayMesh"), card(4, "TerraSignal")] };
+    await recordWith(opportunity, "overview", "from=deck");
+    await flush();
+    const strip = screen.getByTestId("deck-strip");
+    expect(strip).toHaveTextContent("Back to Dashboard· 2 of 3");
+    expect(within(strip).getByRole("link", { name: "Back to Dashboard" })).toHaveAttribute("href", "/vc?card=1");
+    expect(within(strip).getByRole("link", { name: "Previous: Inferra" })).toHaveAttribute("href", "/vc/opportunities/3?tab=decision&from=deck");
+    expect(within(strip).getByRole("link", { name: "Next: TerraSignal" })).toHaveAttribute("href", "/vc/opportunities/4?tab=decision&from=deck");
+    // the header doesn't repeat the next step or the recommendation; Memo and Diligence are quiet links
+    const header = document.querySelector("header")!;
+    expect(header).not.toHaveTextContent(/Next Step:|Recommended:/);
+    expect(within(header).getByRole("link", { name: "Memo" })).toHaveClass("link");
+    // tabs keep the deck context
+    fireEvent.click(screen.getByRole("tab", { name: /Claims/ }));
+    expect(nav.push).toHaveBeenLastCalledWith("/vc/opportunities/1?tab=claims&from=deck", { scroll: false });
     expectCleanCopy();
   });
 
