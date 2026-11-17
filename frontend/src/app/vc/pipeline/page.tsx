@@ -5,25 +5,23 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useFetch } from "@/lib/useFetch";
 import { humanStatus } from "@/lib/format";
-import { filterDeals, nextActionHref, opportunityName, parseSource, parseStage, PIPELINE_STAGES, SourceFilter, stageDot } from "@/lib/pipeline";
+import {
+  filterDeals, NEXT_ACTION_LABELS, nextActionHref, opportunityName, parseNext, parseSource, parseStage, PIPELINE_STAGES, SourceFilter, sortDeals,
+} from "@/lib/pipeline";
 import { PipelineDeal } from "@/lib/types";
 import { PipelineTable } from "@/components/PipelineTable";
-import { EmptyState, ErrorState, PageHeader, Segmented, Spinner, Toolbar } from "@/components/ui";
-
-const STAGE_HINT: Record<string, string> = {
-  all: "Every Active Deal",
-  screening: "New Applications and Moved-In Leads",
-  diligence: "Analyzed; Checking Claims",
-  decision: "Ready for an Invest / Pass Call",
-};
+import { EmptyState, ErrorState, PageHeader, PageSkeleton, Segmented } from "@/components/ui";
+import { ArrowRightIcon, CloseIcon, PipelineIcon } from "@/components/icons";
 
 export default function PipelinePage() {
   return (
-    <Suspense fallback={<Spinner label="Loading Pipeline…" />}>
+    <Suspense fallback={<PageSkeleton label="Loading Pipeline…" />}>
       <Deals />
     </Suspense>
   );
 }
+
+type Stage = "all" | (typeof PIPELINE_STAGES)[number];
 
 function Deals() {
   const { data, loading, error, reload } = useFetch<{ items: PipelineDeal[] }>("/api/pipeline");
@@ -31,121 +29,102 @@ function Deals() {
   const router = useRouter();
   const pathname = usePathname();
   // filters live in the URL so a refresh or shared link keeps them
-  const stage = parseStage(params.get("stage"));
+  const stage = parseStage(params.get("stage")) as Stage;
   const source = parseSource(params.get("source"));
+  const next = parseNext(params.get("next"));
 
-  function setFilter(key: "stage" | "source", value: string) {
-    const next = new URLSearchParams(params.toString());
-    if (value === "all") next.delete(key);
-    else next.set(key, value);
-    const qs = next.toString();
+  function setFilter(key: "stage" | "source" | "next", value: string) {
+    const q = new URLSearchParams(params.toString());
+    if (value === "all") q.delete(key);
+    else q.set(key, value);
+    const qs = q.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }
 
-  const all = data?.items ?? [];
+  const all = sortDeals(data?.items ?? []);
+  const byNext = (d: PipelineDeal) => !next || d.next_action_key === next;
+  const shown = filterDeals(all, stage, source).filter(byNext);
+  // the one primary action is the first row's next step: what the table puts on top
+  const top = shown.find((d) => d.next_action);
   const actNow = all.filter((d) => d.priority === 1).length;
-  const top = [...all].filter((d) => d.next_action).sort((a, b) => (a.priority ?? 9) - (b.priority ?? 9) || b.age_days - a.age_days)[0];
+
   const header = (
     <PageHeader
       title="Pipeline"
       subtitle={data
-        ? `${all.length} Active ${all.length === 1 ? "Deal" : "Deals"} in Screening, Diligence, and Decision${actNow ? ` · ${actNow} ${actNow === 1 ? "Recommendation" : "Recommendations"} Awaiting Your Review` : ""}`
-        : "Active Deals in Screening, Diligence, and Decision"}
+        ? `${all.length} Active ${all.length === 1 ? "Deal" : "Deals"}${actNow ? ` · ${actNow} Awaiting Your Review` : ""}`
+        : "Active Deals in Screening, Diligence and Decision"}
       actions={top && (
-        // the one primary action: the most urgent deal's next step
-        <Link href={nextActionHref(top.id, top.next_action_key)} className="btn-primary max-w-[22rem]" title={`${top.next_action} · ${opportunityName(top)}`}>
-          <span className="truncate">{top.next_action}: {opportunityName(top)}</span>
+        <Link href={nextActionHref(top.id, top.next_action_key)} className="btn-primary group max-w-[22rem]" title={`${top.next_action} · ${opportunityName(top)}`}>
+          <span className="truncate">{top.next_action}: <span data-content>{opportunityName(top)}</span></span>
+          <ArrowRightIcon size={16} className="transition-transform duration-base ease-out group-hover:translate-x-0.5" />
         </Link>
       )}
     />
   );
 
-  if (loading && !data) return <div className="space-y-4">{header}<Spinner label="Loading Pipeline…" /></div>;
-  if (error) return <div className="space-y-4">{header}<ErrorState message={`Couldn't load the pipeline: ${error}`} onRetry={reload} /></div>;
+  if (loading && !data) return <PageSkeleton label="Loading Pipeline…" />;
+  if (error) return <div className="space-y-8">{header}<ErrorState message={`Couldn't load the pipeline: ${error}`} onRetry={reload} /></div>;
   if (!all.length) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-8">
         {header}
         <EmptyState
+          icon={<PipelineIcon size={20} />}
           title="No Active Deals Yet"
           hint="Inbound applications land here at Screening. Outbound founders join once you move them to Screening from Founders."
-          action={<><Link href="/vc/founders" className="btn-primary">Go to Founders</Link><Link href="/vc/founders?source=open" className="btn-secondary">Source Founders</Link></>}
+          action={<Link href="/vc/founders" className="btn-primary">Go to Founders</Link>}
         />
       </div>
     );
   }
 
-  // stage counts respect the source filter, and vice versa
-  const stageCount = (s: string) => filterDeals(all, s, source).length;
-  const sourceCount = (s: SourceFilter) => filterDeals(all, stage, s).length;
-  const shown = filterDeals(all, stage, source);
+  // stage counts respect the other filters, and vice versa
+  const stageCount = (s: string) => filterDeals(all, s, source).filter(byNext).length;
+  const sourceCount = (s: SourceFilter) => filterDeals(all, stage, s).filter(byNext).length;
+  const filtered = stage !== "all" || source !== "all" || !!next;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-8">
       {header}
 
-      {/* stage funnel: the stage filter — each cell says what the stage means */}
-      <div className="grid grid-cols-2 overflow-hidden rounded-lg border border-line bg-white sm:grid-cols-4" role="group" aria-label="Filter by Stage">
-        {(["all", ...PIPELINE_STAGES] as const).map((s, i) => {
-          const active = stage === s;
-          return (
-            <button
-              key={s}
-              type="button"
-              aria-pressed={active}
-              onClick={() => setFilter("stage", s)}
-              className={`px-4 py-3 text-left transition-colors ${i % 2 ? "border-l border-line" : ""} ${i >= 2 ? "border-t border-line sm:border-t-0" : ""} ${i === 2 ? "sm:border-l" : ""} ${
-                active ? "bg-brand-wash shadow-[inset_0_-2px_0_#1f4fd8]" : "hover:bg-surface-sunken"}`}
-            >
-              <span className="flex items-center justify-between gap-2">
-                <span className="flex items-center gap-1.5 text-[15px] font-medium text-ink">
-                  {s !== "all" && <span className={`h-2 w-2 rounded-full ${stageDot(s)}`} aria-hidden />}
-                  {s === "all" ? "All Stages" : humanStatus(s)}
-                </span>
-                <span className="num text-2xl font-semibold text-ink">{stageCount(s)}</span>
-              </span>
-              <span className="mt-0.5 block text-[13px] text-ink-muted">{STAGE_HINT[s]}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      <Toolbar>
-        <span className="text-sm font-medium text-ink-soft">Source</span>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+        <Segmented<Stage>
+          label="Filter by Stage"
+          value={stage}
+          onChange={(v) => setFilter("stage", v)}
+          options={(["all", ...PIPELINE_STAGES] as Stage[]).map((s) => ({
+            value: s,
+            label: <>{s === "all" ? <>All<span className="hidden sm:inline"> Stages</span></> : humanStatus(s)} <span className="ml-0.5 text-ink-faint sm:ml-1">{stageCount(s)}</span></>,
+          }))}
+        />
         <Segmented<SourceFilter>
+          size="sm"
           label="Filter by Source"
           value={source}
           onChange={(v) => setFilter("source", v)}
-          options={[
-            { value: "all", label: <>All <span className="opacity-60">{sourceCount("all")}</span></> },
-            { value: "inbound", label: <>Inbound <span className="opacity-60">{sourceCount("inbound")}</span></> },
-            { value: "outbound", label: <>Outbound <span className="opacity-60">{sourceCount("outbound")}</span></> },
-          ]}
+          options={(["all", "inbound", "outbound"] as SourceFilter[]).map((s) => ({
+            value: s,
+            label: <>{s === "all" ? "Any Source" : humanStatus(s)} <span className="ml-1 text-ink-faint">{sourceCount(s)}</span></>,
+          }))}
         />
-        <span className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-ink-muted" aria-live="polite">
-          <span data-testid="pipeline-showing">
-            Showing {shown.length} of {all.length}
-            {stage !== "all" && <> · {humanStatus(stage)}</>}
-            {source !== "all" && <> · {humanStatus(source)}</>}
-          </span>
-          {(stage !== "all" || source !== "all") && (
-            <button className="btn-ghost btn-sm" onClick={() => router.replace(pathname, { scroll: false })}>Clear Filters</button>
-          )}
-          {loading && <Spinner label="Refreshing…" />}
+        {next && (
+          <button type="button" className="chip-button h-8 bg-brand-wash px-3 text-[13px] text-brand hover:bg-brand/15" onClick={() => setFilter("next", "all")} aria-label={`Remove Filter: ${NEXT_ACTION_LABELS[next]}`}>
+            {NEXT_ACTION_LABELS[next]} <CloseIcon size={12} />
+          </button>
+        )}
+        <span className="ml-auto text-[13px] text-ink-muted" aria-live="polite">
+          <span data-testid="pipeline-showing">Showing {shown.length} of {all.length}</span>
+          {loading && <span className="spinner ml-2 h-3 w-3 align-[-2px] text-brand" aria-label="Refreshing" />}
         </span>
-      </Toolbar>
+      </div>
 
       {shown.length ? (
-        <>
-          <PipelineTable deals={shown} />
-          <p className="flex flex-wrap items-center gap-1.5 text-[13px] text-ink-muted">
-            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-brand" /> Blue dot: awaiting your review. Thesis fit is 0–100 against your Fund thesis. Waiting counts days since the first signal.
-          </p>
-        </>
+        <PipelineTable deals={shown} />
       ) : (
         <EmptyState
           title="No Deals Match These Filters"
-          action={<button className="btn-secondary" onClick={() => router.replace(pathname, { scroll: false })}>Clear Filters</button>}
+          action={filtered ? <button className="btn-secondary" onClick={() => router.replace(pathname, { scroll: false })}>Clear Filters</button> : undefined}
         />
       )}
     </div>

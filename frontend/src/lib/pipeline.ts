@@ -89,6 +89,14 @@ export function filterDeals(deals: PipelineDeal[], stage: string, source: Source
   );
 }
 
+// The order deals are worked in, everywhere (Pipeline table, its header action,
+// Dashboard): awaiting your review first, then oldest waiting, then id. Mirrors
+// the backend action queue. Deals with nothing left to do go last.
+export function sortDeals(deals: PipelineDeal[]): PipelineDeal[] {
+  const t = (d: PipelineDeal) => new Date(d.first_signal_at).getTime() || 0;
+  return [...deals].sort((a, b) => (a.priority ?? 99) - (b.priority ?? 99) || t(a) - t(b) || a.id - b.id);
+}
+
 export function parseStage(v: string | null): string {
   return v && (PIPELINE_STAGES as readonly string[]).includes(v) ? v : "all";
 }

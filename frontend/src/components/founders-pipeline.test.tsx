@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { FoundersTable } from "./FoundersTable";
 import { PipelineTable } from "./PipelineTable";
-import { filterDeals, leadStatus, matchesFounderView, parseSource, parseStage, sortLeads } from "@/lib/pipeline";
+import { filterDeals, leadStatus, matchesFounderView, parseSource, parseStage, sortDeals, sortLeads } from "@/lib/pipeline";
 import { FounderLead, PipelineDeal } from "@/lib/types";
 import { momentum } from "@/test/fixtures";
 
@@ -110,27 +110,49 @@ describe("FoundersTable sorting", () => {
 });
 
 describe("PipelineTable", () => {
-  it("shows source, stage, next action, and honest missing fit", () => {
+  it("shows source, stage, next action, and honest missing fit; the row's action appears once", () => {
     render(<PipelineTable deals={[deal()]} />);
     const row = screen.getByTestId("deal-row-11");
-    expect(within(row).getByText("Outbound")).toBeInTheDocument();
+    expect(within(row).getByText(/Outbound ·/)).toBeInTheDocument();
     expect(within(row).getByText("Screening")).toBeInTheDocument();
-    // the next action is a link to where it's done
-    expect(within(row).getByRole("link", { name: "Run analysis →" })).toHaveAttribute("href", "/vc/opportunities/11");
+    // the next action is the row's one link, to where it's done
+    expect(within(row).getAllByRole("link").map((l) => [l.textContent, l.getAttribute("href")])).toEqual([["Run analysis", "/vc/opportunities/11"]]);
     expect(within(row).getByText("No Company")).toBeInTheDocument();
-    expect(within(row).getByRole("link", { name: "Ada Builder" })).toHaveAttribute("href", "/vc/opportunities/11");
+    // the whole row opens it too
+    fireEvent.click(within(row).getByText("Ada Builder"));
+    expect(push).toHaveBeenCalledWith("/vc/opportunities/11");
   });
 
   it("links a recommendation awaiting review to the decision panel", () => {
     render(<PipelineTable deals={[deal({ next_action: "Review recommendation", next_action_key: "review_recommendation", next_action_detail: "Recommended: Continue diligence", priority: 1 })]} />);
-    expect(screen.getByRole("link", { name: /Review recommendation/ })).toHaveAttribute("href", "/vc/opportunities/11?tab=decision");
-    expect(screen.getByText("Recommended: Continue diligence")).toBeInTheDocument();
-    expect(screen.getByLabelText("Awaiting Your Review")).toBeInTheDocument();
+    const row = screen.getByTestId("deal-row-11");
+    expect(within(row).getByRole("link", { name: /Review recommendation/ })).toHaveAttribute("href", "/vc/opportunities/11?tab=decision");
+    expect(within(row).getByText("Recommended: Continue diligence")).toBeInTheDocument();
+    expect(within(row).getByLabelText("Awaiting Your Review")).toBeInTheDocument();
   });
 
   it("marks decided deals as having no next action", () => {
     render(<PipelineTable deals={[deal({ next_action: null, priority: null, stage: "decision" })]} />);
-    expect(screen.getByText("None — Decided")).toBeInTheDocument();
+    expect(within(screen.getByTestId("deal-row-11")).getByText("None — Decided")).toBeInTheDocument();
+  });
+
+  it("lays deals out as a list on narrower screens, with the same single action", () => {
+    render(<PipelineTable deals={[deal()]} />);
+    const card = screen.getByTestId("deal-card-11");
+    expect(within(card).getAllByRole("link")).toHaveLength(1);
+  });
+});
+
+describe("sortDeals", () => {
+  it("puts deals awaiting review first, then the oldest waiting, then by id", () => {
+    const deals = [
+      deal({ id: 1, priority: 2, first_signal_at: "2026-10-01T00:00:00Z" }),
+      deal({ id: 2, priority: 1, first_signal_at: "2026-11-10T00:00:00Z" }),
+      deal({ id: 3, priority: 1, first_signal_at: "2026-11-01T00:00:00Z" }),
+      deal({ id: 4, priority: 1, first_signal_at: "2026-11-01T00:00:00Z" }),
+      deal({ id: 5, priority: null, next_action: null }),
+    ];
+    expect(sortDeals(deals).map((d) => d.id)).toEqual([3, 4, 2, 1, 5]);
   });
 });
 

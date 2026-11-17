@@ -309,7 +309,7 @@ export function Segmented<T extends string>({ label, value, options, onChange, s
           type="button"
           aria-pressed={value === o.value}
           onClick={() => onChange(o.value)}
-          className={`press num relative whitespace-nowrap rounded-md font-medium transition-colors duration-fast ${size === "sm" ? "h-8 px-2.5 text-[13px]" : "h-9 px-3.5 text-sm"} ${
+          className={`press num relative whitespace-nowrap rounded-md font-medium transition-colors duration-fast ${size === "sm" ? "h-8 px-2.5 text-[13px]" : "h-9 px-2.5 text-sm sm:px-3.5"} ${
             value === o.value ? `text-ink ${box ? "" : "bg-white shadow-card"}` : "text-ink-muted hover:text-ink"
           }`}
         >
