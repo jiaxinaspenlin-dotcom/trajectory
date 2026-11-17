@@ -305,6 +305,23 @@ html[data-motion] .deck-behind { animation: deck-behind-up 240ms var(--ease-out)
   .card-interactive:active {
     transform: translateY(0) scale(0.995);
   }
+  /* a large answer in a question (Decision): lifts on hover, presses down, and the
+     focus ring follows the hidden radio inside it */
+  .choice-card {
+    transition: box-shadow var(--dur-base) var(--ease-out), border-color var(--dur-fast) var(--ease-out),
+      background-color var(--dur-fast) var(--ease-out), transform var(--dur-base) var(--ease-out);
+  }
+  .choice-card:hover {
+    @apply shadow-hover;
+    transform: translateY(-2px);
+  }
+  .choice-card:active {
+    transform: translateY(0) scale(0.99);
+  }
+  .choice-card:has(input:focus-visible) {
+    outline: 2px solid #3047e8;
+    outline-offset: 2px;
+  }
   .slide-arrow {
     @apply inline-block text-brand;
     opacity: 0;

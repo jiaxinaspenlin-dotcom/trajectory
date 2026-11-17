@@ -15,6 +15,9 @@ import { InvestmentArena } from "@/components/arena/InvestmentArena";
 import { ClaimsTable } from "@/components/ClaimsTable";
 import { FounderScoreBreakdown } from "@/components/FounderScoreBreakdown";
 import { HumanDecisionPanel } from "@/components/HumanDecisionPanel";
+import { decisionReasons } from "@/lib/decision";
+import { dashboardCardHref, nextCard } from "@/lib/deck";
+import { useDeck } from "@/lib/useDeck";
 import { Claim, Evidence, Opportunity } from "@/lib/types";
 import { LeadWebCheck } from "@/components/WebSourcing";
 import { humanStatus, labelPhrase, sourceName, verificationTone } from "@/lib/format";
@@ -52,10 +55,18 @@ function OpportunityRecord() {
   const pathname = usePathname();
   const tab = parseOpportunityTab(params.get("tab"));
   const focusEvidence = Number(params.get("evidence")) || null;
+  // opened from the Dashboard deck: the record shows where it sits in it
+  const fromDeck = params.get("from") === "deck";
   // tab changes are history entries, so Back returns to the previous panel
   const setTab = useCallback((t: OpportunityTab) => {
-    router.push(t === "overview" ? pathname : `${pathname}?tab=${t}`, { scroll: false });
-  }, [pathname, router]);
+    const q = new URLSearchParams();
+    if (t !== "overview") q.set("tab", t);
+    if (fromDeck) q.set("from", "deck");
+    router.push(q.size ? `${pathname}?${q}` : pathname, { scroll: false });
+  }, [pathname, router, fromDeck]);
+  // the deck as it was when this record opened: for the position strip and for
+  // "Next" after a decision
+  const deck = useDeck(fromDeck || tab === "decision");
   useEffect(() => {
     const legacy = LEGACY_HASH[window.location.hash];
     if (legacy && !params.get("tab")) router.replace(legacy === "overview" ? pathname : `${pathname}?tab=${legacy}`, { scroll: false });
@@ -430,10 +441,13 @@ function OpportunityRecord() {
 
         {tab === "decision" && (
           <div className="max-w-3xl">
-            <Section title="Recommendation & Decision" subtitle="The system recommends; a person decides." card={false}>
+            <Section title="Your Decision" subtitle="The system recommends; you decide." card={false}>
               <HumanDecisionPanel
                 opportunityId={o.id}
                 recommendation={o.current_recommendation || null}
+                why={decisionReasons(o, o.current_recommendation?.action ?? null)}
+                next={deck ? nextCard(deck, o.id) : undefined}
+                dashboardHref={dashboardCardHref(deck ? nextCard(deck, o.id)?.opportunity_id : null)}
                 onDecision={reload}
                 savedLocal={myDecision}
                 onSavedLocal={(d) => { saveMyDecision(o.id, d); setMyDecision(d); }}

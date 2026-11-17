@@ -532,7 +532,13 @@ describe("every route uses Title Case labels", () => {
       expectCleanCopy();
       fireEvent.click(screen.getByRole("button", { name: /Expand Full Debate/ }));
     }
-    if (tab === "decision") fireEvent.change(screen.getByRole("combobox"), { target: { value: screen.getAllByRole("option")[1].getAttribute("value") } });
+    if (tab === "decision") {
+      // every part of the step on screen at once: the picker, the note and Deciding As
+      fireEvent.click(screen.getByRole("radio", { name: /Choose a Different Action/ }));
+      fireEvent.click(screen.getByRole("radio", { name: "Monitor" }));
+      fireEvent.click(screen.getByRole("button", { name: "Add a Note" }));
+      fireEvent.click(screen.getByRole("button", { name: "Change" }));
+    }
     expectCleanCopy();
   });
 
@@ -582,13 +588,11 @@ describe("every route uses Title Case labels", () => {
   it("/vc/opportunities/[id]: a recorded decision", async () => {
     posts["/api/opportunities/1/decision"] = { human_decision: { decided_by: "Demo Investor", decision: "advance", chosen_action: "Continue Diligence", system_recommended_action: "Continue Diligence", notes: "" } };
     await recordWith(opportunity, "decision");
-    // submitting empty shows the form's errors first
-    fireEvent.click(screen.getByRole("button", { name: "Record Decision" }));
+    // confirming with nothing chosen shows the reason first
+    fireEvent.click(screen.getByTestId("confirm-decision"));
     expectCleanCopy();
     fireEvent.click(screen.getAllByRole("radio")[0]);
-    fireEvent.change(screen.getByRole("combobox"), { target: { value: screen.getAllByRole("option")[1].getAttribute("value") } });
-    fireEvent.change(document.getElementById("by-1")!, { target: { value: "Demo Investor" } });
-    fireEvent.click(screen.getByRole("button", { name: "Record Decision" }));
+    fireEvent.click(screen.getByTestId("confirm-decision"));
     await screen.findByText("Decision Recorded");
     expectCleanCopy();
   });
