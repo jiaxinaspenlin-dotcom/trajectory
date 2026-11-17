@@ -305,7 +305,7 @@ function OpportunityRecord() {
               </Section>
               <Section title="At a Glance" card={false}>
                 <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  <Fact label="Thesis Fit" value={o.company ? `${Math.round(o.thesis_fit_score)}` : "Needs a Company"} note={o.company ? (o.thesis_fit_stale ? "Not Current" : "of 100") : undefined} tab="screening" pathname={pathname} />
+                  <Fact label="Thesis Fit" value={o.company ? `${Math.round(o.thesis_fit_score)}` : "Needs a Company"} note={o.company ? (o.thesis_fit_stale ? "Not Current" : "/ 100") : undefined} tab="screening" pathname={pathname} />
                   <Fact label="Founder Score" value={o.founder_score ? `${Math.round(o.founder_score.score)}` : "Not Scored"} tab="founder" pathname={pathname} />
                   <Fact label="Evidence" value={`${evidence.length}`} note={newIds.size ? `${newIds.size} New` : evidence.length === 1 ? "Item" : "Items"} tab="evidence" pathname={pathname} />
                   <Fact label="Claims" value={claims.data ? `${claimCount}` : "…"} tab="claims" pathname={pathname} />

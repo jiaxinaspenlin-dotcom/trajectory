@@ -13,7 +13,7 @@ import type { Config } from "tailwindcss";
 // panels, reveal 480ms for content entering the viewport. Only transform and
 // opacity animate; prefers-reduced-motion turns all of it into instant changes.
 //
-// Contrast on white (measured): ink 18.6 · soft 12.3 · muted 6.0 · faint 4.8 ·
+// Contrast on white (measured): ink 18.6 · soft 12.3 · muted 6.0 · faint 5.4 (4.8 on the gray wells) ·
 // brand 6.6 (white on brand 6.6) · positive 5.4 · caution 5.4 · negative 6.6.
 const config: Config = {
   content: ["./src/**/*.{ts,tsx}"],
@@ -24,7 +24,7 @@ const config: Config = {
           DEFAULT: "#0b1220",
           soft: "#273142",
           muted: "#5b6475",
-          faint: "#6b7385",
+          faint: "#626a7c",
         },
         surface: {
           DEFAULT: "#ffffff",

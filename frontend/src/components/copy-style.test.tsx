@@ -574,6 +574,11 @@ describe("every route uses Title Case labels", () => {
     expect(screen.queryByText(/^fintech|^ai\/ml|^devtools/)).toBeNull();
   });
 
+  it("/vc/opportunities/[id]: overview with a current thesis fit", async () => {
+    await recordWith({ ...opportunity, thesis_fit_stale: false }, "overview");
+    expectCleanCopy();
+  });
+
   it("/vc/opportunities/[id]: a recorded decision", async () => {
     posts["/api/opportunities/1/decision"] = { human_decision: { decided_by: "Demo Investor", decision: "advance", chosen_action: "Continue Diligence", system_recommended_action: "Continue Diligence", notes: "" } };
     await recordWith(opportunity, "decision");

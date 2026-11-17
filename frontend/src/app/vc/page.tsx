@@ -247,13 +247,13 @@ function NextUp({ a, total, onOpen }: { a: ActionItem; total: number; onOpen: ()
       <svg aria-hidden className="pointer-events-none absolute -right-6 -top-6 h-48 w-72 text-white/10" viewBox="0 0 280 180" fill="none">
         <path d="M10 170 C 90 160, 140 120, 170 80 S 240 20, 275 10" stroke="currentColor" strokeWidth="14" strokeLinecap="round" />
       </svg>
-      <p className="relative text-meta font-medium text-white/80">Right Now{total > 1 ? ` · 1 of ${total}` : ""}</p>
+      <p className="relative text-meta font-medium text-white/90">Right Now{total > 1 ? ` · 1 of ${total}` : ""}</p>
       <div className="relative mt-3 flex flex-wrap items-end justify-between gap-x-8 gap-y-6">
         <div className="min-w-0">
           <Link href={`/vc/opportunities/${a.opportunity_id}`} onClick={(e) => e.stopPropagation()}
             className="block truncate text-[2rem] font-semibold leading-tight tracking-[-0.025em] text-white hover:underline hover:decoration-white/40 hover:underline-offset-4 sm:text-display" data-content>{a.name}</Link>
           <p className="mt-2 text-body text-white/90">{a.next_action_detail ?? a.next_action}</p>
-          <p className="mt-1 text-meta text-white/75">{humanStatus(a.stage)} · {a.entry_type === "inbound" ? "Inbound" : "Outbound"} · <span className="num">{waitingText(a.age_days)}</span></p>
+          <p className="mt-1 text-meta text-white/90">{humanStatus(a.stage)} · {a.entry_type === "inbound" ? "Inbound" : "Outbound"} · <span className="num">{waitingText(a.age_days)}</span></p>
         </div>
         <Link
           href={nextActionHref(a.opportunity_id, a.next_action_key)}
