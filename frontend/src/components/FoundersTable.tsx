@@ -2,14 +2,15 @@
 
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { humanStatus, momentumWindow, trajectoryTone } from "@/lib/format";
+import { humanStatus, momentumWindow } from "@/lib/format";
 import { PipelineStatus } from "@/lib/myWorkspace";
 import { inPipeline, leadStatus, shortlistOf } from "@/lib/pipeline";
 import { FounderLead } from "@/lib/types";
 import { ShortlistBadge, StageBadge } from "./DealBadges";
-import { MoreIcon, SortIcon } from "./icons";
-import { Badge } from "./ui";
+import { Button } from "./ui";
+import { ArrowRightIcon, MoreIcon, SortIcon } from "./icons";
 
 const STATUS_OPTIONS: { value: PipelineStatus; label: string }[] = [
   { value: "saved", label: "Saved" },
@@ -43,12 +44,10 @@ export function sortFounderLeads(leads: FounderLead[], sort: Sort, overlay: Reco
   });
 }
 
-// How much room the table has decides where secondary actions live:
-// wide — every action inline; compact — Review inline, the rest in a row menu;
-// stacked — one card per row (phones). Measured on the table's own container.
-export type FoundersLayout = "wide" | "compact" | "stacked";
-const COMPACT_BELOW = 1240;
-const STACKED_BELOW = 720;
+// Wide containers get a table; narrow ones (phones, a tight window) one row per
+// lead. Measured on the table's own container.
+export type FoundersLayout = "wide" | "stacked";
+const STACKED_BELOW = 860;
 
 function useContainerLayout(forced?: FoundersLayout) {
   const ref = useRef<HTMLDivElement>(null);
@@ -59,7 +58,7 @@ function useContainerLayout(forced?: FoundersLayout) {
     const apply = () => {
       const w = el.clientWidth;
       if (!w) return; // not laid out (e.g. hidden or a test DOM): keep the current layout
-      setLayout(w < STACKED_BELOW ? "stacked" : w < COMPACT_BELOW ? "compact" : "wide");
+      setLayout(w < STACKED_BELOW ? "stacked" : "wide");
     };
     apply();
     const ro = new ResizeObserver(apply);
@@ -69,6 +68,9 @@ function useContainerLayout(forced?: FoundersLayout) {
   return { ref, layout: forced ?? layout };
 }
 
+// One row per lead. The whole row opens the record (the founder's name is its
+// link); everything else lives in the row's one menu: the stage step (Move to
+// Screening, confirmed first) and my shortlist.
 export function FoundersTable({
   leads,
   overlay,
@@ -86,7 +88,6 @@ export function FoundersTable({
   const router = useRouter();
   const { ref, layout } = useContainerLayout(forcedLayout);
   const [sort, setSort] = useState<Sort>(null);
-  const [confirming, setConfirming] = useState<number | null>(null);
   const [busy, setBusy] = useState<number | null>(null);
   const [rowError, setRowError] = useState<{ id: number; message: string } | null>(null);
 
@@ -95,7 +96,6 @@ export function FoundersTable({
     setRowError(null);
     try {
       await onMoveToScreening(id);
-      setConfirming(null);
     } catch (e) {
       setRowError({ id, message: e instanceof Error ? e.message : "Could not move to screening." });
     } finally {
@@ -113,7 +113,7 @@ export function FoundersTable({
     const dir = sort?.key === k ? sort.dir : null;
     return (
       <th scope="col" className={className} title={title} aria-sort={dir === "asc" ? "ascending" : dir === "desc" ? "descending" : "none"}>
-        <button type="button" onClick={() => toggleSort(k)} className="inline-flex items-center gap-1 hover:text-ink">
+        <button type="button" onClick={() => toggleSort(k)} className={`press inline-flex items-center gap-1 rounded transition-colors duration-fast hover:text-ink ${dir ? "text-ink" : ""}`}>
           {children}<SortIcon dir={dir} />
         </button>
       </th>
@@ -123,10 +123,8 @@ export function FoundersTable({
   const rows = sortFounderLeads(leads, sort, overlay);
   const name = (l: FounderLead) => l.founder?.full_name || l.company?.name || `Opportunity #${l.id}`;
 
-  // Secondary actions for the row menu (compact and stacked layouts).
-  // Always in this order: open the record, the stage step, then my shortlist.
+  // The row's menu. Always in this order: the stage step, then my shortlist.
   const menuItems = (l: FounderLead): RowMenuItem[] => [
-    { label: "Open Record", href: `/vc/opportunities/${l.id}` },
     inPipeline(l)
       ? { label: `View in Pipeline · ${humanStatus(l.stage)}`, href: `/vc/pipeline?stage=${l.stage}` }
       : {
@@ -147,48 +145,27 @@ export function FoundersTable({
     ...(overlay[l.id] ? [{ label: "Remove from Shortlist", onSelect: () => onSetStatus(l.id, null) }] : []),
   ];
 
-  const statusSelect = (l: FounderLead) => (
-    <select
-      aria-label={`My Shortlist for ${name(l)}`}
-      className="mt-1 h-7 max-w-full rounded border border-line bg-white px-1 text-xs text-ink-soft"
-      value={overlay[l.id] ?? ""}
-      onChange={(e) => onSetStatus(l.id, (e.target.value || null) as PipelineStatus | null)}
-    >
-      {/* the blank option is an action, not a value: the badge above shows the current status */}
-      <option value="">{overlay[l.id] ? "Remove from Shortlist" : "Add to Shortlist…"}</option>
-      {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-    </select>
-  );
-
-  const review = (l: FounderLead) => (
-    <Link href={`/vc/opportunities/${l.id}`} onClick={stop} className="btn-secondary btn-sm">
-      Review<span className="sr-only"> <span data-content>{name(l)}</span></span> <span aria-hidden>→</span>
-    </Link>
-  );
-
   const errorLine = (l: FounderLead) =>
-    rowError?.id === l.id && <p className="mt-1 text-xs text-negative" role="alert">{rowError.message}</p>;
+    rowError?.id === l.id && <p className="field-error" role="alert">{rowError.message}</p>;
 
   if (layout === "stacked") {
     return (
       <div ref={ref}>
-        <ul className="card divide-y divide-line" aria-label="Founders">
-          {rows.map((l) => (
-            <li key={l.id} data-testid={`founder-row-${l.id}`} className="space-y-2.5 px-4 py-3.5">
-              <div className="min-w-0">
-                <FounderCell l={l} />
+        <ul className="divide-y divide-line" aria-label="Founders">
+          {rows.map((l, i) => (
+            <li key={l.id} data-testid={`founder-row-${l.id}`} onClick={() => router.push(`/vc/opportunities/${l.id}`)}
+              className="row-interactive group animate-rise -mx-3 space-y-2.5 rounded-lg px-3 py-4" style={{ "--i": i } as React.CSSProperties}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0"><FounderCell l={l} /></div>
+                <span onClick={stop}><RowMenu name={name(l)} items={menuItems(l)} busy={busy === l.id} /></span>
               </div>
               <CompanyCell l={l} />
-              <dl className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px]">
-                <div className="flex items-center gap-1.5"><dt className="text-ink-muted">Score</dt><dd><ScoreCell l={l} /></dd></div>
-                <div className="flex items-center gap-1.5"><dt className="text-ink-muted">Evidence</dt><dd className="num text-ink-soft">{l.evidence_count}</dd></div>
-                <div className="flex items-center gap-1.5"><dd><MomentumCell l={l} /></dd></div>
-              </dl>
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-[13px]">
                 <StatusBadges l={l} shortlist={shortlistOf(l, overlay[l.id] ?? null)} />
-                <span className="flex shrink-0 items-center gap-1.5">
-                  {review(l)}
-                  <RowMenu name={name(l)} items={menuItems(l)} busy={busy === l.id} />
+                <span className="flex items-center gap-3">
+                  <span className="flex items-center gap-1.5"><span className="text-ink-muted">Score</span><ScoreCell l={l} /></span>
+                  <span className="flex items-center gap-1.5"><span className="text-ink-muted">Evidence</span><span className="num text-ink-soft">{l.evidence_count}</span></span>
+                  <MomentumCell l={l} />
                 </span>
               </div>
               {errorLine(l)}
@@ -199,70 +176,38 @@ export function FoundersTable({
     );
   }
 
-  const compact = layout === "compact";
   return (
-    // `relative` makes this the containing block for absolutely positioned
-    // children (e.g. sr-only headers), so they scroll here instead of widening the page
-    <div ref={ref} className="card relative overflow-x-auto">
-      {/* tighter cells than the default table; the first and last keep the card's inset */}
-      <table className="table [&_td]:px-3 [&_th]:px-3 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 [&_td:last-child]:pr-4 [&_th:last-child]:pr-4">
+    <div ref={ref}>
+      <table className="table">
         <thead>
           <tr>
-            <Th k="founder" className="min-w-[11rem]">Founder</Th>
+            <Th k="founder" className="min-w-[11rem] pl-0">Founder</Th>
             <Th k="company">Company / Project</Th>
             <Th k="score" className="text-right">Score</Th>
             <Th k="momentum">Momentum</Th>
             <Th k="evidence" className="text-right">Evidence</Th>
             <Th k="status" title="Shared stage, with your shortlist (if any) underneath.">Stage</Th>
-            <th scope="col" className="text-right"><span className="sr-only">Actions</span></th>
+            <th scope="col" className="w-12 pr-0 text-right"><span className="sr-only">Actions</span></th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((l) => {
+          {rows.map((l, i) => {
             const href = `/vc/opportunities/${l.id}`;
             const shortlist = shortlistOf(l, overlay[l.id] ?? null);
             return (
-              <tr key={l.id} data-testid={`founder-row-${l.id}`} onClick={() => router.push(href)} className="table-row-link">
-                <td className="max-w-[16rem]"><FounderCell l={l} /></td>
+              <tr key={l.id} data-testid={`founder-row-${l.id}`} onClick={() => router.push(href)} className="table-row-link group animate-rise" style={{ "--i": i } as React.CSSProperties}>
+                <td className="max-w-[16rem] pl-0"><FounderCell l={l} /></td>
                 <td className="max-w-[15rem]"><CompanyCell l={l} /></td>
                 <td className="text-right"><ScoreCell l={l} /></td>
-                <td className="min-w-[8.5rem]"><MomentumCell l={l} /></td>
+                <td className="min-w-[8rem]"><MomentumCell l={l} /></td>
                 <td className="text-right">
                   {l.evidence_count
                     ? <span className="num text-ink-soft">{l.evidence_count}</span>
                     : <span className="text-xs text-ink-muted">None Yet</span>}
                 </td>
-                <td onClick={stop}>
-                  <StatusBadges l={l} shortlist={shortlist} stacked />
-                  {!compact && statusSelect(l)}
-                </td>
-                <td className="text-right" onClick={stop}>
-                  <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
-                    {compact ? (
-                      <RowMenu name={name(l)} items={menuItems(l)} busy={busy === l.id} />
-                    ) : inPipeline(l) ? (
-                      <Link href={`/vc/pipeline?stage=${l.stage}`} className="btn-ghost btn-sm">View in Pipeline</Link>
-                    ) : confirming === l.id ? (
-                      <>
-                        <button className="btn-primary btn-sm" onClick={() => confirmMove(l.id)} disabled={busy === l.id}>
-                          {busy === l.id ? "Moving…" : "Confirm Move"}
-                        </button>
-                        <button className="btn-ghost btn-sm" onClick={() => setConfirming(null)} disabled={busy === l.id}>Cancel</button>
-                      </>
-                    ) : (
-                      <button
-                        className="btn-ghost btn-sm"
-                        onClick={() => { setConfirming(l.id); setRowError(null); }}
-                        title="Approve moving this founder into Screening. Nothing is sent to the founder."
-                      >
-                        Move to Screening
-                      </button>
-                    )}
-                    {review(l)}
-                  </div>
-                  {!compact && confirming === l.id && (
-                    <p className="mt-1 whitespace-normal text-xs text-ink-muted">Moves this lead into the fund&apos;s Pipeline at Screening. No outreach is sent.</p>
-                  )}
+                <td><StatusBadges l={l} shortlist={shortlist} stacked /></td>
+                <td className="pr-0 text-right" onClick={stop}>
+                  <RowMenu name={name(l)} items={menuItems(l)} busy={busy === l.id} />
                   {errorLine(l)}
                 </td>
               </tr>
@@ -279,9 +224,10 @@ function FounderCell({ l }: { l: FounderLead }) {
   return (
     <>
       <span className="flex flex-wrap items-center gap-1.5">
-        <Link href={href} onClick={stop} className="break-words font-medium text-ink hover:text-brand" data-content>
+        <Link href={href} onClick={stop} className="break-words font-medium text-ink group-hover:text-brand" data-content>
           {l.founder?.full_name || l.company?.name || `Opportunity #${l.id}`}
         </Link>
+        <ArrowRightIcon size={14} className="slide-arrow" />
         {!!l.new_evidence_count && (
           <Link
             href={`${href}?tab=evidence`}
@@ -355,12 +301,14 @@ function ScoreCell({ l }: { l: FounderLead }) {
 function MomentumCell({ l }: { l: FounderLead }) {
   const m = l.momentum;
   if (!m) return <span className="text-xs text-ink-muted">No History</span>;
+  const up = (m.change_30d ?? 0) >= 0;
+  const tone = m.trajectory === "accelerating" || m.trajectory === "improving" ? "text-positive" : m.trajectory === "declining" ? "text-negative" : "text-ink-muted";
   return (
-    <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
-      <Badge tone={trajectoryTone(m.trajectory)}>{humanStatus(m.trajectory)}</Badge>
+    <span className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 text-[13px]">
+      <span className={`font-medium ${tone}`}>{humanStatus(m.trajectory)}</span>
       {m.change_30d != null && (
-        <span className={`num text-xs ${m.change_30d >= 0 ? "text-positive" : "text-negative"}`}>
-          {m.change_30d >= 0 ? "+" : ""}{Math.round(m.change_30d)} / {momentumWindow(m.change_30d_window_days).short}
+        <span className={`num text-xs ${up ? "text-positive" : "text-negative"}`}>
+          {up ? "+" : ""}{Math.round(m.change_30d)} / {momentumWindow(m.change_30d_window_days).short}
         </span>
       )}
     </span>
@@ -444,7 +392,7 @@ function RowMenu({ name, items, busy }: { name: string; items: RowMenuItem[]; bu
     if (shown) menu.current?.querySelector<HTMLElement>("[role=menuitem], [role=menuitemcheckbox], button")?.focus();
   }, [shown, confirm]);
 
-  const itemClass = "flex min-h-9 w-full items-center gap-2 rounded px-3 text-left text-sm text-ink-soft hover:bg-surface-sunken hover:text-ink focus:bg-surface-sunken focus:outline-none";
+  const itemClass = "press flex min-h-9 w-full items-center gap-2 rounded-md px-3 text-left text-sm text-ink-soft transition-colors duration-fast hover:bg-surface-sunken hover:text-ink focus:bg-surface-sunken focus:outline-none";
 
   return (
     <>
@@ -452,7 +400,7 @@ function RowMenu({ name, items, busy }: { name: string; items: RowMenuItem[]; bu
         ref={button}
         type="button"
         id={`${id}-button`}
-        className="icon-btn h-8 w-8 border border-line-strong bg-white"
+        className={`icon-btn h-8 w-8 ${open ? "bg-neutral-wash text-ink" : ""}`}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? id : undefined}
@@ -462,7 +410,7 @@ function RowMenu({ name, items, busy }: { name: string; items: RowMenuItem[]; bu
         <MoreIcon size={16} />
         <span className="sr-only">More Actions for <span data-content>{name}</span></span>
       </button>
-      {open && pos && (
+      {open && pos && createPortal(
         <div
           ref={menu}
           id={id}
@@ -471,16 +419,16 @@ function RowMenu({ name, items, busy }: { name: string; items: RowMenuItem[]; bu
           aria-labelledby={confirm ? undefined : `${id}-button`}
           onClick={stop}
           style={{ top: pos.top, right: pos.right }}
-          className="fixed z-50 w-64 rounded-lg border border-line bg-white p-1.5 text-left shadow-overlay"
+          className="menu-enter fixed z-50 w-64 origin-top-right rounded-xl border border-line bg-white p-1.5 text-left shadow-overlay"
         >
           {confirm ? (
             <div className="space-y-2 p-2">
               <p className="whitespace-normal text-sm font-medium text-ink">{confirm.title}</p>
               <p className="whitespace-normal text-[13px] text-ink-muted">{confirm.body}</p>
               <div className="flex gap-2 pt-1">
-                <button type="button" className="btn-primary btn-sm" onClick={async () => { await confirm.run(); close(true); }}>
-                  {busy ? "Moving…" : confirm.action}
-                </button>
+                <Button variant="primary" size="sm" busy={busy} onClick={async () => { await confirm.run(); close(true); }}>
+                  {confirm.action}
+                </Button>
                 <button type="button" className="btn-ghost btn-sm" onClick={() => setConfirm(null)}>Cancel</button>
               </div>
             </div>
@@ -506,7 +454,8 @@ function RowMenu({ name, items, busy }: { name: string; items: RowMenuItem[]; bu
               </button>
             )
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

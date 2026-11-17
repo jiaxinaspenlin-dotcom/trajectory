@@ -6,11 +6,11 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useFetch } from "@/lib/useFetch";
 import { humanStatus } from "@/lib/format";
-import { Badge, Drawer, EmptyState, ErrorState, PageHeader, Segmented, Spinner, Toolbar } from "@/components/ui";
+import { Badge, Button, Drawer, EmptyState, ErrorState, PageHeader, PageSkeleton, Segmented, Toolbar } from "@/components/ui";
 import { FoundersTable } from "@/components/FoundersTable";
 import { useToast } from "@/components/Toast";
 import { WebSourcing } from "@/components/WebSourcing";
-import { SearchIcon } from "@/components/icons";
+import { ArrowRightIcon, FoundersIcon, SearchIcon } from "@/components/icons";
 import { FounderLead } from "@/lib/types";
 import { clearPipelineStatus, getPipeline, PipelineStatus, setPipelineStatus } from "@/lib/myWorkspace";
 import { FOUNDER_VIEWS, FounderView, inPipeline, matchesFounderView, matchesQuery, sortLeads } from "@/lib/pipeline";
@@ -39,10 +39,11 @@ interface DiscoveryResult {
 }
 
 const DISCOVERY_CACHE = "trajectory_last_discovery";
+const PHONE_LABEL: Partial<Record<FounderView, string>> = { pinned: "Shortlist", in_pipeline: "Pipeline" };
 
 export default function FoundersPage() {
   return (
-    <Suspense fallback={<Spinner label="Loading Founders…" />}>
+    <Suspense fallback={<PageSkeleton label="Loading Founders…" />}>
       <Founders />
     </Suspense>
   );
@@ -64,14 +65,14 @@ function Founders() {
   const pipelineCount = all.filter(inPipeline).length;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-8">
       <PageHeader
         title="Founders"
         subtitle={leads.data
           ? `${all.length} Sourced ${all.length === 1 ? "Lead" : "Leads"} · ${pipelineCount} Moved to Pipeline`
           : "Leads You've Sourced from Public Evidence"}
         // with no leads yet, the empty state below carries this action
-        actions={all.length > 0 && <button className="btn-primary" onClick={() => setSourcingOpen(true)}>+ Source Founders</button>}
+        actions={all.length > 0 && <button className="btn-primary" onClick={() => setSourcingOpen(true)}>Source Founders</button>}
       />
       <FounderLeads leads={leads} onOpenSourcing={() => setSourcingOpen(true)} />
       <Drawer
@@ -174,8 +175,8 @@ function AiDiscovery({ onSourced }: { onSourced: () => void }) {
         />
       </label>
       <div className="flex items-center gap-3">
-        <button className="btn-primary" onClick={run} disabled={loading}>{loading ? "Discovering…" : "Run GitHub Discovery"}</button>
-        {loading && <Spinner label="Planning the Search, Querying GitHub, Scoring Candidates…" />}
+        <Button variant="primary" onClick={run} busy={loading}>Run GitHub Discovery</Button>
+        {loading && <span className="text-meta text-ink-muted" role="status">Planning the Search, Querying GitHub, Scoring Candidates…</span>}
       </div>
       {error && <ErrorState message={error} />}
 
@@ -198,23 +199,21 @@ function AiDiscovery({ onSourced }: { onSourced: () => void }) {
             <p className="rounded-md border border-caution/30 bg-caution-wash px-3 py-2 text-xs text-caution">{result.notes.join(" ")}</p>
           )}
           {result.prospects.length ? (
-            <table className="table rounded-md border border-line">
-              <thead><tr><th>#</th><th>Founder</th><th className="text-right">Evidence</th><th className="text-right">Score</th><th /></tr></thead>
-              <tbody>
-                {result.prospects.map((p, idx) => (
-                  <tr key={p.opportunity_id}>
-                    <td className="num text-ink-muted">{idx + 1}</td>
-                    <td>
-                      <Link href={`/vc/opportunities/${p.opportunity_id}`} className="font-medium text-ink hover:text-brand" data-content>{p.name}</Link>
-                      <a href={p.github_url} target="_blank" rel="noreferrer" className="ml-1.5 text-xs text-ink-muted hover:text-brand" data-content>@{p.login} ↗</a>
-                    </td>
-                    <td className="num text-right text-ink-soft">{p.evidence_added}</td>
-                    <td className="num text-right font-semibold text-ink">{Math.round(p.founder_score)}</td>
-                    <td className="text-right"><Link href={`/vc/opportunities/${p.opportunity_id}`} className="btn-ghost btn-sm">Review →</Link></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <ol className="divide-y divide-line" aria-label="Discovered Founders">
+              {result.prospects.map((p, idx) => (
+                <li key={p.opportunity_id} className="animate-rise" style={{ "--i": idx } as React.CSSProperties}>
+                  <Link href={`/vc/opportunities/${p.opportunity_id}`} className="row-interactive group -mx-2 flex items-center gap-3 rounded-md px-2 py-2.5">
+                    <span className="num w-5 text-meta text-ink-muted">{idx + 1}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium text-ink group-hover:text-brand" data-content>{p.name}</span>
+                      <span className="block text-meta text-ink-muted"><span data-content>@{p.login}</span> · <span className="num">{p.evidence_added}</span> Evidence</span>
+                    </span>
+                    <span className="num text-section text-ink">{Math.round(p.founder_score)}</span>
+                    <ArrowRightIcon size={14} className="slide-arrow" />
+                  </Link>
+                </li>
+              ))}
+            </ol>
           ) : (
             <p className="text-sm text-ink-muted">No candidates surfaced this run — try refining the brief or your thesis.</p>
           )}
@@ -256,13 +255,12 @@ function ManualAdd({ onSourced }: { onSourced: () => void }) {
           <span className="label">GitHub Username</span>
           <input className="input mt-1" placeholder="e.g. torvalds" value={username} onChange={(e) => setUsername(e.target.value)} />
         </label>
-        <button type="submit" className="btn-primary" disabled={loading || !username.trim()}>Sync from GitHub</button>
+        <Button type="submit" variant="primary" busy={loading} disabled={!username.trim()}>Sync from GitHub</Button>
       </form>
       <p className="text-xs text-ink-muted">Pulls one public profile and its repositories as live evidence, then scores the founder.</p>
-      {loading && <Spinner label="Syncing…" />}
       {error && <ErrorState message={error} />}
       {result && (
-        <div className="rounded-md border border-line bg-surface-sunken p-3 text-sm">
+        <div className="animate-rise rounded-lg bg-surface-sunken p-3 text-sm">
           <p className="font-medium text-ink">Sync {humanStatus(result.sync?.status ?? "")}: {result.sync?.message}</p>
           {result.opportunity_id && <Link href={`/vc/opportunities/${result.opportunity_id}`} className="btn-secondary btn-sm mt-2">Open Founder Profile →</Link>}
         </div>
@@ -310,12 +308,13 @@ function FounderLeads({
     notify({ message: `${leadName(id)} moved to Screening. No outreach was sent.`, href: "/vc/pipeline?stage=screening", linkLabel: "View in Pipeline" });
   }
 
-  if (leads.loading && !leads.data) return <Spinner label="Loading Founders…" />;
+  if (leads.loading && !leads.data) return <PageSkeleton label="Loading Founders…" />;
   if (leads.error) return <ErrorState message={`Couldn't load founders: ${leads.error}`} onRetry={leads.reload} />;
   const all = leads.data?.items ?? [];
   if (!all.length) {
     return (
       <EmptyState
+        icon={<FoundersIcon size={20} />}
         title="No Founders Sourced Yet"
         hint="Search the web for launches and company sites, or source from GitHub. Saved leads appear here with their evidence."
         action={<button className="btn-primary" onClick={onOpenSourcing}>Source Founders</button>}
@@ -330,7 +329,7 @@ function FounderLeads({
   );
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-6">
       <Toolbar>
         {/* scrolls inside its own row on phones instead of widening the page */}
         <div className="max-w-full overflow-x-auto">
@@ -338,34 +337,37 @@ function FounderLeads({
             label="Filter Founders"
             value={view}
             onChange={setView}
-            options={FOUNDER_VIEWS.map((v) => ({ value: v.key, label: <>{v.label} <span className="opacity-60">{count(v.key)}</span></> }))}
+            options={FOUNDER_VIEWS.filter((v) => v.key !== "all").map((v) => ({
+              value: v.key,
+              // shorter on phones so every view fits without scrolling
+              label: <>{PHONE_LABEL[v.key] ? <><span className="sm:hidden">{PHONE_LABEL[v.key]}</span><span className="hidden sm:inline">{v.label}</span></> : v.label} <span className="ml-0.5 text-ink-faint">{count(v.key)}</span></>,
+            }))}
           />
         </div>
         <label className="relative w-full sm:w-auto">
           <span className="sr-only">Search Founders</span>
-          <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-muted" />
+          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
           <input
             type="search"
             aria-label="Search Founders"
             placeholder="Search Name, @handle, Company, Project"
-            className="input w-full pl-8 sm:w-72"
+            className="input w-full pl-9 sm:w-72"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
         </label>
-        {leads.loading && <Spinner label="Refreshing…" />}
+        {leads.loading && <span className="spinner h-3.5 w-3.5 text-brand" role="status" aria-label="Refreshing" />}
       </Toolbar>
       {shown.length ? (
         <FoundersTable leads={shown} overlay={overlay} onSetStatus={setStatus} onMoveToScreening={moveToScreening} />
       ) : (
         <EmptyState
           title="No Founders Match This View"
-          action={<button className="btn-secondary" onClick={() => { setView("all"); setQuery(""); }}>Show All Founders</button>}
+          action={<button className="btn-secondary" onClick={() => { setView("active"); setQuery(""); }}>Show All Active Founders</button>}
         />
       )}
-      <p className="text-xs text-ink-muted">
-        <strong className="font-medium text-ink-soft">Stage</strong> is shared with the fund: moving a lead to Screening puts it in Pipeline. Your{" "}
-        <strong className="font-medium text-ink-soft">shortlist</strong> (Saved, Monitoring, Dismissed) is personal and kept in this browser. No outreach is ever sent automatically.
+      <p className="text-meta text-ink-muted">
+        Stage is shared with the fund; your shortlist (Saved, Monitoring, Dismissed) is personal to this browser. No outreach is ever sent automatically.
       </p>
     </div>
   );

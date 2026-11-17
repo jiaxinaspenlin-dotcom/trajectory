@@ -47,8 +47,8 @@ describe("FoundersTable", () => {
     expect(within(row).getByText("61")).toBeInTheDocument();
     expect(within(row).getByText(/Accelerating/)).toBeInTheDocument();
     expect(within(row).getByText("4")).toBeInTheDocument();
-    // the founder is named in hidden text, not an aria-label
-    expect(within(row).getByRole("link", { name: "Review Ada Builder" })).toHaveAttribute("href", "/vc/opportunities/11");
+    // one link opens the record; there is no repeated Review button
+    expect(within(row).queryByRole("link", { name: /Review/ })).toBeNull();
   });
 
   it("says so honestly when there is no score, evidence, or project", () => {
@@ -61,20 +61,22 @@ describe("FoundersTable", () => {
   it("asks for confirmation before moving to screening, then calls with the same ID", async () => {
     const move = vi.fn().mockResolvedValue(undefined);
     render(<FoundersTable leads={[lead()]} overlay={{}} onSetStatus={() => {}} onMoveToScreening={move} />);
-    fireEvent.click(screen.getByText("Move to Screening"));
+    fireEvent.click(screen.getByRole("button", { name: "More Actions for Ada Builder" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Move to Screening…" }));
     expect(move).not.toHaveBeenCalled();
-    expect(screen.getByText(/No outreach is sent/)).toBeInTheDocument();
-    fireEvent.click(screen.getByText("Confirm Move"));
+    expect(screen.getByRole("dialog", { name: "Move Ada Builder to Screening?" })).toHaveTextContent("No outreach is sent");
+    fireEvent.click(screen.getByRole("button", { name: "Confirm Move" }));
     await waitFor(() => expect(move).toHaveBeenCalledWith(11));
   });
 
-  it("links a lead already in the pipeline instead of offering the move again", () => {
+  it("links a lead already in the pipeline instead of offering the move again", async () => {
     render(<FoundersTable leads={[lead({ stage: "screening", status: "applied" })]} overlay={{}} onSetStatus={() => {}} onMoveToScreening={async () => {}} />);
-    expect(screen.queryByText("Move to Screening")).not.toBeInTheDocument();
-    expect(screen.getByText("View in Pipeline")).toHaveAttribute("href", "/vc/pipeline?stage=screening");
     // the shared stage is shown, not a pseudo-status
     expect(screen.getByText("Screening")).toBeInTheDocument();
     expect(screen.queryByText("Applied")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "More Actions for Ada Builder" }));
+    expect(await screen.findByRole("menuitem", { name: "View in Pipeline · Screening" })).toHaveAttribute("href", "/vc/pipeline?stage=screening");
+    expect(screen.queryByRole("menuitem", { name: "Move to Screening…" })).not.toBeInTheDocument();
   });
 
   it("opens the existing opportunity detail when a row is clicked", () => {
@@ -193,44 +195,29 @@ describe("pipeline helpers", () => {
   });
 });
 
-describe("FoundersTable when space is tight", () => {
-  it("keeps Review inline and moves secondary actions into a row menu", async () => {
-    const onMove = vi.fn(async () => {});
+describe("FoundersTable row menu and phones", () => {
+  it("keeps my shortlist in the row's one menu", async () => {
     const onSetStatus = vi.fn();
-    render(<FoundersTable layout="compact" leads={[lead()]} overlay={{}} onSetStatus={onSetStatus} onMoveToScreening={onMove} />);
+    render(<FoundersTable leads={[lead()]} overlay={{}} onSetStatus={onSetStatus} onMoveToScreening={async () => {}} />);
     const row = screen.getByTestId("founder-row-11");
-    expect(within(row).getByRole("link", { name: "Review Ada Builder" })).toHaveAttribute("href", "/vc/opportunities/11");
-    expect(within(row).queryByText("Move to Screening")).not.toBeInTheDocument();
-    expect(within(row).queryByLabelText(/Prospect status/)).not.toBeInTheDocument();
-
+    expect(within(row).getAllByRole("button", { name: /More Actions/ })).toHaveLength(1);
+    expect(within(row).queryByRole("combobox")).toBeNull();
     const more = within(row).getByRole("button", { name: "More Actions for Ada Builder" });
     fireEvent.click(more);
     expect(more).toHaveAttribute("aria-expanded", "true");
     fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: /Monitoring/ }));
     expect(onSetStatus).toHaveBeenCalledWith(11, "monitoring");
-
-    fireEvent.click(more);
-    fireEvent.click(await screen.findByRole("menuitem", { name: "Move to Screening…" }));
-    // confirmation happens inside the menu; nothing moves until confirmed
-    expect(screen.getByRole("dialog", { name: "Move Ada Builder to Screening?" })).toHaveTextContent("No outreach is sent");
-    expect(onMove).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Confirm Move" }));
-    await waitFor(() => expect(onMove).toHaveBeenCalledWith(11));
   });
 
-  it("offers View in Pipeline from the menu for a lead already in the pipeline", async () => {
-    render(<FoundersTable layout="compact" leads={[lead({ stage: "screening", status: "applied" })]} overlay={{}} onSetStatus={() => {}} onMoveToScreening={async () => {}} />);
-    fireEvent.click(screen.getByRole("button", { name: "More Actions for Ada Builder" }));
-    expect(await screen.findByRole("menuitem", { name: "View in Pipeline · Screening" })).toHaveAttribute("href", "/vc/pipeline?stage=screening");
-    expect(screen.queryByRole("menuitem", { name: "Move to Screening…" })).not.toBeInTheDocument();
-  });
-
-  it("stacks each row on phones with Review and the menu reachable", () => {
+  it("stacks each row on phones with the record and the menu reachable", () => {
+    push.mockClear();
     render(<FoundersTable layout="stacked" leads={[lead({ evidence_count: 4 })]} overlay={{}} onSetStatus={() => {}} onMoveToScreening={async () => {}} />);
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
     const card = screen.getByTestId("founder-row-11");
-    expect(within(card).getByRole("link", { name: "Review Ada Builder" })).toBeInTheDocument();
+    expect(within(card).getByRole("link", { name: "Ada Builder" })).toBeInTheDocument();
     expect(within(card).getByRole("button", { name: "More Actions for Ada Builder" })).toBeInTheDocument();
     expect(within(card).getByText("Evidence")).toBeInTheDocument();
+    fireEvent.click(within(card).getByText("No Company Yet"));
+    expect(push).toHaveBeenCalledWith("/vc/opportunities/11");
   });
 });

@@ -28,7 +28,7 @@ export function opportunityName(o: { id: number; company: { name: string } | nul
 export type FounderView = "active" | "pinned" | "in_pipeline" | "dismissed" | "all";
 
 export const FOUNDER_VIEWS: { key: FounderView; label: string }[] = [
-  { key: "active", label: "All Active" },
+  { key: "active", label: "Active" },
   { key: "pinned", label: "Shortlisted" },
   { key: "in_pipeline", label: "In Pipeline" },
   { key: "dismissed", label: "Dismissed" },

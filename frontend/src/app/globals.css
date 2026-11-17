@@ -93,29 +93,31 @@ html {
   to { transform: rotate(360deg); }
 }
 
-/* content that mounts (a page, a panel, data arriving) */
-.animate-rise { animation: rise var(--dur-reveal) var(--ease-out) both; animation-delay: calc(min(var(--i, 0), 8) * var(--stagger)); }
-.animate-fade { animation: fade var(--dur-base) var(--ease-out) both; }
+/* content that mounts (a page, a panel, data arriving). Entry animations fill
+   backwards only: once they end nothing lingers, so they never leave a stacking
+   context that would trap a menu or drawer under later content. */
+.animate-rise { animation: rise var(--dur-reveal) var(--ease-out) backwards; animation-delay: calc(min(var(--i, 0), 8) * var(--stagger)); }
+.animate-fade { animation: fade var(--dur-base) var(--ease-out) backwards; }
 /* a page arriving after navigation (app/vc/template.tsx and friends) */
-.animate-page { animation: rise 260ms var(--ease-out) both; }
+.animate-page { animation: rise 260ms var(--ease-out) backwards; }
 /* below the fold: hidden until it scrolls into view, then revealed once (lib/motion.ts useReveal) */
 .reveal-wait { opacity: 0; transform: translateY(14px); }
-.reveal-in { animation: rise var(--dur-reveal) var(--ease-out) both; animation-delay: calc(min(var(--i, 0), 8) * var(--stagger)); }
+.reveal-in { animation: rise var(--dur-reveal) var(--ease-out) backwards; animation-delay: calc(min(var(--i, 0), 8) * var(--stagger)); }
 
 /* overlays enter and leave from where they come from */
-.drawer-enter { animation: drawer-in var(--dur-slow) var(--ease-out) both; }
+.drawer-enter { animation: drawer-in var(--dur-slow) var(--ease-out) backwards; }
 .drawer-exit { animation: drawer-out var(--dur-base) var(--ease-in-out) both; }
 @media (max-width: 639px) {
   .drawer-enter.sheet-on-phone { animation-name: sheet-in; }
   .drawer-exit.sheet-on-phone { animation-name: sheet-out; }
 }
-.rail-enter { animation: rail-in var(--dur-slow) var(--ease-out) both; }
+.rail-enter { animation: rail-in var(--dur-slow) var(--ease-out) backwards; }
 .rail-exit { animation: rail-out var(--dur-base) var(--ease-in-out) both; }
-.scrim-enter { animation: fade var(--dur-slow) var(--ease-out) both; }
+.scrim-enter { animation: fade var(--dur-slow) var(--ease-out) backwards; }
 .scrim-exit { animation: fade-out var(--dur-base) var(--ease-out) both; }
-.menu-enter { animation: pop var(--dur-base) var(--ease-out) both; }
+.menu-enter { animation: pop var(--dur-base) var(--ease-out) backwards; }
 .menu-exit { animation: pop-out var(--dur-fast) var(--ease-out) both; }
-.toast-enter { animation: toast-in var(--dur-slow) var(--ease-out) both; }
+.toast-enter { animation: toast-in var(--dur-slow) var(--ease-out) backwards; }
 .toast-exit { animation: toast-out var(--dur-base) var(--ease-out) both; }
 .check-draw path { stroke-dasharray: 24; animation: draw 360ms var(--ease-out) 80ms both; }
 
@@ -300,7 +302,7 @@ html {
   }
   .field-error {
     @apply mt-1.5 text-meta text-negative;
-    animation: rise var(--dur-base) var(--ease-out) both;
+    animation: rise var(--dur-base) var(--ease-out) backwards;
   }
 
   /* ---- data tables: 14px rows, sticky header row under the condensed page header */

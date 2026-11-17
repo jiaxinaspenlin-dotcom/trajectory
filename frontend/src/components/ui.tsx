@@ -300,7 +300,8 @@ export function Segmented<T extends string>({ label, value, options, onChange, s
         <span
           aria-hidden
           className="absolute left-0 top-0 rounded-md bg-white shadow-card transition-transform duration-base ease-out"
-          style={{ width: 1, height: box.h, transform: `translate(${box.x}px, ${box.y}px) scaleX(${box.w})`, transformOrigin: "left" }}
+          // real width (so the rounded corners stay round); only the position animates
+          style={{ width: box.w, height: box.h, transform: `translate(${box.x}px, ${box.y}px)` }}
         />
       )}
       {options.map((o) => (
@@ -309,7 +310,7 @@ export function Segmented<T extends string>({ label, value, options, onChange, s
           type="button"
           aria-pressed={value === o.value}
           onClick={() => onChange(o.value)}
-          className={`press num relative whitespace-nowrap rounded-md font-medium transition-colors duration-fast ${size === "sm" ? "h-8 px-2.5 text-[13px]" : "h-9 px-2.5 text-sm sm:px-3.5"} ${
+          className={`press num relative whitespace-nowrap rounded-md font-medium transition-colors duration-fast ${size === "sm" ? "h-8 px-2.5 text-[13px]" : "h-9 px-2 text-sm sm:px-3.5"} ${
             value === o.value ? `text-ink ${box ? "" : "bg-white shadow-card"}` : "text-ink-muted hover:text-ink"
           }`}
         >
@@ -335,7 +336,8 @@ export function Drawer({
     if (!open) return;
     const opener = document.activeElement as HTMLElement | null;
     const panel = ref.current;
-    const first = panel?.querySelector<HTMLElement>("input, textarea, select, button:not([data-drawer-close]), a[href]");
+    // a form field first (ready to type), else the first control
+    const first = panel?.querySelector<HTMLElement>("input, textarea, select") ?? panel?.querySelector<HTMLElement>("button:not([data-drawer-close]), a[href]");
     (first ?? panel)?.focus({ preventScroll: true });
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();

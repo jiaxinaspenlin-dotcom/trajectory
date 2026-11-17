@@ -7,7 +7,8 @@ import { asSentence, labelPhrase, sectorLabel } from "@/lib/format";
 import { setPipelineStatus } from "@/lib/myWorkspace";
 import { WebEvidence, WebResult, WebSearchResponse, WebSearchStatus, WebSource } from "@/lib/types";
 import { useToast } from "./Toast";
-import { Badge, ErrorState, Spinner } from "./ui";
+import { Badge, Button, ErrorState, Skeleton } from "./ui";
+import { CheckIcon } from "./icons";
 
 const KIND_LABEL: Record<WebEvidence["kind"], string> = {
   launch: "Launch",
@@ -101,11 +102,11 @@ export function WebSourcing({ onSourced }: { onSourced: () => void }) {
   }
 
   if (statusError) return <ErrorState message={`Couldn't check web search: ${statusError}`} onRetry={loadStatus} />;
-  if (!status) return <Spinner label="Checking Web Search…" />;
+  if (!status) return <div role="status" aria-label="Checking Web Search…" className="space-y-3"><Skeleton className="h-4 w-48" /><Skeleton className="h-24 w-full rounded-lg" /></div>;
 
   if (!status.search_configured || !status.ai_configured) {
     return (
-      <div className="rounded-lg border border-dashed border-line-strong bg-white px-5 py-6" data-testid="web-not-configured">
+      <div className="animate-rise rounded-xl bg-surface-sunken px-5 py-6" data-testid="web-not-configured">
         <p className="text-sm font-medium text-ink">Web Search Isn&apos;t Set Up Yet</p>
         <ul className="mt-2 space-y-1 text-sm text-ink-muted">
           {!status.search_configured && <li>Add <code className="font-mono text-ink-soft">TAVILY_API_KEY</code> to the backend environment and restart it.</li>}
@@ -136,9 +137,7 @@ export function WebSourcing({ onSourced }: { onSourced: () => void }) {
           />
         </label>
         <div className="flex flex-wrap items-center gap-2">
-          <button type="submit" className="btn-primary" disabled={loading || request.trim().length < 3}>
-            {loading ? "Searching…" : "Search the Web"}
-          </button>
+          <Button type="submit" variant="primary" busy={loading} disabled={request.trim().length < 3}>Search the Web</Button>
           <button
             type="button"
             className="btn-secondary"
@@ -148,7 +147,6 @@ export function WebSourcing({ onSourced }: { onSourced: () => void }) {
           >
             Start from Fund Thesis
           </button>
-          {loading && <Spinner label="Planning Queries, Searching the Web, Checking Each Claim Against Its Source…" />}
         </div>
         <p className="text-xs text-ink-muted">
           Searches company sites, launch posts, and changelogs. Nothing is added to Founders until you save a result.
@@ -156,6 +154,12 @@ export function WebSourcing({ onSourced }: { onSourced: () => void }) {
       </form>
 
       {error && <ErrorState message={error} onRetry={request.trim().length >= 3 ? run : undefined} />}
+      {loading && (
+        <div className="space-y-3 border-t border-line pt-4" role="status" aria-label="Searching">
+          <p className="text-meta text-ink-muted">Planning Queries, Searching the Web, Checking Each Claim Against Its Source…</p>
+          {[0, 1].map((i) => <Skeleton key={i} className="h-44 w-full rounded-xl" />)}
+        </div>
+      )}
       {search && !loading && <SearchResults search={search} restored={restored} onSaved={onSaved} />}
     </div>
   );
@@ -182,7 +186,7 @@ function SearchResults({
           {search.results.length} {search.results.length === 1 ? "Lead" : "Leads"} from {search.source_count} {search.source_count === 1 ? "Source" : "Sources"}
         </span>
         <span>· {search.queries.length} {search.queries.length === 1 ? "Query" : "Queries"}</span>
-        <button type="button" className="btn-ghost btn-sm" aria-expanded={showSources} onClick={() => setShowSources((v) => !v)}>
+        <button type="button" className="btn-ghost btn-sm ml-auto" aria-expanded={showSources} onClick={() => setShowSources((v) => !v)}>
           {showSources ? "Hide" : "Show"} Sources
         </button>
         {search.rejected.length > 0 && (
@@ -192,9 +196,9 @@ function SearchResults({
         )}
       </div>
 
-      {showSources && <SourceList sources={search.sources} queries={search.queries} />}
+      {showSources && <div className="animate-fade"><SourceList sources={search.sources} queries={search.queries} /></div>}
       {showRejected && (
-        <ul className="space-y-1 rounded-md border border-line bg-surface-sunken p-3 text-xs text-ink-muted">
+        <ul className="animate-fade space-y-1 rounded-lg bg-surface-sunken p-3 text-xs text-ink-muted">
           {search.rejected.map((r, i) => (
             <li key={i}><span className="text-ink-soft">{r.company_name || "Unnamed Candidate"}</span>: {r.reason}</li>
           ))}
@@ -231,8 +235,8 @@ function SearchResults({
       )}
 
       <ol className="space-y-3">
-        {search.results.map((r) => (
-          <li key={r.key}>
+        {search.results.map((r, i) => (
+          <li key={r.key} className="animate-rise" style={{ "--i": i } as React.CSSProperties}>
             <ResultCard searchId={search.search_id} result={r} sources={sources} onSaved={onSaved} />
           </li>
         ))}
@@ -243,7 +247,7 @@ function SearchResults({
 
 function SourceList({ sources, queries }: { sources: WebSource[]; queries: string[] }) {
   return (
-    <div className="rounded-md border border-line bg-surface-sunken p-3 text-xs">
+    <div className="rounded-lg bg-surface-sunken p-3 text-xs">
       <p className="text-ink-muted">Queries: <span data-content>{queries.map((q) => `“${q}”`).join(" · ")}</span></p>
       <ol className="mt-2 space-y-1">
         {sources.map((s) => (
@@ -382,12 +386,15 @@ function ResultCard({
   }
 
   const hasDated = r.evidence.some((e) => e.date_basis === "search_provider");
+  // detail on demand: the first two sources, the rest behind one click
+  const [allEvidence, setAllEvidence] = useState(false);
+  const evidence = allEvidence ? r.evidence : r.evidence.slice(0, 2);
 
   return (
-    <article className="card p-4" data-testid={`web-result-${r.key}`} aria-labelledby={`web-result-${r.key}-name`}>
+    <article className="card p-5 transition-shadow duration-base hover:shadow-hover" data-testid={`web-result-${r.key}`} aria-labelledby={`web-result-${r.key}-name`}>
       <header className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <h3 id={`web-result-${r.key}-name`} className="text-base font-semibold text-ink" data-content>{r.company_name}</h3>
+          <h3 id={`web-result-${r.key}-name`} className="text-section text-ink" data-content>{r.company_name}</h3>
           <p className="flex flex-wrap items-center gap-x-2 text-xs text-ink-muted">
             {r.website
               ? <a href={r.website} target="_blank" rel="noreferrer" title={r.website_basis ? asSentence(r.website_basis) : undefined} className="text-brand hover:underline" data-content>{r.domain} ↗</a>
@@ -396,7 +403,8 @@ function ResultCard({
           </p>
         </div>
         {oppId != null && (
-          <Badge tone="bg-brand-wash text-brand" title="This company already has a lead in Founders, matched by a reliable identifier.">
+          <Badge tone="animate-fade bg-brand-wash text-brand" title="This company already has a lead in Founders, matched by a reliable identifier.">
+            {r.saved_opportunity_id && <CheckIcon size={12} className="check-draw" />}
             {r.saved_opportunity_id ? "Saved" : "Already in Founders"}
           </Badge>
         )}
@@ -419,8 +427,13 @@ function ResultCard({
         <section>
           <h4 className="label">Evidence</h4>
           <ul className="mt-0.5 divide-y divide-line">
-            {r.evidence.map((e) => <EvidenceRow key={e.source_id} e={e} showStatus={oppId != null} />)}
+            {evidence.map((e) => <EvidenceRow key={e.source_id} e={e} showStatus={oppId != null} />)}
           </ul>
+          {r.evidence.length > 2 && (
+            <button type="button" className="link mt-1 text-meta" aria-expanded={allEvidence} onClick={() => setAllEvidence((v) => !v)}>
+              {allEvidence ? "Show Fewer" : `Show ${r.evidence.length - 2} More`}
+            </button>
+          )}
           {hasDated && <p className="mt-1 text-xs text-ink-muted">* Published date reported by the search provider, not stated on the page.</p>}
         </section>
         <section>
@@ -444,16 +457,12 @@ function ResultCard({
           </>
         ) : (
           <>
-            <button type="button" className="btn-primary btn-sm" disabled={busy != null} onClick={() => save("saved")}>
-              {busy === "saved" ? "Saving…" : "Save Lead"}
-            </button>
-            <button type="button" className="btn-secondary btn-sm" disabled={busy != null} onClick={() => save("monitoring")}>
-              {busy === "monitoring" ? "Saving…" : "Monitor"}
-            </button>
+            <Button variant="primary" size="sm" busy={busy === "saved"} disabled={busy != null} onClick={() => save("saved")}>Save Lead</Button>
+            <Button size="sm" busy={busy === "monitoring"} disabled={busy != null} onClick={() => save("monitoring")}>Monitor</Button>
             <span className="text-xs text-ink-muted">Adds to Founders in Sourcing. Move to Screening stays your call.</span>
           </>
         )}
-        {error && <p className="w-full text-xs text-negative" role="alert">{error}</p>}
+        {error && <p className="field-error w-full" role="alert">{error}</p>}
       </footer>
     </article>
   );
@@ -492,14 +501,14 @@ export function LeadWebCheck({ opportunityId, onUpdated }: { opportunityId: numb
     <span className="flex flex-wrap items-center gap-2">
       {message && (
         <span role={message.tone === "error" ? "alert" : "status"} data-testid="web-check-result"
-          className={`text-xs ${message.tone === "error" ? "text-negative" : "text-ink-muted"}`}>
+          className={`animate-fade text-xs ${message.tone === "error" ? "text-negative" : "text-ink-muted"}`}>
           {message.text}
         </span>
       )}
-      <button type="button" className="btn-secondary btn-sm" onClick={check} disabled={busy}
+      <Button size="sm" onClick={check} busy={busy}
         title="Search this lead's own site and launch sites for releases or launches it doesn't have yet.">
-        {busy ? "Checking the Web…" : "Check the Web for Updates"}
-      </button>
+        Check the Web for Updates
+      </Button>
     </span>
   );
 }
