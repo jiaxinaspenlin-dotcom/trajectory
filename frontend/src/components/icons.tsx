@@ -65,6 +65,9 @@ export const MoreIcon = (p: IconProps) => (
 export const CheckIcon = (p: IconProps) => (
   <Svg {...p}><path d="M3.5 8.5 6.5 11.5 12.5 4.5" /></Svg>
 );
+export const ChevronLeftIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M10 3.5 5.5 8 10 12.5" /></Svg>
+);
 export const ChevronRightIcon = (p: IconProps) => (
   <Svg {...p}><path d="M6 3.5 10.5 8 6 12.5" /></Svg>
 );

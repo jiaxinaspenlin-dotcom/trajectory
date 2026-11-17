@@ -1,83 +1,163 @@
-// Dashboard: the next action first with one primary button, the rest grouped by
-// kind of work with real counts, stages as one bar, and exactly one action in an
-// empty workspace.
+// Dashboard: every waiting record as a deck (queue order, one card in front, one
+// primary button), flipped by buttons, keys or swipe and kept in ?card=; kinds of
+// work jump the deck; stages as one bar; exactly one action in an empty workspace.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 
 const push = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push, replace: vi.fn() }), usePathname: () => "/vc", useSearchParams: () => new URLSearchParams() }));
+const replace = vi.fn();
+let search = new URLSearchParams();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push, replace }), usePathname: () => "/vc", useSearchParams: () => search }));
 const fetched: Record<string, unknown> = {};
+const requested: string[] = [];
 vi.mock("@/lib/useFetch", () => ({
-  useFetch: (url: string) => ({ data: fetched[url] ?? null, loading: false, error: null, reload: () => {} }),
+  useFetch: (url: string) => { requested.push(url); return { data: fetched[url] ?? null, loading: false, error: null, reload: () => {} }; },
 }));
 vi.mock("@/lib/api", () => ({ api: { put: vi.fn().mockResolvedValue({}) } }));
+// jsdom has no PointerEvent: a MouseEvent carrying pointerType and pointerId
+if (!("PointerEvent" in window)) {
+  class PointerEventShim extends MouseEvent {
+    pointerType: string; pointerId: number;
+    constructor(type: string, init: PointerEventInit = {}) { super(type, init); this.pointerType = init.pointerType ?? "mouse"; this.pointerId = init.pointerId ?? 1; }
+  }
+  (window as unknown as { PointerEvent: unknown }).PointerEvent = PointerEventShim;
+}
 
-const deal = (id: number, name: string, stage: string, key: string, priority: number) => ({
-  id, fund_id: 1, entry_type: "inbound", stage, status: "applied", founder: null, company: { id, name, sector: "fintech", one_liner: "" },
-  thesis_fit_score: 50, surfaced_reason: "", first_signal_at: "2026-11-01T00:00:00Z", recommendation_at: null, founder_score: null, is_demo: true,
-  next_action: "x", next_action_key: key, priority, age_days: 1,
+const item = (id: number, name: string, group: string, stage: string, key: string, detail: string | null, entry = "outbound") => ({
+  opportunity_id: id, name, founder_name: null, entry_type: entry, stage, next_action: key === "run_analysis" ? "Run Analysis" : "x",
+  next_action_key: key, next_action_detail: detail, priority: 1, age_days: 2, waiting_since: "2026-11-15T00:00:00Z", group,
 });
-const lead = (id: number, name: string) => ({ ...deal(id, name, "sourcing", "run_analysis", 4), entry_type: "outbound", status: "prospect", evidence_count: 2, top_project: null });
 const queue = [
-  { opportunity_id: 3, name: "Inferra", founder_name: null, entry_type: "outbound", stage: "diligence", next_action: "Review Recommendation", next_action_key: "review_recommendation", next_action_detail: "Recommended: Continue Diligence", priority: 1, age_days: 0 },
-  { opportunity_id: 2, name: "PayMesh", founder_name: null, entry_type: "outbound", stage: "diligence", next_action: "Review Recommendation", next_action_key: "review_recommendation", next_action_detail: "Recommended: Monitor", priority: 1, age_days: 0 },
+  item(3, "Inferra", "recommendation", "diligence", "review_recommendation", "Recommended: Continue Diligence"),
+  item(2, "PayMesh", "recommendation", "diligence", "review_recommendation", "Recommended: Monitor"),
+  item(4, "TerraSignal", "application", "screening", "review_application", "New Inbound Application", "inbound"),
+  item(5, "CareBridge", "lead", "sourcing", "run_analysis", "Scores the Three Screening Axes"),
+  item(6, "ForgeTools", "lead", "sourcing", "run_analysis", "Scores the Three Screening Axes"),
 ];
 
 function populated() {
   fetched["/api/dashboard"] = {
     thesis: { fund_name: "Northstar Ventures (Demo)", sectors: [], stages: [], geographies: [] },
     stage_counts: { sourcing: 2, screening: 1, diligence: 2 },
+    stage_names: { sourcing: ["CareBridge", "ForgeTools"], screening: ["TerraSignal"], diligence: ["Inferra", "PayMesh"] },
     action_queue: queue,
+    queue_groups: [{ key: "recommendation", count: 2, first_opportunity_id: 3 }, { key: "application", count: 1, first_opportunity_id: 4 }, { key: "lead", count: 2, first_opportunity_id: 5 }],
     recent_evidence: [{ id: 9, kind: "github_repo", title: "Public repository: aep", source_name: "GitHub", collected_at: new Date().toISOString(), opportunity_id: 3, opportunity_name: "Inferra" }],
   };
-  fetched["/api/pipeline"] = { items: [deal(3, "Inferra", "diligence", "review_recommendation", 1), deal(2, "PayMesh", "diligence", "review_recommendation", 1), deal(4, "TerraSignal", "screening", "review_application", 2)] };
-  fetched["/api/sourcing/prospects"] = { items: [lead(5, "CareBridge"), lead(6, "ForgeTools")] };
 }
 
 afterEach(() => {
   cleanup();
   localStorage.clear();
+  push.mockClear(); replace.mockClear(); requested.length = 0;
+  search = new URLSearchParams();
   for (const k of Object.keys(fetched)) delete fetched[k];
 });
 
 async function renderDashboard() {
   localStorage.setItem("trajectory_tour_seen_anon", "1");
   const { default: Dashboard } = await import("@/app/vc/page");
-  render(<Dashboard />);
+  return render(<Dashboard />);
 }
+const card = () => screen.getByTestId("deck-card");
+
+describe("Dashboard deck", () => {
+  it("shows the first waiting record in front with one primary button, from one request", async () => {
+    populated();
+    await renderDashboard();
+    const deck = screen.getByRole("region", { name: "Waiting Records" });
+    expect(deck).toHaveAttribute("aria-roledescription", "carousel");
+    expect(card()).toHaveAttribute("aria-label", "1 of 5");
+    expect(within(card()).getByText("Inferra")).toBeInTheDocument();
+    expect(within(card()).getByText("Recommended: Continue Diligence")).toBeInTheDocument();
+    expect(card()).toHaveTextContent("Diligence · Outbound · Waiting 2 Days");
+    expect(within(card()).getByRole("link", { name: /Review Recommendation/ })).toHaveAttribute("href", "/vc/opportunities/3?tab=decision&from=deck");
+    expect(document.querySelectorAll(".btn-primary, .btn-lg").length).toBe(1);
+    // the whole card opens it too
+    fireEvent.click(card());
+    expect(push).toHaveBeenCalledWith("/vc/opportunities/3?tab=decision&from=deck");
+    expect([...new Set(requested)]).toEqual(["/api/dashboard"]);
+  });
+
+  it("flips with the buttons and the arrow keys, keeps the card in the URL, and stops at the ends", async () => {
+    populated();
+    await renderDashboard();
+    expect(screen.getByRole("button", { name: "Previous Card" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Next Card" }));
+    expect(replace).toHaveBeenLastCalledWith("/vc?card=2", { scroll: false });
+    fireEvent.keyDown(card(), { key: "ArrowRight" });
+    expect(replace).toHaveBeenLastCalledWith("/vc?card=2", { scroll: false }); // still card 1 here: the URL drives the deck
+    cleanup();
+    search = new URLSearchParams("card=6");
+    await renderDashboard();
+    expect(card()).toHaveAttribute("aria-label", "5 of 5");
+    expect(screen.getByTestId("deck-position")).toHaveTextContent("5 of 5");
+    expect(screen.getByRole("button", { name: "Next Card" })).toBeDisabled();
+    expect(within(card()).getByRole("link", { name: /Review Lead/ })).toHaveAttribute("href", "/vc/opportunities/6?from=deck");
+    fireEvent.keyDown(card(), { key: "ArrowLeft" });
+    expect(replace).toHaveBeenLastCalledWith("/vc?card=5", { scroll: false });
+    replace.mockClear();
+    fireEvent.keyDown(card(), { key: "ArrowRight" });
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the first card when the one in the URL is no longer waiting", async () => {
+    populated();
+    search = new URLSearchParams("card=99");
+    await renderDashboard();
+    expect(card()).toHaveAttribute("aria-label", "1 of 5");
+    expect(within(card()).getByText("Inferra")).toBeInTheDocument();
+  });
+
+  it("names an application and its one action", async () => {
+    populated();
+    search = new URLSearchParams("card=4");
+    await renderDashboard();
+    expect(within(card()).getByText("New Inbound Application")).toBeInTheDocument();
+    expect(card()).toHaveTextContent("Screening · Inbound · Waiting 2 Days");
+    expect(within(card()).getByRole("link", { name: /Review Application/ })).toHaveAttribute("href", "/vc/opportunities/4?from=deck");
+  });
+
+  it("jumps by kind of work, marks the current kind, and the counts add up to the deck", async () => {
+    populated();
+    search = new URLSearchParams("card=2");
+    await renderDashboard();
+    const kinds = screen.getByRole("region", { name: "Jump to a Kind of Work" });
+    const tiles = within(kinds).getAllByRole("button");
+    // count (read once, by its screen-reader copy) and kind
+    expect(tiles.map((t) => [t.querySelector(".sr-only")!.textContent, t.querySelector(".font-medium.text-ink")!.textContent])).toEqual([
+      ["2", "Recommendations to Review"], ["1", "Application to Review"], ["2", "New Leads"],
+    ]);
+    expect(tiles[0]).toHaveTextContent("Showing");
+    expect(tiles[0]).toHaveAttribute("aria-current", "true");
+    expect(tiles[1]).not.toHaveAttribute("aria-current");
+    expect(within(kinds).getByText("5 Waiting")).toBeInTheDocument();
+    fireEvent.click(tiles[2]);
+    expect(replace).toHaveBeenLastCalledWith("/vc?card=5", { scroll: false });
+  });
+
+  it("swipes on touch", async () => {
+    populated();
+    await renderDashboard();
+    const c = card();
+    fireEvent.pointerDown(c, { pointerType: "touch", clientX: 300, clientY: 100, pointerId: 1 });
+    fireEvent.pointerMove(c, { pointerType: "touch", clientX: 200, clientY: 104, pointerId: 1 });
+    fireEvent.pointerUp(c, { pointerType: "touch", clientX: 200, clientY: 104, pointerId: 1 });
+    expect(replace).toHaveBeenLastCalledWith("/vc?card=2", { scroll: false });
+    // a swipe isn't a click
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("drops what this browser already decided or dismissed", async () => {
+    populated();
+    localStorage.setItem("trajectory_investor_decisions", JSON.stringify({ 3: { decision: "advance" } }));
+    await renderDashboard();
+    expect(within(card()).getByText("PayMesh")).toBeInTheDocument();
+    expect(card()).toHaveAttribute("aria-label", "1 of 4");
+  });
+});
 
 describe("Dashboard", () => {
-  it("leads with one task and one primary button; a recommendation opens the Decision tab", async () => {
-    populated();
-    await renderDashboard();
-    const now = screen.getByRole("region", { name: "Right Now" });
-    expect(within(now).getByText("Inferra")).toBeInTheDocument();
-    expect(within(now).getByRole("link", { name: /Review Recommendation/ })).toHaveAttribute("href", "/vc/opportunities/3?tab=decision");
-    // one primary action on the page
-    expect(document.querySelectorAll(".btn-primary, .btn-lg").length).toBe(1);
-    // the whole panel opens it too
-    fireEvent.click(within(now).getByText("Recommended: Continue Diligence"));
-    expect(push).toHaveBeenCalledWith("/vc/opportunities/3?tab=decision");
-  });
-
-  it("groups what else is waiting by kind of work, with real counts and filtered lists", async () => {
-    populated();
-    await renderDashboard();
-    const waiting = screen.getByRole("region", { name: "Also Waiting" });
-    const links = within(waiting).getAllByRole("link");
-    // Inferra is Right Now: the groups leave it out, and "1 of N" is it plus the groups
-    expect(links.map((l) => [l.getAttribute("href"), l.textContent])).toEqual([
-      ["/vc/pipeline?next=review_recommendation", expect.stringContaining("1Recommendation to Review")],
-      ["/vc/pipeline?next=review_application", expect.stringContaining("1Application to Review")],
-      ["/vc/founders", expect.stringContaining("2New Leads")],
-    ]);
-    expect(within(waiting).queryByText(/Inferra/)).toBeNull();
-    expect(within(waiting).getByText("PayMesh")).toBeInTheDocument();
-    expect(within(screen.getByRole("region", { name: "Right Now" })).getByText(/1 of 5/)).toBeInTheDocument();
-    // no row per company with the same button
-    expect(within(waiting).queryByRole("button")).toBeNull();
-  });
-
   it("shows the four stages as one summary, each opening its list", async () => {
     populated();
     await renderDashboard();
@@ -90,18 +170,8 @@ describe("Dashboard", () => {
     expect(screen.getByRole("tooltip")).toHaveTextContent("Inferra, PayMesh");
   });
 
-  it("drops what this browser already decided or dismissed", async () => {
-    populated();
-    localStorage.setItem("trajectory_investor_decisions", JSON.stringify({ 3: { decision: "advance" } }));
-    await renderDashboard();
-    const now = screen.getByRole("region", { name: "Right Now" });
-    expect(within(now).getByText("PayMesh")).toBeInTheDocument();
-  });
-
   it("an empty workspace shows exactly one setup action", async () => {
-    fetched["/api/dashboard"] = { thesis: null, stage_counts: {}, action_queue: [], recent_evidence: [] };
-    fetched["/api/pipeline"] = { items: [] };
-    fetched["/api/sourcing/prospects"] = { items: [] };
+    fetched["/api/dashboard"] = { thesis: null, stage_counts: {}, stage_names: {}, action_queue: [], queue_groups: [], recent_evidence: [] };
     await renderDashboard();
     const actions = [...document.querySelectorAll("main a, main button, a.btn-primary, button")].filter((el) => !el.closest("[aria-hidden='true']"));
     expect(actions.map((a) => a.textContent)).toEqual(["Create Thesis"]);

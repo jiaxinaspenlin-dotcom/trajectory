@@ -1,36 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useFetch } from "@/lib/useFetch";
 import { CountUp, ErrorState, PageHeader, Reveal, Skeleton } from "@/components/ui";
 import { DASHBOARD_TOUR, GuidedTour } from "@/components/GuidedTour";
+import { Deck } from "@/components/Deck";
 import { ArrowRightIcon, CheckIcon } from "@/components/icons";
 import { humanStatus, sourceName } from "@/lib/format";
-import { evidenceHref, nextActionHref, opportunityName, stageDot } from "@/lib/pipeline";
+import { evidenceHref, stageDot } from "@/lib/pipeline";
 import { accountScope } from "@/lib/auth";
 import { useSeen } from "@/lib/motion";
 import { getMyDecisions, getPipeline, LocalDecision, PipelineStatus } from "@/lib/myWorkspace";
-import { FounderLead, PipelineDeal } from "@/lib/types";
-
-interface ActionItem {
-  opportunity_id: number;
-  name: string;
-  founder_name: string | null;
-  entry_type: string;
-  stage: string;
-  next_action: string;
-  next_action_key: string;
-  next_action_detail: string | null;
-  priority: number;
-  age_days: number;
-}
+import { cardHref, DECK_GROUPS, DeckItem, deckGroups, openItems } from "@/lib/deck";
 
 interface Dashboard {
   thesis: { fund_name: string; sectors: string[]; stages: string[]; geographies: string[] } | null;
   stage_counts: Record<string, number>;
-  action_queue: ActionItem[];
+  stage_names: Record<string, string[]>;
+  action_queue: DeckItem[];
+  queue_groups: { key: string; count: number; first_opportunity_id: number }[];
   recent_evidence: { id: number; kind: string; title: string; source_name: string; collected_at: string; opportunity_id: number | null; opportunity_name: string | null }[];
 }
 
@@ -42,20 +32,15 @@ const STAGE_LINKS: Record<string, string> = {
   decision: "/vc/pipeline?stage=decision",
 };
 
-// Kinds of work, in the order they matter. Each group opens its filtered list.
-const WORK: { key: string; one: string; many: string; href: string }[] = [
-  { key: "review_recommendation", one: "Recommendation to Review", many: "Recommendations to Review", href: "/vc/pipeline?next=review_recommendation" },
-  { key: "review_application", one: "Application to Review", many: "Applications to Review", href: "/vc/pipeline?next=review_application" },
-  { key: "resolve_diligence", one: "Deal with Open Diligence", many: "Deals with Open Diligence", href: "/vc/pipeline?next=resolve_diligence" },
-  { key: "run_analysis", one: "Deal to Analyze", many: "Deals to Analyze", href: "/vc/pipeline?next=run_analysis" },
-  { key: "generate_memo", one: "Memo to Generate", many: "Memos to Generate", href: "/vc/pipeline?next=generate_memo" },
-];
-
+// useSearchParams (the deck's ?card=) needs a Suspense boundary
 export default function DashboardPage() {
+  return <Suspense fallback={<div className="space-y-10" role="status" aria-label="Loading Dashboard…"><PageHeader title="Dashboard" /><DashboardSkeleton /></div>}><DashboardContent /></Suspense>;
+}
+
+function DashboardContent() {
   const { data, error, loading, reload } = useFetch<Dashboard>("/api/dashboard");
-  const deals = useFetch<{ items: PipelineDeal[] }>("/api/pipeline");
-  const leads = useFetch<{ items: FounderLead[] }>("/api/sourcing/prospects");
   const router = useRouter();
+  const params = useSearchParams();
   const [tourOpen, setTourOpen] = useState(false);
   const [tourChecked, setTourChecked] = useState(false);
   // per-browser workspace overlay (saved / monitoring / dismissed + decisions)
@@ -98,29 +83,17 @@ export default function DashboardPage() {
   if (!data) return null;
 
   // Shared records don't know what this browser decided or dismissed: drop those.
-  const open = (id: number) => !decisions[id] && pipeline[id] !== "dismissed";
-  const queue = (data.action_queue || []).filter((a) => open(a.opportunity_id));
-  const next = queue[0];
-  const openDeals = (deals.data?.items ?? []).filter((d) => open(d.id));
-  const newLeads = (leads.data?.items ?? []).filter((l) => l.stage === "sourcing" && l.status !== "dismissed" && open(l.id));
-
-  // "Also Waiting" is everything except the Right Now record, so "1 of N" is that
-  // record plus the groups (the dashboard's own queue is capped and can't count)
-  const alsoDeals = openDeals.filter((d) => d.id !== next?.opportunity_id);
-  const alsoLeads = newLeads.filter((l) => l.id !== next?.opportunity_id);
-  const groups = [
-    ...WORK.map((w) => {
-      const items = alsoDeals.filter((d) => d.next_action_key === w.key);
-      return { key: w.key, count: items.length, label: items.length === 1 ? w.one : w.many, href: w.href, names: items.map(opportunityName) };
-    }),
-    { key: "new_leads", count: alsoLeads.length, label: alsoLeads.length === 1 ? "New Lead" : "New Leads", href: "/vc/founders", names: alsoLeads.map(opportunityName) },
-  ].filter((g) => g.count > 0);
-  const waitingTotal = deals.data && leads.data ? 1 + groups.reduce((a, g) => a + g.count, 0) : queue.length;
-
-  const byStage: Record<string, string[]> = {
-    sourcing: newLeads.map(opportunityName),
-    ...Object.fromEntries(["screening", "diligence", "decision"].map((s) => [s, openDeals.filter((d) => d.stage === s).map(opportunityName)])),
-  };
+  // The deck is every other waiting record, in the queue's order.
+  const items = openItems(data.action_queue || [], decisions, pipeline);
+  const wanted = Number(params.get("card"));
+  const found = items.findIndex((it) => it.opportunity_id === wanted);
+  // a card that's no longer waiting falls back to the first
+  const index = found >= 0 ? found : 0;
+  const current = items[index];
+  const groups = deckGroups(items);
+  // flipping is only which card is in front: it's kept in the URL (so Back from a
+  // record returns to it) without adding a history entry per flip
+  const show = (i: number) => router.replace(`/vc?card=${items[i].opportunity_id}`, { scroll: false });
 
   // setup, in order; an empty workspace shows only the first missing step
   const setup = [
@@ -135,11 +108,11 @@ export default function DashboardPage() {
     <div className="space-y-12">
       {header}
 
-      {/* 1. what to do right now: one task, one primary button */}
+      {/* 1. what's waiting: a deck, one card in front, one primary button */}
       <section aria-labelledby="now-title" data-tour="action-queue">
-        <h2 id="now-title" className="sr-only">Right Now</h2>
-        {next ? (
-          <NextUp a={next} total={waitingTotal} onOpen={() => router.push(nextActionHref(next.opportunity_id, next.next_action_key))} />
+        <h2 id="now-title" className="sr-only">Waiting for You</h2>
+        {current ? (
+          <Deck items={items} index={index} onIndex={show} onOpen={(it) => router.push(cardHref(it))} />
         ) : empty && stepIndex >= 0 ? (
           <SetupStep step={stepIndex} total={setup.length} {...setup[stepIndex]} />
         ) : (
@@ -154,7 +127,7 @@ export default function DashboardPage() {
             <Link href="/vc/founders?source=open" className="btn-primary">Source Founders</Link>
           </div>
         )}
-        {next && !data.thesis && (
+        {current && !data.thesis && (
           <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-meta text-caution">
             <span>No investment thesis yet — thesis fit can&apos;t be scored.</span>
             <Link href="/vc/fund?edit=1" className="link text-caution">Create Thesis</Link>
@@ -162,23 +135,35 @@ export default function DashboardPage() {
         )}
       </section>
 
-      {/* 2. what else is waiting, by kind of work */}
-      {groups.length > 0 && (
+      {/* 2. the deck by kind of work: each jumps to the first card of its kind */}
+      {groups.length > 1 && (
         <section aria-labelledby="waiting-title" data-tour="waiting">
-          <h2 id="waiting-title" className="mb-4 text-title text-ink">Also Waiting</h2>
+          <div className="mb-4 flex items-baseline justify-between gap-3">
+            <h2 id="waiting-title" className="text-title text-ink">Jump to a Kind of Work</h2>
+            <span className="num text-meta text-ink-muted">{items.length} Waiting</span>
+          </div>
           <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {groups.map((g, i) => (
-              <Reveal as="li" key={g.key} i={i} className="animate-rise">
-                <Link href={g.href} className="card-interactive group flex h-full flex-col rounded-xl border border-line bg-white p-5 focus-visible:outline-offset-2">
-                  <span className="flex items-baseline justify-between gap-3">
-                    <span className="text-[2rem] font-semibold leading-none tracking-tight text-ink"><CountUp value={g.count} /></span>
-                    <ArrowRightIcon size={18} className="slide-arrow" />
-                  </span>
-                  <span className="mt-2 text-body font-medium text-ink">{g.label}</span>
-                  <span className="mt-1 truncate text-meta text-ink-muted" data-content>{g.names.slice(0, 3).join(", ")}{g.names.length > 3 ? ` +${g.names.length - 3}` : ""}</span>
-                </Link>
-              </Reveal>
-            ))}
+            {groups.map((g, i) => {
+              const on = current?.group === g.key;
+              const meta = DECK_GROUPS[g.key];
+              return (
+                <Reveal as="li" key={g.key} i={i} className="animate-rise">
+                  <button
+                    type="button"
+                    aria-current={on ? "true" : undefined}
+                    onClick={() => { show(g.first); document.querySelector("[data-testid=deck]")?.scrollIntoView({ block: "nearest", behavior: "smooth" }); }}
+                    className={`card-interactive group flex h-full w-full flex-col rounded-xl border p-5 text-left focus-visible:outline-offset-2 ${on ? "border-brand bg-brand-wash" : "border-line bg-white"}`}
+                  >
+                    <span className="flex items-baseline justify-between gap-3">
+                      <span className="text-[2rem] font-semibold leading-none tracking-tight text-ink"><CountUp value={g.count} /></span>
+                      {on ? <span className="text-meta font-medium text-brand">Showing</span> : <ArrowRightIcon size={18} className="slide-arrow" />}
+                    </span>
+                    <span className="mt-2 text-body font-medium text-ink">{g.count === 1 ? meta.one : meta.many}</span>
+                    <span className="mt-1 truncate text-meta text-ink-muted" data-content>{g.names.slice(0, 3).join(", ")}{g.names.length > 3 ? ` +${g.names.length - 3}` : ""}</span>
+                  </button>
+                </Reveal>
+              );
+            })}
           </ul>
         </section>
       )}
@@ -190,7 +175,7 @@ export default function DashboardPage() {
             <h2 id="stages-title" className="text-title text-ink">Where Everything Stands</h2>
             <span className="num text-meta text-ink-muted">{total} {total === 1 ? "Record" : "Records"}</span>
           </div>
-          <StageBar counts={data.stage_counts} names={byStage} />
+          <StageBar counts={data.stage_counts} names={data.stage_names ?? {}} />
         </Reveal>
       )}
 
@@ -234,43 +219,6 @@ export default function DashboardPage() {
 function relativeDay(iso: string): string {
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
   return days <= 0 ? "Today" : days === 1 ? "Yesterday" : `${days} Days Ago`;
-}
-
-function waitingText(days: number): string {
-  return days === 0 ? "Waiting Since Today" : `Waiting ${days}d`;
-}
-
-// The most urgent task, on its own, in the accent color. The whole panel opens
-// it; the button says what it is.
-function NextUp({ a, total, onOpen }: { a: ActionItem; total: number; onOpen: () => void }) {
-  return (
-    <div
-      className="animate-rise group relative cursor-pointer overflow-hidden rounded-2xl bg-brand px-6 py-7 text-white shadow-raised transition-transform duration-base ease-out hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.995] sm:px-9 sm:py-9"
-      onClick={onOpen}
-    >
-      {/* a quiet trajectory line in the corner: the brand mark, not a decoration loop */}
-      <svg aria-hidden className="pointer-events-none absolute -right-6 -top-6 h-48 w-72 text-white/10" viewBox="0 0 280 180" fill="none">
-        <path d="M10 170 C 90 160, 140 120, 170 80 S 240 20, 275 10" stroke="currentColor" strokeWidth="14" strokeLinecap="round" />
-      </svg>
-      <p className="relative text-meta font-medium text-white/90">Right Now{total > 1 ? ` · 1 of ${total}` : ""}</p>
-      <div className="relative mt-3 flex flex-wrap items-end justify-between gap-x-8 gap-y-6">
-        <div className="min-w-0">
-          <Link href={`/vc/opportunities/${a.opportunity_id}`} onClick={(e) => e.stopPropagation()}
-            className="block truncate text-[2rem] font-semibold leading-tight tracking-[-0.025em] text-white hover:underline hover:decoration-white/40 hover:underline-offset-4 sm:text-display" data-content>{a.name}</Link>
-          <p className="mt-2 text-body text-white/90">{a.next_action_detail ?? a.next_action}</p>
-          <p className="mt-1 text-meta text-white/90">{humanStatus(a.stage)} · {a.entry_type === "inbound" ? "Inbound" : "Outbound"} · <span className="num">{waitingText(a.age_days)}</span></p>
-        </div>
-        <Link
-          href={nextActionHref(a.opportunity_id, a.next_action_key)}
-          onClick={(e) => e.stopPropagation()}
-          className="btn btn-lg w-full bg-white text-brand shadow-raised hover:bg-brand-wash focus-visible:ring-white focus-visible:ring-offset-brand sm:w-auto"
-        >
-          {a.next_action}
-          <ArrowRightIcon size={18} className="transition-transform duration-base ease-out group-hover:translate-x-1" />
-        </Link>
-      </div>
-    </div>
-  );
 }
 
 // Empty workspace: exactly one setup action.

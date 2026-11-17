@@ -326,12 +326,17 @@ def dashboard(db: Session = Depends(get_db)) -> dict:
     thesis = active_thesis(db, fund.id)
     opps = db.scalars(select(Opportunity).where(Opportunity.fund_id == fund.id)).all()
 
-    from app.services.action_queue import build_action_queue
+    from app.services.action_queue import build_action_queue, group_counts
     from app.services.founder import momentum_for
 
     stage_counts: dict[str, int] = {}
+    stage_names: dict[str, list[str]] = {}
     for o in opps:
         stage_counts[str(o.stage)] = stage_counts.get(str(o.stage), 0) + 1
+        company = db.get(Company, o.company_id) if o.company_id else None
+        founder = db.get(Founder, o.founder_id) if o.founder_id else None
+        name = (company.name if company else None) or (founder.full_name if founder else None) or f"Opportunity #{o.id}"
+        stage_names.setdefault(str(o.stage), []).append(name)
 
     # top momentum
     momentum_ranked = []
@@ -362,8 +367,8 @@ def dashboard(db: Session = Depends(get_db)) -> dict:
     outbound_opps.sort(key=lambda o: -o.id)
     outbound = [opportunity_out(db, o) for o in outbound_opps[:24]]
 
-    # prioritized action queue — the investor's next steps
-    # the whole queue, so the Dashboard can show the top items and an honest "N more"
+    # prioritized action queue — the investor's next steps. The whole queue (the
+    # Dashboard deck covers every waiting record), with its counts per group.
     action_queue = build_action_queue(db, fund.id, limit=None)
 
     recent_evidence = db.scalars(
@@ -374,10 +379,12 @@ def dashboard(db: Session = Depends(get_db)) -> dict:
         "thesis": {"fund_name": thesis.fund_name, "sectors": thesis.sectors,
                    "stages": thesis.stages, "geographies": thesis.geographies} if thesis else None,
         "stage_counts": stage_counts,
+        "stage_names": stage_names,
         "top_outbound_prospects": outbound,
         "recent_inbound_applications": inbound,
         "highest_momentum": momentum_ranked[:5],
         "action_queue": action_queue,
+        "queue_groups": group_counts(action_queue),
         "recent_evidence": [
             {"id": e.id, "kind": e.kind, "title": e.title, "source_name": e.source_name,
              "collected_at": e.collected_at.isoformat(), **_evidence_owner(opps, e, db)}

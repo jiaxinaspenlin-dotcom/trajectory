@@ -100,6 +100,37 @@ def opportunity_age_days(o: Opportunity, now: datetime | None = None) -> int:
     return max(0, (now - start).days)
 
 
+# The Dashboard deck's groups, in the order they're shown. A pending recommendation
+# or application is its own kind of work wherever it sits; anything else still in
+# Sourcing is a lead; the rest is grouped by its next action.
+QUEUE_GROUPS: tuple[str, ...] = ("recommendation", "application", "lead", "diligence", "analysis", "memo")
+_GROUP_BY_KEY = {
+    "review_recommendation": "recommendation",
+    "review_application": "application",
+    "resolve_diligence": "diligence",
+    "run_analysis": "analysis",
+    "generate_memo": "memo",
+}
+
+
+def queue_group(stage: str, key: str) -> str:
+    if key in ("review_recommendation", "review_application"):
+        return _GROUP_BY_KEY[key]
+    if stage == "sourcing":
+        return "lead"
+    return _GROUP_BY_KEY.get(key, "analysis")
+
+
+def group_counts(queue: list[dict]) -> list[dict]:
+    """Per group, in deck order: how many are waiting and the first one in the deck."""
+    out = []
+    for g in QUEUE_GROUPS:
+        members = [x for x in queue if x["group"] == g]
+        if members:
+            out.append({"key": g, "count": len(members), "first_opportunity_id": members[0]["opportunity_id"]})
+    return out
+
+
 def build_action_queue(db: Session, fund_id: int, limit: int | None = 8) -> list[dict]:
     now = datetime.now(UTC)
     opps = db.scalars(select(Opportunity).where(Opportunity.fund_id == fund_id)).all()
@@ -129,6 +160,8 @@ def build_action_queue(db: Session, fund_id: int, limit: int | None = 8) -> list
                 "next_action_detail": nxt["detail"],
                 "priority": nxt["priority"],
                 "age_days": opportunity_age_days(o, now),
+                "waiting_since": waiting_since[o.id].isoformat(),
+                "group": queue_group(str(o.stage), nxt["key"]),
             }
         )
 

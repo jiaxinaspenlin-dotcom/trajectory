@@ -192,8 +192,8 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
 }
 
 export const DASHBOARD_TOUR: TourStep[] = [
-  { target: "action-queue", title: "Start with What to Do Right Now", body: "Welcome to your investor workspace. The most urgent task is always here, with one button that opens the right part of that opportunity: its decision, its analysis or its diligence." },
-  { target: "waiting", title: "Everything Else, Grouped", body: "What else is waiting, by kind of work: recommendations to review, applications, new leads. Each group opens a filtered list." },
+  { target: "action-queue", title: "Everything Waiting, as a Deck", body: "Welcome to your investor workspace. Every record waiting for you is a card here, most urgent first. Flip through with the arrows, the arrow keys or a swipe; each card's one button opens what's waiting: its decision, its application or its evidence." },
+  { target: "waiting", title: "Jump by Kind of Work", body: "Recommendations to review, applications, new leads: each jumps the deck to the first card of its kind, and the kind you're on is marked." },
   { target: "overview", title: "Where Everything Stands", body: "Every lead and deal by stage: Sourcing, Screening, Diligence, Decision. Hover a stage to see what's in it; click it to open those records." },
   { target: "nav", title: "Everything Else Is One Click Away", body: "Map shows every lead and deal in one view. Founders ranks the leads you've sourced, Pipeline holds every active deal, and Fund keeps your thesis that every score is evaluated against." },
   { target: "action-queue", title: "Open an Opportunity to Go Deeper", body: "Each opportunity has tabs: Overview, Founder, Screening, Arena, Claims, Evidence and Decision. The button at the top of a record is always its next step; you approve or override every recommendation." },

@@ -107,6 +107,23 @@ html[data-motion] .animate-page { animation: rise 260ms var(--ease-out) backward
 .reveal-wait { opacity: 0; transform: translateY(14px); }
 .reveal-in { animation: rise var(--dur-reveal) var(--ease-out) backwards; animation-delay: calc(min(var(--i, 0), 8) * var(--stagger)); }
 
+/* the Dashboard deck: the new front card slides in from the side it was flipped
+   towards and settles; the card behind moves up a step. Under 300ms. */
+@keyframes deck-in-next {
+  from { opacity: 0; transform: translateX(28px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes deck-in-prev {
+  from { opacity: 0; transform: translateX(-28px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes deck-behind-up {
+  from { transform: translateY(var(--from-y)) scale(var(--from-s)); }
+}
+html[data-motion] .deck-in-next { animation: deck-in-next 240ms var(--ease-out) backwards; }
+html[data-motion] .deck-in-prev { animation: deck-in-prev 240ms var(--ease-out) backwards; }
+html[data-motion] .deck-behind { animation: deck-behind-up 240ms var(--ease-out) backwards; }
+
 /* overlays enter and leave from where they come from */
 .drawer-enter { animation: drawer-in var(--dur-slow) var(--ease-out) backwards; }
 .drawer-exit { animation: drawer-out var(--dur-base) var(--ease-in-out) both; }
