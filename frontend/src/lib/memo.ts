@@ -1,4 +1,5 @@
 import { Memo, MemoSection } from "@/lib/types";
+import { humanStatus } from "./format";
 
 // The canonical, always-present investment-memo sections, in order. Kept in sync
 // with backend MEMO_SECTIONS (app/ai/services.py). The UI renders all of these
@@ -24,7 +25,7 @@ export const CANONICAL_MEMO_SECTIONS: { key: string; title: string }[] = [
 // Merge a memo's stored sections onto the canonical structure: canonical order,
 // stored content where present, a labeled placeholder otherwise. Any non-canonical
 // stored sections (from older memos) are appended so no content is ever lost.
-export function normalizeMemoSections(memo: Memo): MemoSection[] {
+export function normalizeMemoSections(memo: Memo): (MemoSection & { placeholder?: boolean })[] {
   const byKey = new Map(memo.sections.map((s) => [s.key, s]));
   const ordered: MemoSection[] = CANONICAL_MEMO_SECTIONS.map(({ key, title }) => {
     const stored = byKey.get(key);
@@ -35,9 +36,16 @@ export function normalizeMemoSections(memo: Memo): MemoSection[] {
       body: "Not yet covered — regenerate the memo to populate this section from the available evidence.",
       evidence_ids: [],
       unavailable_label: "Insufficient Evidence",
+      placeholder: true,
     };
   });
   const canonicalKeys = new Set(CANONICAL_MEMO_SECTIONS.map((c) => c.key));
   const extras = memo.sections.filter((s) => !canonicalKeys.has(s.key));
   return [...ordered, ...extras];
+}
+
+// Memo prose can carry stored values from the claims it cites ("status:
+// founder_reported"). Show them the way the rest of the product does.
+export function memoText(body: string): string {
+  return body.replace(/\bstatus:\s*([a-z]+(?:_[a-z]+)+|[a-z]+)/g, (_, v: string) => humanStatus(v));
 }
