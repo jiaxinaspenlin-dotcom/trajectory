@@ -294,7 +294,7 @@ function StageBar({ counts, names }: { counts: Record<string, number>; names: Re
           if (!n) return null;
           return (
             <Link key={s} href={STAGE_LINKS[s]} tabIndex={-1} onMouseEnter={() => setHover(s)}
-              className={`h-full origin-left rounded-full transition-[transform,opacity] duration-[600ms] ease-out ${stageDot(s)} ${hover && hover !== s ? "opacity-35" : ""}`}
+              className={`h-full origin-left rounded-full transition-[transform,opacity] duration-[500ms] ease-out ${stageDot(s)} ${hover && hover !== s ? "opacity-35" : ""}`}
               style={{ flexGrow: n / total, transform: `scaleX(${seen ? 1 : 0})`, transitionDelay: seen ? `${i * 90}ms` : "0ms" }} />
           );
         })}

@@ -55,7 +55,7 @@ export function useSeen<T extends HTMLElement>(): [RefObject<T>, boolean] {
 
 // A number that counts up from zero the first time it is seen. The final value is
 // what renders on the server, in tests and under reduced motion.
-export function useCountUp(value: number, ms = 700): [RefObject<HTMLSpanElement>, number] {
+export function useCountUp(value: number, ms = 500): [RefObject<HTMLSpanElement>, number] {
   const ref = useRef<HTMLSpanElement>(null);
   const [shown, setShown] = useState(value);
   const done = useRef(false);

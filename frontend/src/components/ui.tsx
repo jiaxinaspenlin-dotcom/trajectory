@@ -160,7 +160,7 @@ export function Meter({ value, className = "bg-brand", track = "bg-line", label 
   const v = Math.max(0, Math.min(1, value));
   return (
     <div ref={ref} className={`h-1 overflow-hidden rounded-full ${track}`} role={label ? "img" : undefined} aria-label={label}>
-      <div className={`h-full w-full origin-left rounded-full transition-transform duration-[600ms] ease-out ${className}`} style={{ transform: `scaleX(${seen ? v : 0})` }} />
+      <div className={`h-full w-full origin-left rounded-full transition-transform duration-[500ms] ease-out ${className}`} style={{ transform: `scaleX(${seen ? v : 0})` }} />
     </div>
   );
 }

@@ -654,7 +654,7 @@ function StageTrack({ stage }: { stage: string }) {
           <li key={s} aria-current={i === at ? "step" : undefined} title={humanStatus(s)}>
             <span className="sr-only">{humanStatus(s)}{i < at ? " (Done)" : ""}</span>
             <span className="block h-1.5 overflow-hidden rounded-full bg-line" aria-hidden>
-              <span className={`block h-full origin-left rounded-full transition-transform duration-[600ms] ease-out ${stageDot(s)}`}
+              <span className={`block h-full origin-left rounded-full transition-transform duration-[500ms] ease-out ${stageDot(s)}`}
                 style={{ transform: `scaleX(${i <= at ? 1 : 0})`, transitionDelay: `${i * 80}ms` }} />
             </span>
           </li>
