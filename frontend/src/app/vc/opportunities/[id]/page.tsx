@@ -11,7 +11,7 @@ import { ArrowRightIcon } from "@/components/icons";
 import { useToast } from "@/components/Toast";
 import { MomentumChart } from "@/components/MomentumChart";
 import { ThreeAxes } from "@/components/ThreeAxes";
-import { InvestmentArena } from "@/components/arena/InvestmentArena";
+import { InvestmentArena, RecordedDecision } from "@/components/arena/InvestmentArena";
 import { ClaimsTable } from "@/components/ClaimsTable";
 import { FounderScoreBreakdown } from "@/components/FounderScoreBreakdown";
 import { HumanDecisionPanel } from "@/components/HumanDecisionPanel";
@@ -70,6 +70,8 @@ function OpportunityRecord() {
   // the deck as it was when this record opened: for the position strip and for
   // "Next" after a decision
   const deck = useDeck(fromDeck || tab === "decision");
+  // the Arena shows the latest recorded decision (and whether the debate is newer)
+  const decisionHistory = useFetch<{ items: RecordedDecision[] }>(tab === "arena" ? `/api/opportunities/${id}/decisions` : null);
   // after a decision, the next record still waiting according to the backend
   const [afterDecision, setAfterDecision] = useState<DeckItem | null | undefined>(undefined);
   const decided = useCallback(async () => {
@@ -100,7 +102,6 @@ function OpportunityRecord() {
   const [busy, setBusy] = useState(false);
   const [confirmRegen, setConfirmRegen] = useState(false);
   const [regenError, setRegenError] = useState<string | null>(null);
-  const [memoBusy, setMemoBusy] = useState(false);
   const [fitBusy, setFitBusy] = useState(false);
   const [confirmScreening, setConfirmScreening] = useState(false);
   const [screeningError, setScreeningError] = useState<string | null>(null);
@@ -183,18 +184,6 @@ function OpportunityRecord() {
     }
   }
 
-  async function generateMemo() {
-    setMemoBusy(true);
-    try {
-      await api.post(`/api/opportunities/${id}/memo`);
-      await reload();
-    } catch {
-      /* surfaced via the drawer staying empty; full errors live on the print view */
-    } finally {
-      setMemoBusy(false);
-    }
-  }
-
   async function regenerate() {
     setBusy(true);
     setRegenError(null);
@@ -241,6 +230,9 @@ function OpportunityRecord() {
   const primary =
     isLead
       ? <Button variant="primary" onClick={() => setConfirmScreening(true)}>Move to Screening</Button>
+    // on the Arena tab with no debate yet, the panel's Run Analysis is the action
+    : (step?.key === "run_analysis" || step?.key === "review_application") && tab === "arena" && !o.debate
+      ? null
     : step?.key === "run_analysis" || step?.key === "review_application"
       ? <Button variant="primary" onClick={() => setConfirmRegen(true)} busy={busy}>Run Analysis</Button>
     // already on the Decision tab: the form is the action, so no button points back at it
@@ -462,7 +454,19 @@ function OpportunityRecord() {
         )}
 
         {tab === "arena" && (
-          <InvestmentArena debate={o.debate || null} memo={o.memo ?? null} onGenerateMemo={generateMemo} memoBusy={memoBusy} />
+          <InvestmentArena
+            debate={o.debate || null}
+            opportunityId={o.id}
+            diligence={o.diligence ?? []}
+            decision={decisionHistory.data?.items.at(-1) ?? null}
+            decideHref={`${pathname}?tab=decision${fromDeck ? "&from=deck" : ""}`}
+            memoHref={`/vc/opportunities/${o.id}/memo`}
+            onRunAnalysis={regenerate}
+            analysisBusy={busy}
+            analysisError={regenError && (regenError.includes("OPENAI") || regenError.toLowerCase().includes("ai provider")
+              ? "AI is not configured. Set OPENAI_API_KEY on the backend to enable analysis. Deterministic scores and the seeded demo analysis remain available."
+              : regenError)}
+          />
         )}
 
         {tab === "claims" && (

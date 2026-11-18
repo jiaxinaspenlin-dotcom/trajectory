@@ -81,7 +81,7 @@ export default function MemoPage() {
           <>
             <MemoView memo={memo.data} />
             <Section title="Bull, Bear & Referee" card={false}>
-              <InvestmentArena debate={opp.data?.debate || null} expandable={false} />
+              <InvestmentArena debate={opp.data?.debate || null} opportunityId={Number(id)} diligence={opp.data?.diligence ?? []} compact />
             </Section>
           </>
         ) : null}

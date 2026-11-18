@@ -1,283 +1,312 @@
 "use client";
 
-import { useState } from "react";
-import { Debate, Memo } from "@/lib/types";
-import { asSentence, humanStatus, labelPhrase, pct } from "@/lib/format";
-import { MemoView } from "@/components/MemoView";
-import { Button } from "@/components/ui";
-import { BullCharacter, BearCharacter, RefereeCharacter, CharState } from "./Characters";
-import { DebatePlayer } from "./DebatePlayer";
-import { ArenaBackdrop, Emblem, Flourish, Pedestal, RefereeBadge } from "./stage";
-import { EvidenceRef } from "../EvidenceRef";
+import { KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { Debate, DiligenceQuestion } from "@/lib/types";
+import { asSentence, humanStatus, labelPhrase } from "@/lib/format";
+import { evidenceHref } from "@/lib/pipeline";
+import { debateTurns, isStrongest, leanLabel, Point, refereePosition, relatedPoints, replayPosition, Side, Turn } from "@/lib/arena";
+import { useSeen } from "@/lib/motion";
+import { Button, ConfidenceBar, DemoBadge, Segmented } from "@/components/ui";
+import { ArrowRightIcon } from "@/components/icons";
+import { BearCharacter, BullCharacter, CharState, RefereeCharacter } from "./Characters";
 
-type Role = "bull" | "bear" | "referee";
-
-const ROLE_META: Record<Role, { name: string; sub: string; color: string }> = {
-  bull: { name: "Bull", sub: "Optimistic Case", color: "text-bull" },
-  referee: { name: "Referee", sub: "Neutral Judge", color: "text-referee" },
-  bear: { name: "Bear", sub: "Skeptical Case", color: "text-bear" },
-};
-
-function EvidenceRefs({ ids }: { ids: number[] }) {
-  if (!ids.length) return <span className="ml-1 text-xs text-caution">Unverified</span>;
-  return (
-    <span className="ml-1 text-xs text-ink-muted">
-      {ids.slice(0, 6).map((id) => (
-        <EvidenceRef key={id} id={id} />
-      ))}
-    </span>
-  );
+export interface RecordedDecision {
+  decision: string;
+  chosen_action: string;
+  decided_by: string;
+  decided_at: string;
 }
 
+const SIDES: Record<Side, { name: string; title: string; tone: string; bar: string; Avatar: typeof BullCharacter }> = {
+  bull: { name: "Bull", title: "Case to Advance", tone: "text-bull", bar: "bg-bull", Avatar: BullCharacter },
+  bear: { name: "Bear", title: "Case for Caution", tone: "text-bear", bar: "bg-bear", Avatar: BearCharacter },
+};
+const TURN_MS = 1800;
+
+// The argument is the page: where the Referee landed and why, then both sides in
+// full, then the Referee's reasoning. Nothing waits on hover; Replay Debate plays
+// the same content in place, one turn at a time, and never hides it afterwards.
 export function InvestmentArena({
-  debate,
-  expandable = true,
-  memo,
-  onGenerateMemo,
-  memoBusy = false,
+  debate, opportunityId, diligence = [], decision = null, decideHref, memoHref,
+  onRunAnalysis, analysisBusy = false, analysisError = null, compact = false,
 }: {
   debate: Debate | null;
-  expandable?: boolean;
-  memo?: Memo | null;
-  onGenerateMemo?: () => void;
-  memoBusy?: boolean;
+  opportunityId: number;
+  diligence?: DiligenceQuestion[];
+  // the latest recorded decision on this record, if any
+  decision?: RecordedDecision | null;
+  decideHref?: string;
+  memoHref?: string;
+  onRunAnalysis?: () => void;
+  analysisBusy?: boolean;
+  analysisError?: string | null;
+  // the memo page's read-only copy: no Decide, no replay
+  compact?: boolean;
 }) {
-  const [pinned, setPinned] = useState<Role | null>(null);
-  const [hovered, setHovered] = useState<Role | null>(null);
-  const [expanded, setExpanded] = useState(false);
-  const [memoOpen, setMemoOpen] = useState(false);
-  // whether this instance should render the inline memo drawer at all
-  const showMemoDrawer = memo !== undefined;
-
   if (!debate) {
     return (
-      <div className="card mx-auto w-full max-w-[1100px] overflow-hidden" data-testid="arena-empty">
-        <div className="relative">
-          <ArenaBackdrop />
-          <div className="relative z-10 px-4 py-6 text-center">
-            <div className="flex justify-center"><Emblem /></div>
-            <h3 className="mt-1 text-lg font-semibold text-ink">Investment Arena</h3>
-            <p className="mx-auto mt-1 max-w-md text-sm text-ink-muted">
-              No debate generated yet. Run analysis to let the Bull, Bear, and Referee weigh the evidence.
-            </p>
-          </div>
+      <section className="rounded-2xl bg-surface-sunken px-6 py-8 sm:px-8" data-testid="arena-empty" aria-labelledby="arena-empty-title">
+        <div className="flex items-center gap-2" aria-hidden>
+          <BullCharacter size={36} /><RefereeCharacter size={36} /><BearCharacter size={36} />
         </div>
-      </div>
+        <h2 id="arena-empty-title" className="mt-3 text-title text-ink">No Debate Yet</h2>
+        <p className="mt-1 max-w-xl text-body text-ink-muted">
+          Running analysis has the Bull and the Bear argue from the stored evidence, and the Referee recommend what to do next.
+        </p>
+        {onRunAnalysis && (
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <Button variant="primary" onClick={onRunAnalysis} busy={analysisBusy}>Run Analysis</Button>
+            {analysisBusy && <span className="text-meta text-ink-muted" role="status">Scoring the three screening axes and writing the debate… this can take a minute.</span>}
+          </div>
+        )}
+        {analysisError && <p className="field-error" role="alert">{analysisError}</p>}
+      </section>
     );
   }
+  return <Debated {...{ debate, opportunityId, diligence, decision, decideHref, memoHref, compact }} />;
+}
 
-  const bull = debate.arguments.find((a) => a.role === "bull");
-  const bear = debate.arguments.find((a) => a.role === "bear");
+function Debated({ debate, opportunityId, diligence, decision, decideHref, memoHref, compact }: {
+  debate: Debate; opportunityId: number; diligence: DiligenceQuestion[]; decision: RecordedDecision | null;
+  decideHref?: string; memoHref?: string; compact: boolean;
+}) {
+  const points: Record<Side, Point[]> = {
+    bull: debate.arguments.find((a) => a.role === "bull")?.points ?? [],
+    bear: debate.arguments.find((a) => a.role === "bear")?.points ?? [],
+  };
+  const headline: Record<Side, string> = {
+    bull: debate.arguments.find((a) => a.role === "bull")?.headline ?? "",
+    bear: debate.arguments.find((a) => a.role === "bear")?.headline ?? "",
+  };
   const referee = debate.referee;
+  const final = referee ? refereePosition(referee.recommended_action, referee.confidence) : 50;
+  const turns = useMemo(() => debateTurns(points.bull, points.bear), [debate]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const bubbleFor = (role: Role): string => {
-    if (role === "bull") return bull?.speech_bubble || "Strongest case to advance.";
-    if (role === "bear") return bear?.speech_bubble || "Strongest case for caution.";
-    return referee?.speech_bubble || "Weighing evidence quality.";
-  };
+  // replay: null when not playing (everything shown)
+  const [replay, setReplay] = useState<{ step: number; playing: boolean } | null>(null);
+  const controls = useRef<HTMLDivElement>(null);
+  const turn: Turn | null = replay ? turns[replay.step] : null;
+  useEffect(() => {
+    if (!replay?.playing) return;
+    const t = setTimeout(() => {
+      setReplay((r) => (!r ? r : r.step >= turns.length - 1 ? null : { ...r, step: r.step + 1 }));
+    }, TURN_MS);
+    return () => clearTimeout(t);
+  }, [replay, turns.length]);
+  const start = () => { setReplay({ step: 0, playing: true }); setTimeout(() => controls.current?.querySelector<HTMLElement>("[data-replay=toggle]")?.focus()); };
+  const go = (step: number) => setReplay((r) => (step >= turns.length ? null : { playing: r?.playing ?? false, step: Math.max(0, step) }));
+  const skip = () => setReplay(null);
+  function onReplayKey(e: KeyboardEvent) {
+    if (!replay) return;
+    if (e.key === " ") { e.preventDefault(); setReplay({ ...replay, playing: !replay.playing }); }
+    else if (e.key === "ArrowRight") { e.preventDefault(); go(replay.step + 1); }
+    else if (e.key === "ArrowLeft") { e.preventDefault(); go(replay.step - 1); }
+    else if (e.key === "End" || e.key === "Escape") { e.preventDefault(); skip(); }
+  }
+  // which turn a point is spoken on, to hide what hasn't been said yet in a replay
+  const turnOf = (side: Side, index: number) => turns.findIndex((t) => t.side === side && "index" in t && t.index === index);
+  const said = (side: Side, index: number) => !replay || turnOf(side, index) <= replay.step;
+  const position = replay ? replayPosition(turns, replay.step, final) : final;
 
-  const active = pinned ?? hovered;
-  const stateFor = (role: Role): CharState => {
-    if (pinned === role) return "selected";
-    if (hovered === role) return role === "referee" ? "decision" : "speaking";
-    return "idle";
-  };
+  // phones show one side at a time; a replay follows the side speaking
+  const [phoneSide, setPhoneSide] = useState<Side>("bull");
+  const shownSide: Side = turn && turn.side !== "referee" ? turn.side : phoneSide;
 
-  const Character = ({ role }: { role: Role }) => {
-    const Comp = role === "bull" ? BullCharacter : role === "bear" ? BearCharacter : RefereeCharacter;
-    const meta = ROLE_META[role];
-    const show = active === role;
-    const size = role === "referee" ? 118 : 96;
-    return (
-      <div className="flex flex-col items-center">
-        <div className="relative">
-          {/* speech bubble on hover / focus / pin */}
-          {show && (
-            <div
-              role="status"
-              className="absolute bottom-full left-1/2 z-20 mb-2 w-48 -translate-x-1/2 rounded-lg border border-line bg-white p-2 text-center text-xs text-ink-soft shadow-raised"
-            >
-              {bubbleFor(role)}
-              <div className="mx-auto -mb-1 mt-1 h-2 w-2 rotate-45 border-b border-r border-line bg-white" />
-            </div>
-          )}
-          {role === "referee" && <RefereeBadge />}
-          <button
-            type="button"
-            aria-pressed={pinned === role}
-            aria-label={`${meta.name}. ${bubbleFor(role)} Activate to pin the detailed analysis.`}
-            className="press rounded-xl transition-transform duration-base ease-out hover:-translate-y-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
-            onMouseEnter={() => setHovered(role)}
-            onMouseLeave={() => setHovered(null)}
-            onFocus={() => setHovered(role)}
-            onBlur={() => setHovered(null)}
-            onClick={() => setPinned((p) => (p === role ? null : role))}
-            data-testid={`arena-${role}`}
-          >
-            <Comp state={stateFor(role)} size={size} />
-          </button>
-        </div>
-        <Pedestal />
-        <div className="mt-1 text-center">
-          <div className={`text-sm font-bold ${meta.color}`}>{meta.name}</div>
-          <div className="text-xs text-ink-muted">{meta.sub}</div>
-        </div>
-      </div>
-    );
+  // a hovered or focused point, and the points on the other side about the same thing
+  const [focus, setFocus] = useState<{ side: Side; index: number } | null>(null);
+  const related = focus ? relatedPoints(points[focus.side][focus.index], points[focus.side === "bull" ? "bear" : "bull"]) : [];
+
+  const updatedAfter = decision && debate.computed_at && new Date(debate.computed_at) > new Date(decision.decided_at);
+  const questionLink = (text: string) => {
+    const q = diligence.find((d) => d.question.includes(text.replace(/^Contradiction:\s*/, "").slice(0, 60)));
+    return `/vc/opportunities/${opportunityId}/diligence${q ? `#q-${q.id}` : ""}`;
   };
 
   return (
-    <div className="card mx-auto w-full max-w-[1100px] overflow-hidden" data-testid="arena">
-      {/* illustrated stage with interactive characters */}
-      <div className="relative">
-        <ArenaBackdrop />
-        <div className="relative z-10 px-4 pb-5 pt-5">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-ink-muted">{`v${debate.version} · ${humanStatus(debate.generated_by)}`}</span>
-            {expandable && (
-              <button className="btn-ghost text-xs" onClick={() => setExpanded(true)}>Expand Full Debate ↗</button>
+    <div className="space-y-8" data-testid="arena">
+      {/* 1. the verdict, and the one next step */}
+      {referee && (
+        <section aria-labelledby="arena-verdict" className="rounded-2xl bg-brand-wash p-5 sm:p-6" data-testid="arena-verdict">
+          <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
+            <div className="flex min-w-0 items-start gap-3">
+              <Avatar side="referee" state={turn?.side === "referee" ? "decision" : "idle"} />
+              <div className="min-w-0">
+                <p className="text-meta font-medium text-brand">Referee Recommends</p>
+                <h2 id="arena-verdict" className="text-title text-ink">{humanStatus(referee.recommended_action)}</h2>
+                <div className="mt-1"><ConfidenceBar value={referee.confidence} /></div>
+                <p className="mt-2 max-w-2xl text-[15px] text-ink-soft" data-content>{asSentence(referee.rationale.replace(/^Demo referee:\s*/i, ""))}</p>
+              </div>
+            </div>
+            {!compact && (decision ? (
+              <div className="text-meta text-ink-muted sm:text-right" data-testid="arena-decided">
+                <p className="text-[15px] font-medium text-ink">Decided: {humanStatus(decision.chosen_action)}</p>
+                <p><span data-content>{decision.decided_by}</span> · {new Date(decision.decided_at).toLocaleDateString()}</p>
+                {decideHref && <Link href={decideHref} scroll={false} className="link text-meta">See the Decision</Link>}
+              </div>
+            ) : decideHref && (
+              <Link href={decideHref} scroll={false} className="btn-primary group">Decide<ArrowRightIcon size={16} className="transition-transform duration-base ease-out group-hover:translate-x-0.5" /></Link>
+            ))}
+          </div>
+          {updatedAfter && <p className="mt-3 text-meta text-caution" data-testid="arena-updated">The debate was updated after this decision.</p>}
+        </section>
+      )}
+
+      {/* 2. where the Referee landed between the two cases */}
+      {referee && <Balance position={position} action={referee.recommended_action} replaying={!!replay} />}
+
+      {/* replay, the memo, and what this debate is */}
+      <div className="flex flex-wrap items-center justify-between gap-3" data-print-hide>
+        {!compact && (replay ? (
+          <div ref={controls} role="group" aria-label="Replay Debate" onKeyDown={onReplayKey} className="flex flex-wrap items-center gap-1" data-testid="replay-controls">
+            <button type="button" className="btn-ghost btn-sm" onClick={() => go(replay.step - 1)} disabled={replay.step === 0}>Previous</button>
+            <button type="button" data-replay="toggle" className="btn-secondary btn-sm min-w-[5.5rem]" onClick={() => setReplay({ ...replay, playing: !replay.playing })}>{replay.playing ? "Pause" : "Play"}</button>
+            <button type="button" className="btn-ghost btn-sm" onClick={() => go(replay.step + 1)}>Next</button>
+            <button type="button" className="btn-ghost btn-sm" onClick={skip}>Skip to End</button>
+            <span className="num ml-2 text-meta text-ink-muted" aria-live="polite" data-testid="replay-position">Turn {replay.step + 1} of {turns.length}</span>
+          </div>
+        ) : (
+          <button type="button" className="btn-secondary btn-sm" onClick={start} data-testid="replay-start">Replay Debate</button>
+        ))}
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-muted">
+          {debate.generated_by === "demo" && <DemoBadge />}
+          <span>v{debate.version}{debate.computed_at ? ` · Generated ${new Date(debate.computed_at).toLocaleDateString()}` : ""}</span>
+          {memoHref && <Link href={memoHref} className="link text-meta">Read the Memo</Link>}
+        </p>
+      </div>
+
+      {/* 3. both cases in full; one at a time on phones */}
+      <div>
+        <div className="mb-4 md:hidden" data-print-hide>
+          <Segmented<Side> label="Which Case" value={shownSide} onChange={setPhoneSide}
+            options={(["bull", "bear"] as Side[]).map((s) => ({ value: s, label: `${SIDES[s].name} · ${points[s].length}` }))} />
+        </div>
+        <div className="grid gap-8 md:grid-cols-2 md:gap-10">
+          {(["bull", "bear"] as Side[]).map((side) => (
+            <section key={side} aria-labelledby={`arena-${side}`} data-testid={`arena-${side}`}
+              className={`${shownSide === side ? "" : "hidden"} md:block print:block`}>
+              <div className="flex items-center gap-3">
+                <Avatar side={side} state={turn?.side === side ? "speaking" : "idle"} />
+                <div className="min-w-0">
+                  <h3 id={`arena-${side}`} className={`text-section ${SIDES[side].tone}`}>{SIDES[side].name} · {SIDES[side].title}</h3>
+                  {headline[side] && <p className="text-meta text-ink-muted">{labelPhrase(headline[side])}</p>}
+                </div>
+              </div>
+              {points[side].length ? (
+                <ol className="mt-3 space-y-1">
+                  {points[side].map((p, i) => {
+                    const other: Side = side === "bull" ? "bear" : "bull";
+                    const link = focus && focus.side === other ? related.find((r) => r.index === i) : undefined;
+                    const isFocus = focus?.side === side && focus.index === i;
+                    const dim = focus?.side === side && !isFocus;
+                    const speaking = turn && turn.side === side && "index" in turn && turn.index === i;
+                    return (
+                      <li key={i}
+                        className={`relative -mx-3 rounded-lg px-3 py-3 transition-[opacity,background-color] duration-base ${said(side, i) ? (speaking ? "animate-rise bg-surface-sunken" : "") : "invisible"} ${dim ? "opacity-60" : ""} ${isFocus || speaking ? "bg-surface-sunken" : ""} ${link ? "bg-brand-wash ring-1 ring-brand/30" : ""}`}
+                        onMouseEnter={() => setFocus({ side, index: i })} onMouseLeave={() => setFocus(null)}
+                        onFocus={() => setFocus({ side, index: i })} onBlur={() => setFocus(null)}
+                        tabIndex={p.evidence_ids.length ? undefined : 0}
+                        data-testid={`point-${side}-${i}`}
+                      >
+                        <p className="text-[15px] leading-6 text-ink" data-content>{asSentence(p.text)}</p>
+                        <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-meta">
+                          {isStrongest(p, side === "bull" ? referee?.strongest_bull_point : referee?.strongest_bear_point) && (
+                            <span className="chip bg-brand-wash text-brand">Strongest Point</span>
+                          )}
+                          {(p.unverified || !p.evidence_ids.length) && <span className="chip bg-caution-wash text-caution">Unverified</span>}
+                          {p.evidence_ids.length > 0 && (
+                            <Link href={evidenceHref(opportunityId, p.evidence_ids[0])} scroll={false} className="link text-meta">
+                              {p.evidence_ids.length === 1 ? "1 Evidence Item" : `${p.evidence_ids.length} Evidence Items`}
+                            </Link>
+                          )}
+                          {link && <span className="chip bg-white text-brand" data-testid="point-link">{link.why}</span>}
+                        </p>
+                      </li>
+                    );
+                  })}
+                </ol>
+              ) : (
+                <p className="mt-3 text-sm text-ink-muted">The {SIDES[side].name} made no points in this debate.</p>
+              )}
+            </section>
+          ))}
+        </div>
+      </div>
+
+      {/* 4. the Referee's reasoning */}
+      {referee && (
+        <section aria-labelledby="arena-referee" data-testid="arena-referee"
+          className={`border-t border-line pt-6 transition-opacity duration-base ${replay && turn?.side !== "referee" ? "opacity-40" : ""}`}>
+          <h3 id="arena-referee" className="text-section text-referee">Referee</h3>
+          <p className="mt-1 text-meta text-ink-muted">The Referee judges evidence quality and independence, not who argued more persuasively.</p>
+          <div className="mt-4 grid gap-6 md:grid-cols-2">
+            <div>
+              <p className="label">What Would Change the Call</p>
+              <p className="mt-1 text-[15px] text-ink-soft" data-content>{asSentence(referee.evidence_that_would_change)}</p>
+            </div>
+            {referee.unresolved_questions.length > 0 && (
+              <div>
+                <p className="label">Open Questions</p>
+                <ul className="mt-1 space-y-1.5">
+                  {referee.unresolved_questions.map((q, i) => (
+                    <li key={i} className="text-[15px] text-ink-soft">
+                      <span data-content>{asSentence(q)}</span> <Link href={questionLink(q)} className="link whitespace-nowrap text-meta">See the Question</Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {referee.required_diligence.length > 0 && (
+              <div>
+                <p className="label">Required Diligence</p>
+                <ul className="mt-1 space-y-1.5">
+                  {referee.required_diligence.map((q, i) => <li key={i} className="text-[15px] text-ink-soft">{labelPhrase(q)}</li>)}
+                </ul>
+                <Link href={`/vc/opportunities/${opportunityId}/diligence`} className="link mt-2 inline-block text-meta">Open Diligence</Link>
+              </div>
             )}
           </div>
-
-          <div className="mt-1 flex justify-center"><Emblem /></div>
-          <div className="flex items-center justify-center gap-3">
-            <Flourish side="left" />
-            <h3 className="text-center text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">Investment Arena</h3>
-            <Flourish side="right" />
-          </div>
-          <p data-print-hide className="mt-1 text-center text-xs text-ink-muted">
-            Hover or focus a character for its case; click to pin the full analysis.
-          </p>
-
-          <div className="mx-auto mt-4 grid max-w-xl grid-cols-3 items-end gap-1 sm:gap-3">
-            <Character role="bull" />
-            <Character role="referee" />
-            <Character role="bear" />
-          </div>
-        </div>
-      </div>
-
-      {/* referee recommendation */}
-      {referee && (
-        <div className="border-t border-line bg-brand-wash px-5 py-3 text-center">
-          <div className="label text-brand">Referee Recommends</div>
-          <div className="text-lg font-semibold text-brand">{humanStatus(referee.recommended_action)}</div>
-          <div className="text-xs text-ink-muted">
-            Confidence {pct(referee.confidence)} ·{" "}
-            {referee.final_decision_supportable
-              ? "Final Decision Currently Supportable"
-              : "Not Yet Decisive — More Evidence Needed"}
-          </div>
-        </div>
+        </section>
       )}
-
-      {/* pinned detail */}
-      <div className="border-t border-line px-5 py-4" data-testid="arena-detail">
-        {pinned === "bull" && bull && <SideDetail title="Bull — Case to Advance" tone="text-bull" argument={bull} />}
-        {pinned === "bear" && bear && <SideDetail title="Bear — Case for Caution" tone="text-bear" argument={bear} />}
-        {pinned === "referee" && referee && <RefereeDetail referee={referee} />}
-        {!pinned && (
-          <p className="text-sm text-ink-muted">
-            Click a character above to pin its full analysis. The Referee judges evidence quality and
-            independence — not who argued more persuasively.
-          </p>
-        )}
-      </div>
-
-      {/* inline investment memo drawer */}
-      {showMemoDrawer && (
-        <div className="border-t border-line" data-testid="arena-memo">
-          <button
-            type="button"
-            className="press flex w-full items-center justify-between px-5 py-3 text-left transition-colors duration-fast hover:bg-surface-sunken"
-            aria-expanded={memoOpen}
-            onClick={() => setMemoOpen((v) => !v)}
-          >
-            <span>
-              <span className="text-sm font-semibold text-ink">Investment Memo</span>
-              <span className="ml-2 text-xs text-ink-muted">
-                Full evidence-backed write-up — every standard section, missing data labeled, never invented.
-              </span>
-            </span>
-            <span className={`text-ink-muted transition-transform duration-base ease-out ${memoOpen ? "rotate-180" : ""}`}>▾</span>
-          </button>
-
-          {memoOpen && (
-            <div className="animate-fade border-t border-line bg-surface-sunken/40 px-5 py-4">
-              {memo ? (
-                <MemoView memo={memo} />
-              ) : (
-                <div className="rounded-lg border border-line bg-white p-4 text-sm text-ink-muted">
-                  No memo generated yet.{" "}
-                  {onGenerateMemo ? (
-                    <Button variant="primary" className="ml-1" onClick={onGenerateMemo} busy={memoBusy}>Generate Memo</Button>
-                  ) : (
-                    <span>Run analysis to generate the full memo.</span>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* full-screen debate player: VS intro, then turn-taking chat */}
-      {expanded && <DebatePlayer debate={debate} onClose={() => setExpanded(false)} />}
     </div>
   );
 }
 
-function SideDetail({ title, tone, argument }: { title: string; tone: string; argument: Debate["arguments"][number] }) {
+// The bar from Advance to Caution with the Referee's marker. It moves in from the
+// middle the first time it's seen, and follows the argument during a replay.
+function Balance({ position, action, replaying }: { position: number; action: string; replaying: boolean }) {
+  const [ref, seen] = useSeen<HTMLDivElement>();
+  const at = seen ? position : 50;
   return (
-    <div>
-      <h4 className={`text-sm font-semibold ${tone}`}>{title}</h4>
-      <p className="mt-1 text-sm font-medium text-ink">{labelPhrase(argument.headline)}</p>
-      <ul className="mt-2 space-y-2">
-        {argument.points.map((p, i) => (
-          <li key={i} className="text-sm text-ink-soft">
-            • {asSentence(p.text)}
-            <EvidenceRefs ids={p.evidence_ids} />
-          </li>
-        ))}
-      </ul>
-    </div>
+    <section aria-label="Where the Referee Landed" data-testid="arena-balance" ref={ref}>
+      <div className="flex items-center justify-between text-meta font-medium">
+        <span className="text-bull">Advance</span>
+        <span className="text-ink-muted">{replaying ? "Following the Argument" : leanLabel(action)}</span>
+        <span className="text-bear">Caution</span>
+      </div>
+      {/* clipped sideways (with room for the marker at either end), so the moved layer never widens the page */}
+      <div className="-mx-2.5 mt-2 px-2.5 [overflow-x:clip]">
+      <div className="relative h-2 rounded-full bg-gradient-to-r from-bull/25 via-line to-bear/25" role="img"
+        aria-label={`${replaying ? "Following the Argument" : leanLabel(action)}, ${Math.round(at)}% of the Way from Advance to Caution`}>
+        <span aria-hidden className="absolute inset-y-0 left-1/2 w-px bg-line-strong" />
+        {/* a full-width layer moved by the position (a percentage of the track),
+            carrying the marker centered on its left edge: only transform animates */}
+        <span aria-hidden data-testid="balance-marker" data-position={Math.round(position)}
+          className="absolute inset-0 transition-transform duration-[500ms] ease-out" style={{ transform: `translateX(${at}%)` }}>
+          <span className="absolute left-0 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-referee shadow-raised" />
+        </span>
+      </div>
+      </div>
+    </section>
   );
 }
 
-function RefereeDetail({ referee }: { referee: NonNullable<Debate["referee"]> }) {
+function Avatar({ side, state }: { side: Side | "referee"; state: CharState }) {
+  const Comp = side === "referee" ? RefereeCharacter : SIDES[side].Avatar;
   return (
-    <div className="rounded-lg border border-line bg-surface-sunken p-4">
-      <h4 className="text-sm font-semibold text-referee">Referee Assessment</h4>
-      <p className="mt-1 text-sm text-ink-soft">{referee.rationale}</p>
-      <dl className="mt-3 grid gap-3 sm:grid-cols-2">
-        <div>
-          <dt className="label">Strongest Bull Point</dt>
-          <dd className="text-sm text-ink-soft">{asSentence(referee.strongest_bull_point)}</dd>
-        </div>
-        <div>
-          <dt className="label">Strongest Bear Point</dt>
-          <dd className="text-sm text-ink-soft">{asSentence(referee.strongest_bear_point)}</dd>
-        </div>
-      </dl>
-      {referee.unresolved_questions.length > 0 && (
-        <div className="mt-3">
-          <div className="label">Unresolved Questions</div>
-          <ul className="mt-1 list-inside list-disc text-sm text-ink-soft">
-            {referee.unresolved_questions.map((q, i) => <li key={i}>{asSentence(q)}</li>)}
-          </ul>
-        </div>
-      )}
-      {referee.required_diligence.length > 0 && (
-        <div className="mt-3">
-          <div className="label">Required Diligence</div>
-          <ul className="mt-1 list-inside list-disc text-sm text-ink-soft">
-            {referee.required_diligence.map((q, i) => <li key={i}>{labelPhrase(q)}</li>)}
-          </ul>
-        </div>
-      )}
-      <p className="mt-3 text-xs text-ink-muted">
-        Evidence That Would Change the Call: <span data-content>{referee.evidence_that_would_change}</span>
-      </p>
-    </div>
+    <span aria-hidden className={`press grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white shadow-card transition-transform duration-base ease-out hover:-translate-y-0.5 ${
+      state === "speaking" || state === "decision" ? "scale-110 ring-2 ring-brand/30" : ""}`}>
+      <Comp size={40} state={state} />
+    </span>
   );
 }

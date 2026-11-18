@@ -421,32 +421,6 @@ html[data-motion] .deck-behind { animation: deck-behind-up 240ms var(--ease-out)
   }
 }
 
-/* Investment Arena: full-debate intro + chat animations */
-@keyframes arenaFadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: none; }
-}
-@keyframes vsBullIn {
-  0% { opacity: 0; transform: translateX(-130%); }
-  100% { opacity: 1; transform: translateX(0); }
-}
-@keyframes vsBearIn {
-  0% { opacity: 0; transform: translateX(130%); }
-  100% { opacity: 1; transform: translateX(0); }
-}
-@keyframes vsPop {
-  from { opacity: 0; transform: scale(1.3); }
-  to { opacity: 1; transform: scale(1); }
-}
-@keyframes vsZoomOut {
-  0% { opacity: 1; transform: scale(1); }
-  100% { opacity: 0; transform: scale(0.18); }
-}
-@keyframes debateReveal {
-  from { opacity: 0; transform: scale(1.03); }
-  to { opacity: 1; transform: scale(1); }
-}
-
 /* Guided-tour spotlight: a ring and a light page dim. */
 .tour-highlight {
   position: relative;

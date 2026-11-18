@@ -543,10 +543,12 @@ describe("every route uses Title Case labels", () => {
     await recordWith(opportunity, tab);
     if (tab === "founder") fireEvent.click(document.querySelector("[aria-expanded='false']")!);
     if (tab === "arena") {
-      fireEvent.click(document.querySelector("[data-testid='arena-referee']")!);
-      fireEvent.click(document.querySelector("[data-testid='arena-memo'] button")!);
+      // a point hovered (with its link to the other side), then a replay under way
+      const point = document.querySelector<HTMLElement>("[data-testid^='point-']");
+      if (point) fireEvent.mouseEnter(point);
       expectCleanCopy();
-      fireEvent.click(screen.getByRole("button", { name: /Expand Full Debate/ }));
+      const replay = document.querySelector<HTMLElement>("[data-testid='replay-start']");
+      if (replay) fireEvent.click(replay);
     }
     if (tab === "decision") {
       // every part of the step on screen at once: the picker, the note and Deciding As
