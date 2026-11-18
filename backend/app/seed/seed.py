@@ -45,6 +45,7 @@ from app.models.workflow import (
 from app.scoring.founder_score import compute_founder_score, scale_founder_score
 from app.seed.data import COMPANIES, FOUNDERS
 from app.services.context import build_opportunity_context
+from app.services.copy import plural
 from app.services.thesis import compute_thesis_fit
 
 NOW = datetime.now(UTC)
@@ -275,11 +276,13 @@ def _seed_static_analysis(db: Session, opp: Opportunity) -> None:
         {"text": f"Founder Momentum is {momentum.get('trajectory', 'n/a')}.",
          "evidence_ids": [], "unverified": True},
     ]
+    uncorroborated = len([c for c in claims if c['verification_status'] in ('founder_reported', 'unverified')])
+    # a concern only when there is one: "0 claims lack corroboration" isn't a point
     bear_points = [
-        {"text": f"{len([c for c in claims if c['verification_status'] in ('founder_reported', 'unverified')])} "
-                 "material claim(s) are founder-reported and lack independent corroboration.",
+        {"text": plural(uncorroborated, "material claim is founder-reported and lacks",
+                        "material claims are founder-reported and lack") + " independent corroboration.",
          "evidence_ids": [], "unverified": True},
-    ]
+    ] if uncorroborated else []
     for con in contradictions[:2]:
         bear_points.insert(0, {"text": f"Contradiction: {con['description']}", "evidence_ids": [], "unverified": True})
     db.add(DebateArgument(debate_id=debate.id, role="bull", headline="Evidence-backed case to advance",
@@ -293,13 +296,15 @@ def _seed_static_analysis(db: Session, opp: Opportunity) -> None:
               "Continue Diligence" if score >= 50 else "Monitor")
     db.add(RefereeDecision(
         debate_id=debate.id, recommended_action=action, confidence=round(min(0.9, conf + 0.1), 2),
-        strongest_bull_point=bull_points[0]["text"], strongest_bear_point=bear_points[0]["text"],
+        strongest_bull_point=bull_points[0]["text"],
+        strongest_bear_point=bear_points[0]["text"] if bear_points else "No open concerns recorded.",
         unresolved_questions=[c["description"] for c in contradictions][:3] or ["Independent verification of traction claims."],
         required_diligence=["Corroborate founder-reported metrics with independent sources.", "Resolve open contradictions."],
         evidence_that_would_change="Independent verification of traction and resolution of contradictions.",
         final_decision_supportable=bool(score >= 75 and conf >= 0.7 and not contradictions),
         rationale=f"Demo referee: Founder Score {score:.0f} at {conf*100:.0f}% confidence, thesis fit "
-                  f"{thesis_fit:.0f}, {len(contradictions)} open contradiction(s). Weighs independence over rhetoric.",
+                  f"{thesis_fit:.0f}, {plural(len(contradictions), 'open contradiction', 'open contradictions')}. "
+                  "Weighs independence over rhetoric.",
         speech_bubble=f"My call: {action}. Evidence quality drives this.",
     ))
     db.add(RecommendedAction(opportunity_id=opp.id, action=action,

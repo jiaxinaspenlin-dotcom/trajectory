@@ -62,28 +62,52 @@ describe("evidence citations", () => {
 describe("HumanDecisionPanel", () => {
   const rec = { action: "Continue Diligence", confidence: 0.6, rationale: "Strong execution" };
   const why = {
-    reasons: [{ text: "Founder Score is 25/100 with independent GitHub evidence.", href: "/vc/opportunities/5?tab=evidence&evidence=23", linkLabel: "See Evidence (5)", unverified: false }],
-    risk: { text: "Contradiction: reported users differ.", href: "/vc/opportunities/5?tab=claims", linkLabel: "See the Claims", unverified: true },
+    reasons: [
+      { text: "Founder Score is 25/100 with independent GitHub evidence.", href: "/vc/opportunities/5?tab=evidence&evidence=23", linkLabel: "See Evidence (5)", unverified: false, tone: "strength" as const },
+      { text: "Founder Momentum is accelerating.", href: null, linkLabel: null, unverified: true, tone: "strength" as const },
+    ],
+    counter: { text: "Contradiction: reported users differ.", href: "/vc/opportunities/5?tab=claims", linkLabel: "See the Claims", unverified: true, tone: "concern" as const },
   };
+  const marks = (el: HTMLElement) => [...el.querySelectorAll("li[data-mark]")].map((li) => [li.getAttribute("data-mark"), li.querySelector("svg") ? "icon" : "no icon"]);
   const recorded = (decision: string, chosen_action: string) => ({ human_decision: { decision, chosen_action, decided_by: "Demo Investor", decided_at: "", notes: "", system_recommended_action: "Continue Diligence" } });
   const panel = (extra: Partial<React.ComponentProps<typeof HumanDecisionPanel>> = {}) =>
     render(<HumanDecisionPanel opportunityId={5} recommendation={rec} why={why} onDecision={() => {}} {...extra} />);
 
-  it("shows why first: the recommendation, its reasons and the main risk, each linked", () => {
+  it("shows why first: an advancing recommendation's strengths, and the concern that could change it", () => {
     get.mockResolvedValue({ items: [] });
     panel();
     expect(screen.getByText("60%")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "See Evidence (5)" })).toHaveAttribute("href", "/vc/opportunities/5?tab=evidence&evidence=23");
-    expect(screen.getByTestId("decision-risk")).toHaveTextContent("Contradiction: reported users differ.");
-    expect(screen.getByTestId("decision-risk")).toHaveTextContent("Unverified");
+    const counter = screen.getByTestId("decision-counter");
+    expect(counter).toHaveTextContent("What Could Change This");
+    expect(counter).toHaveTextContent("Contradiction: reported users differ.");
+    expect(screen.queryByText("Main Risk")).toBeNull();
     expect(screen.getByRole("link", { name: "See the Claims" })).toHaveAttribute("href", "/vc/opportunities/5?tab=claims");
+    // a verified strength gets the check; an unverified one a neutral mark, never a check; a concern the caution mark
+    expect(marks(screen.getByTestId("decision-reasons"))).toEqual([["strength", "icon"], ["neutral", "no icon"]]);
+    expect(marks(counter)).toEqual([["concern", "icon"]]);
+  });
+
+  it("for a cautious recommendation, the concerns support it and a strength could change it", () => {
+    get.mockResolvedValue({ items: [] });
+    panel({
+      recommendation: { action: "Monitor", confidence: 0.65, rationale: "" },
+      why: {
+        reasons: [{ text: "1 material claim is founder-reported and lacks independent corroboration.", href: null, linkLabel: null, unverified: true, tone: "concern" }],
+        counter: { text: "Founder Score is 42/100 with independent GitHub evidence.", href: null, linkLabel: null, unverified: false, tone: "strength" },
+      },
+    });
+    expect(marks(screen.getByTestId("decision-reasons"))).toEqual([["concern", "icon"]]);
+    expect(screen.getByTestId("decision-reasons")).toHaveTextContent("Concern: 1 material claim is founder-reported");
+    expect(marks(screen.getByTestId("decision-counter"))).toEqual([["strength", "icon"]]);
+    expect(screen.getByTestId("decision-counter")).toHaveTextContent("Strength: Founder Score is 42/100");
   });
 
   it("says plainly when there are no reasons", () => {
     get.mockResolvedValue({ items: [] });
-    panel({ why: { reasons: [], risk: null } });
+    panel({ why: { reasons: [], counter: null } });
     expect(screen.getByText(/No reasons are recorded for this recommendation yet/)).toBeInTheDocument();
-    expect(screen.queryByTestId("decision-risk")).toBeNull();
+    expect(screen.queryByTestId("decision-counter")).toBeNull();
   });
 
   it("starts with nothing chosen and records nothing without an explicit choice", async () => {

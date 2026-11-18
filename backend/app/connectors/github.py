@@ -24,6 +24,7 @@ import httpx
 from app.connectors.base import Connector, ConnectorResult, NormalizedEvidence
 from app.core.config import settings
 from app.models.enums import Provenance, SourceType, SyncStatus, VerificationStatus
+from app.services.copy import plural
 
 GITHUB_API = "https://api.github.com"
 
@@ -443,7 +444,7 @@ class GitHubConnector(Connector):
             source_type=SourceType.GITHUB_REPO,
             source_url=latest.get("html_url") or repo.get("html_url"),
             kind="github_release",
-            title=f"{len(releases)} public release(s) on {repo.get('name')}",
+            title=f"{plural(len(releases), 'public release', 'public releases')} on {repo.get('name')}",
             raw_value=str(latest.get("tag_name", "")),
             structured_value={
                 "release_count": len(releases),

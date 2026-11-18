@@ -42,7 +42,7 @@ export function HumanDecisionPanel({
 }: {
   opportunityId: number;
   recommendation: { action: string; confidence: number; rationale: string } | null;
-  why?: { reasons: Reason[]; risk: Reason | null };
+  why?: { reasons: Reason[]; counter: Reason | null };
   onDecision: () => void;
   // the decision this browser previously recorded for this opportunity, if any
   savedLocal?: LocalDecision | null;
@@ -124,10 +124,10 @@ export function HumanDecisionPanel({
                 {why.reasons.map((r, i) => <ReasonLine key={i} r={r} />)}
               </ul>
             ) : <p className="mt-3 text-sm text-ink-muted">No reasons are recorded for this recommendation yet. Run analysis to get them, or look at the evidence yourself.</p>}
-            {why?.risk && (
-              <div className="mt-4 border-t border-line pt-4" data-testid="decision-risk">
-                <p className="label">Main Risk</p>
-                <ul className="mt-1.5"><ReasonLine r={why.risk} risk /></ul>
+            {why?.counter && (
+              <div className="mt-4 border-t border-line pt-4" data-testid="decision-counter">
+                <p className="label">What Could Change This</p>
+                <ul className="mt-1.5"><ReasonLine r={why.counter} /></ul>
               </div>
             )}
           </>
@@ -234,13 +234,18 @@ export function HumanDecisionPanel({
   );
 }
 
-function ReasonLine({ r, risk = false }: { r: Reason; risk?: boolean }) {
+// The mark follows the point: a strength gets the check, a concern the caution
+// mark, and a strength nobody has verified a neutral mark, never a check.
+function ReasonLine({ r }: { r: Reason }) {
+  const mark = r.tone === "concern" ? "concern" : r.unverified ? "neutral" : "strength";
   return (
-    <li className="flex items-start gap-2.5 text-[15px] leading-6 text-ink-soft">
-      <span aria-hidden className={`mt-1 grid h-4 w-4 shrink-0 place-items-center rounded-full ${risk ? "text-caution" : "bg-positive text-white"}`}>
-        {risk ? <AlertIcon size={16} /> : <CheckIcon size={10} />}
+    <li className="flex items-start gap-2.5 text-[15px] leading-6 text-ink-soft" data-mark={mark}>
+      <span aria-hidden className={`mt-1 grid h-4 w-4 shrink-0 place-items-center rounded-full ${
+        mark === "concern" ? "text-caution" : mark === "neutral" ? "border-2 border-ink-faint/60" : "bg-positive text-white"}`}>
+        {mark === "concern" ? <AlertIcon size={16} /> : mark === "strength" ? <CheckIcon size={10} /> : null}
       </span>
       <span className="min-w-0">
+        <span className="sr-only">{r.tone === "concern" ? "Concern: " : "Strength: "}</span>
         <span data-content>{r.text}</span>
         {r.unverified && <span className="chip ml-2 bg-caution-wash text-caution">Unverified</span>}
         {r.href && <> <Link href={r.href} className="link whitespace-nowrap text-[13px]">{r.linkLabel}</Link></>}

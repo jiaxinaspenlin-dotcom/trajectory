@@ -94,3 +94,8 @@ def title_case(text: str) -> str:
         _case_word(t, k in edges, after_verb(k)) if t.strip() and t not in BREAKS else t
         for k, t in enumerate(tokens)
     )
+
+
+def plural(n: int, one: str, many: str) -> str:
+    """'1 material claim is', '3 material claims are': the count with the right form."""
+    return f"{n} {one if n == 1 else many}"

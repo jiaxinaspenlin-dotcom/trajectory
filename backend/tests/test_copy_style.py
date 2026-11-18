@@ -45,3 +45,21 @@ def test_queue_labels_and_details_are_title_case(client, seeded):
         if a["next_action_detail"]:
             assert a["next_action_detail"] == title_case(a["next_action_detail"]), a
 
+
+
+def test_counts_are_pluralized_at_the_source(client, seeded):
+    from app.services.copy import plural
+
+    assert plural(1, "material claim is", "material claims are") == "1 material claim is"
+    assert plural(3, "material claim is", "material claims are") == "3 material claims are"
+    # no "claim(s)" or "contradiction(s)" in what the seeded records say
+    for opp_id in range(1, 9):
+        o = client.get(f"/api/opportunities/{opp_id}").json()
+        debate = o.get("debate")
+        if not debate:
+            continue
+        texts = [p["text"] for a in debate["arguments"] for p in a["points"]]
+        texts += [debate["referee"]["rationale"], debate["referee"]["strongest_bear_point"]]
+        for t in texts:
+            assert "(s)" not in t, t
+            assert not t.startswith("0 "), t

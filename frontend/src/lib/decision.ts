@@ -10,43 +10,58 @@ export interface Reason {
   href: string | null;
   linkLabel: string | null;
   unverified: boolean;
+  // what kind of point it is, whichever block it sits in: a strength (bull) or a
+  // concern (bear); its mark follows this, not the block
+  tone: "strength" | "concern";
 }
 
-// Actions that move a deal forward: their reasons are the bull case and their risk
-// the bear case. For a cautious action (Monitor, Pass) it's the other way round.
-const ADVANCING = new Set(["Continue Diligence", "Invest", "Schedule Interview", "Invite to Apply", "Request Information"]);
+// Cautious actions are backed by the concerns (the bear case) and could be changed
+// by the strengths; actions that move a deal forward are the other way round.
+const CAUTIOUS = new Set(["Monitor", "Request Information", "Request More Information", "Pass"]);
+export const isCautious = (action: string | null) => !!action && CAUTIOUS.has(action);
 
-// "0 material claim(s) are founder-reported…" says nothing: it isn't a reason.
+// "0 material claims…" says nothing: it isn't a point either way.
 const vacuous = (text: string) => /^0\s/.test(text.trim());
 
-export function decisionReasons(o: Pick<Opportunity, "id" | "debate" | "diligence">, action: string | null): { reasons: Reason[]; risk: Reason | null } {
+export function decisionReasons(o: Pick<Opportunity, "id" | "debate" | "diligence">, action: string | null): { reasons: Reason[]; counter: Reason | null } {
   const args = o.debate?.arguments ?? [];
-  const advancing = action ? ADVANCING.has(action) : true;
-  const forSide = args.find((a) => a.role === (advancing ? "bull" : "bear"));
-  const againstSide = args.find((a) => a.role === (advancing ? "bear" : "bull"));
+  const cautious = isCautious(action);
+  const supportRole = cautious ? "bear" : "bull";
   const openQuestions = (o.diligence ?? []).filter((q) => q.status === "open");
 
-  const toReason = (p: { text: string; evidence_ids: number[]; unverified?: boolean }): Reason => {
+  const toReason = (p: { text: string; evidence_ids: number[]; unverified?: boolean }, role: "bull" | "bear"): Reason => {
+    const base = { text: p.text, unverified: !!p.unverified, tone: role === "bull" ? "strength" as const : "concern" as const };
     if (p.evidence_ids.length) {
-      return { text: p.text, href: evidenceHref(o.id, p.evidence_ids[0]), linkLabel: p.evidence_ids.length === 1 ? "See Evidence" : `See Evidence (${p.evidence_ids.length})`, unverified: !!p.unverified };
+      return { ...base, href: evidenceHref(o.id, p.evidence_ids[0]), linkLabel: p.evidence_ids.length === 1 ? "See Evidence" : `See Evidence (${p.evidence_ids.length})` };
     }
     // a contradiction or a claim lives on the Claims tab; an open question on Diligence
     const question = openQuestions.find((q) => q.question.includes(p.text.replace(/^Contradiction:\s*/, "").slice(0, 60)));
-    if (question) return { text: p.text, href: `/vc/opportunities/${o.id}/diligence`, linkLabel: "See the Open Question", unverified: !!p.unverified };
-    if (/contradict|claim/i.test(p.text)) return { text: p.text, href: `/vc/opportunities/${o.id}?tab=claims`, linkLabel: "See the Claims", unverified: !!p.unverified };
-    return { text: p.text, href: null, linkLabel: null, unverified: !!p.unverified };
+    if (question) return { ...base, href: `/vc/opportunities/${o.id}/diligence`, linkLabel: "See the Open Question" };
+    if (/contradict|claim/i.test(p.text)) return { ...base, href: `/vc/opportunities/${o.id}?tab=claims`, linkLabel: "See the Claims" };
+    return { ...base, href: null, linkLabel: null };
   };
+  // a side's points, strongest first: backed by evidence, then verified
+  const strength = (p: { evidence_ids: number[]; unverified?: boolean }) => (p.evidence_ids.length ? 2 : 0) + (p.unverified ? 0 : 1);
+  const points = (role: "bull" | "bear") => (args.find((a) => a.role === role)?.points ?? [])
+    .filter((p) => !vacuous(p.text))
+    .map((p, i) => ({ p, i }))
+    .sort((a, b) => strength(b.p) - strength(a.p) || a.i - b.i)
+    .map(({ p }) => p);
 
-  const supporting = (forSide?.points ?? []).filter((p) => !vacuous(p.text));
-  // evidence-backed reasons first
-  const reasons = [...supporting].sort((a, b) => Number(!!b.evidence_ids.length) - Number(!!a.evidence_ids.length)).slice(0, 3).map(toReason);
-  const against = (againstSide?.points ?? []).find((p) => !vacuous(p.text));
-  const risk = against
-    ? toReason(against)
-    : openQuestions[0]
-    ? { text: openQuestions[0].question, href: `/vc/opportunities/${o.id}/diligence`, linkLabel: "See the Open Question", unverified: false }
+  const reasons = points(supportRole).slice(0, 3).map((p) => toReason(p, supportRole));
+  const otherRole = cautious ? "bull" : "bear";
+  const other = points(otherRole)[0];
+  const changeNote = o.debate?.referee?.evidence_that_would_change;
+  const counter: Reason | null = other
+    ? toReason(other, otherRole)
+    // without a point on the other side: for an advancing action the open question
+    // is what could change it; otherwise the referee's own note on what would
+    : !cautious && openQuestions[0]
+    ? { text: openQuestions[0].question, href: `/vc/opportunities/${o.id}/diligence`, linkLabel: "See the Open Question", unverified: false, tone: "concern" }
+    : changeNote
+    ? { text: changeNote, href: null, linkLabel: null, unverified: false, tone: cautious ? "strength" : "concern" }
     : null;
-  return { reasons, risk };
+  return { reasons, counter };
 }
 
 export type Choice = "agree" | "different" | "not_now" | "pass";
