@@ -624,13 +624,20 @@ describe("every route uses Title Case labels", () => {
   it("/vc/opportunities/[id]: an application lands on its first-pass screen", async () => {
     const application = { ...opportunity, entry_type: "inbound", stage: "screening", assessment: null, debate: null, current_recommendation: null,
       next_step: { key: "review_application", label: "Review Application", detail: "New Inbound Application", priority: 2 } };
-    fetched["/api/applications"] = { items: [{ id: 9, company_name: "Ledgerkit" }] };
+    // two applications from companies with the same name: the record's own is found by id
+    fetched["/api/applications"] = { items: [
+      { id: 8, company_id: 1, opportunity_id: 77, company_name: "Ledgerkit" },
+      { id: 9, company_id: 1, opportunity_id: 1, company_name: "Ledgerkit" },
+    ] };
+    fetched["/api/applications/8"] = { id: 8, company_name: "Ledgerkit", github_profile: null, website: null, product_link: null,
+      missing_fields: [], current_revenue: null, num_users: 5, funding_requested: null, document: null };
     fetched["/api/applications/9"] = { id: 9, company_name: "Ledgerkit", github_profile: "ada", website: null, product_link: "https://ledgerkit.dev",
       missing_fields: ["pitch_deck"], current_revenue: null, num_users: 1200, funding_requested: 1500000, document: null };
     await recordWith(application, "overview");
     const screenPanel = screen.getByTestId("application-screen");
     expect(screenPanel).toHaveTextContent("First-Pass Screen");
     expect(screenPanel).toHaveTextContent("1,200 UsersFounder-Reported");
+    expect(screenPanel).not.toHaveTextContent("5 Users");
     expect(screenPanel).toHaveTextContent("Raising $1.5MFounder-Reported");
     expect(screenPanel).toHaveTextContent("Pitch Deck");
     // the one next action

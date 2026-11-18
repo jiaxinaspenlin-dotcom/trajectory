@@ -437,7 +437,7 @@ def run_seed(force: bool = False) -> dict:
             opportunities.append(opp)
 
             if entry == EntryType.INBOUND:
-                db.add(Application(
+                application = Application(
                     company_id=company.id, company_name=company.name,
                     founder_names=[founder.full_name], sector=company.sector,
                     geography=company.geography, github_profile=founder.github_username,
@@ -445,7 +445,11 @@ def run_seed(force: bool = False) -> dict:
                     screen_summary=f"First-pass screen for {company.name}: GitHub available for "
                                    "independent verification; founder-reported traction requires verification.",
                     missing_fields=["Traction Signal (Revenue or Users)"], is_demo=True,
-                ))
+                )
+                db.add(application)
+                db.flush()
+                # linked like a real application, so its record finds it by id
+                opp.application_id = application.id
 
         db.commit()
 

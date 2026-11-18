@@ -89,11 +89,11 @@ function OpportunityRecord() {
     ? `founder_id=${o.founder.id}`
     : null;
   const claims = useFetch<{ items: Claim[] }>(scope ? `/api/claims?${scope}` : null);
-  // an inbound application waiting for review: its first-pass screen leads the record.
-  // The applications list has no company id, so the application is matched by name.
+  // an inbound application waiting for review: its first-pass screen leads the
+  // record. The application is the one this record was created from (by id).
   const reviewingApplication = o?.next_step?.key === "review_application";
-  const apps = useFetch<{ items: { id: number; company_name: string }[] }>(reviewingApplication ? "/api/applications" : null);
-  const appId = apps.data?.items.find((a) => a.company_name === o?.company?.name)?.id;
+  const apps = useFetch<{ items: { id: number; opportunity_id: number | null }[] }>(reviewingApplication ? "/api/applications" : null);
+  const appId = apps.data?.items.find((a) => a.opportunity_id === o?.id)?.id;
   const application = useFetch<ApplicationDetail>(reviewingApplication && appId ? `/api/applications/${appId}` : null);
   const contradictions = useFetch<{ items: any[] }>(scope ? `/api/contradictions?${scope}` : null);
   const [busy, setBusy] = useState(false);
