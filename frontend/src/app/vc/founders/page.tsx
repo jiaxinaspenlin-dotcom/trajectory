@@ -13,7 +13,8 @@ import { WebSourcing } from "@/components/WebSourcing";
 import { ArrowRightIcon, FoundersIcon, SearchIcon } from "@/components/icons";
 import { FounderLead } from "@/lib/types";
 import { clearPipelineStatus, getPipeline, PipelineStatus, setPipelineStatus } from "@/lib/myWorkspace";
-import { FOUNDER_VIEWS, FounderView, inPipeline, matchesFounderView, matchesQuery, SHORTLIST_LABEL, sortLeads } from "@/lib/pipeline";
+import { FOUNDER_VIEWS, FounderView, inPipeline, matchesFounderView, matchesQuery, sortLeads } from "@/lib/pipeline";
+import { removeFromShortlist } from "@/lib/shortlist";
 
 interface Prospect {
   opportunity_id: number;
@@ -289,19 +290,25 @@ function FounderLeads({
     return l ? l.founder?.full_name || l.company?.name || `Opportunity #${id}` : `Opportunity #${id}`;
   };
 
-  function setStatus(id: number, status: PipelineStatus | null) {
-    const lead = (leads.data?.items ?? []).find((x) => x.id === id);
-    if (status && !overlay[id] && lead?.status === status) {
-      // shortlisted on the shared record (as on the record page): pick another value to change it
-      notify({ message: `Already ${SHORTLIST_LABEL[status]} — choose another option to change it.` });
+  // Choosing a value sets it in this browser; Remove from Shortlist (or choosing
+  // the current value again) clears it entirely, including on the shared record.
+  async function setStatus(id: number, status: PipelineStatus | null) {
+    if (!status) {
+      try {
+        await removeFromShortlist(id);
+      } catch (e) {
+        notify({ tone: "error", message: e instanceof Error ? `Couldn't remove ${leadName(id)} from the shortlist: ${e.message}` : "Couldn't remove from the shortlist." });
+        return;
+      }
+      setOverlay(getPipeline());
+      await leads.reload();
+      notify({ message: `${leadName(id)} removed from your shortlist. Stage unchanged.` });
       return;
     }
-    if (status) setPipelineStatus(id, status);
-    else clearPipelineStatus(id);
+    setPipelineStatus(id, status);
     setOverlay(getPipeline());
     notify({
-      message: !status ? `${leadName(id)} removed from your shortlist.`
-        : status === "dismissed" ? `${leadName(id)} dismissed — hidden from All active.`
+      message: status === "dismissed" ? `${leadName(id)} dismissed — hidden from All active.`
         : `${leadName(id)} shortlisted as ${status === "saved" ? "Saved" : "Monitoring"}.`,
     });
   }

@@ -215,9 +215,10 @@ describe("FoundersTable row menu and phones", () => {
     fireEvent.click(screen.getByRole("button", { name: "More Actions for Ada Builder" }));
     expect(await screen.findByRole("menuitemcheckbox", { name: /Saved/ })).toHaveAttribute("aria-checked", "true");
     expect(screen.getByRole("menuitemcheckbox", { name: /Monitoring/ })).toHaveAttribute("aria-checked", "false");
-    // held on the shared record: choosing it asks the page (which explains), never clears
+    // held on the shared record: it can be removed, by choosing it again or by Remove from Shortlist
+    expect(screen.getByRole("menuitem", { name: "Remove from Shortlist" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("menuitemcheckbox", { name: /Saved/ }));
-    expect(onSetStatus).toHaveBeenCalledWith(11, "saved");
+    expect(onSetStatus).toHaveBeenCalledWith(11, null);
     unmount();
 
     render(<FoundersTable leads={[lead({ status: "saved" })]} overlay={{ 11: "monitoring" }} onSetStatus={onSetStatus} onMoveToScreening={async () => {}} />);

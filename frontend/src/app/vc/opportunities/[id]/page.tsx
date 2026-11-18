@@ -18,6 +18,7 @@ import { HumanDecisionPanel } from "@/components/HumanDecisionPanel";
 import { decisionReasons } from "@/lib/decision";
 import { dashboardCardHref, DeckItem, nextWaiting } from "@/lib/deck";
 import { useDeck } from "@/lib/useDeck";
+import { removeFromShortlist } from "@/lib/shortlist";
 import { DeckStrip } from "@/components/DeckStrip";
 import { ApplicationDetail, ApplicationScreen, LeadEvidence } from "@/components/RecordFocus";
 import { Claim, Evidence, Opportunity } from "@/lib/types";
@@ -27,7 +28,7 @@ import { evidenceHref, OpportunityTab, parseOpportunityTab, SHORTLIST_LABEL, sho
 import { Tabs, tabPanelProps } from "@/components/Tabs";
 import { EvidenceLinkProvider } from "@/components/EvidenceRef";
 import {
-  clearPipelineStatus, getMyDecision, getPipelineStatus, LocalDecision, PipelineStatus,
+  getMyDecision, getPipelineStatus, LocalDecision, PipelineStatus,
   saveMyDecision, setPipelineStatus,
 } from "@/lib/myWorkspace";
 
@@ -114,24 +115,27 @@ function OpportunityRecord() {
     setMyDecision(getMyDecision(n));
   }, [id]);
 
-  // My shortlist (Saved / Monitoring / Dismissed) is personal — kept in this
-  // browser and never shared. Choosing the current value again clears it.
-  function setShortlist(next: PipelineStatus) {
-    const n = Number(id);
-    if (!myStatus && o && o.status === next) {
-      // shortlisted on the shared record (e.g. saved from web search); pick another value to change it
-      notify({ message: `Already ${SHORTLIST_LABEL[next]} — choose another option to change it.` });
+  // My shortlist (Saved / Monitoring / Dismissed): choosing a value keeps it in
+  // this browser. Remove from Shortlist (or choosing the current value again)
+  // clears it entirely, including a value held on the shared record. The stage
+  // never changes.
+  async function removeShortlist() {
+    try {
+      await removeFromShortlist(Number(id));
+    } catch (e) {
+      notify({ tone: "error", message: e instanceof Error ? `Couldn't remove from the shortlist: ${e.message}` : "Couldn't remove from the shortlist." });
       return;
     }
-    if (myStatus === next) {
-      clearPipelineStatus(n);
-      setMyStatus(null);
-      notify({ message: "Removed from your shortlist." });
-    } else {
-      setPipelineStatus(n, next);
-      setMyStatus(next);
-      notify({ message: next === "dismissed" ? "Dismissed — hidden from your active leads." : `Shortlist set to ${SHORTLIST_LABEL[next]}.` });
-    }
+    setMyStatus(null);
+    await reload();
+    notify({ message: "Removed from your shortlist. Stage unchanged." });
+  }
+
+  function setShortlist(next: PipelineStatus) {
+    if (shortlistOf(o ?? { status: "" }, myStatus) === next) return void removeShortlist();
+    setPipelineStatus(Number(id), next);
+    setMyStatus(next);
+    notify({ message: next === "dismissed" ? "Dismissed — hidden from your active leads." : `Shortlist set to ${SHORTLIST_LABEL[next]}.` });
   }
 
   // Suggesting outreach and moving to Screening are shared workflow steps.
@@ -364,7 +368,7 @@ function OpportunityRecord() {
             </div>
             <StatusCard
               o={o} inPipeline={inPipeline} shortlist={shortlist}
-              setShortlist={setShortlist} suggestOutreach={suggestOutreach}
+              setShortlist={setShortlist} removeShortlist={removeShortlist} suggestOutreach={suggestOutreach}
             />
           </div>
         )}
@@ -513,10 +517,10 @@ function Fact({ label, value, note, tab, pathname }: { label: string; value: str
 // Screening) and, for outbound leads, my personal shortlist. The next step lives
 // in the header with the record's one primary button.
 function StatusCard({
-  o, inPipeline, shortlist, setShortlist, suggestOutreach,
+  o, inPipeline, shortlist, setShortlist, removeShortlist, suggestOutreach,
 }: {
   o: Opportunity; inPipeline: boolean; shortlist: ReturnType<typeof shortlistOf>;
-  setShortlist: (s: PipelineStatus) => void; suggestOutreach: () => void;
+  setShortlist: (s: PipelineStatus) => void; removeShortlist: () => void; suggestOutreach: () => void;
 }) {
   return (
     <aside aria-label="Stage and Shortlist" className="space-y-8 lg:border-l lg:border-line lg:pl-8">
@@ -538,7 +542,8 @@ function StatusCard({
             onChange={(v) => v !== "none" && setShortlist(v)}
             options={(["saved", "monitoring", "dismissed"] as const).map((st) => ({ value: st, label: SHORTLIST_LABEL[st] }))}
           />
-          <p className="mt-2 text-xs text-ink-muted">Only you see this (saved in this browser). It doesn&apos;t change the stage.</p>
+          {shortlist && <button type="button" className="link mt-2 block text-sm" onClick={removeShortlist}>Remove from Shortlist</button>}
+          <p className="mt-2 text-xs text-ink-muted">A choice is kept in this browser; removing clears it from the record too. Neither changes the stage.</p>
           {!inPipeline && (
             <button className="link mt-3 text-sm" onClick={suggestOutreach}
               title="Adds an 'Invite to Apply' suggestion for you to approve. Nothing is sent.">

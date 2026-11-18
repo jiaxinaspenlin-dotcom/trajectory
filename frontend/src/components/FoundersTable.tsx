@@ -126,8 +126,7 @@ export function FoundersTable({
   // The row's menu. Always in this order: the stage step, then my shortlist. The
   // current shortlist is the one the row's badge shows: mine, or the shared record's.
   const menuItems = (l: FounderLead): RowMenuItem[] => {
-    const mine = overlay[l.id] ?? null;
-    const current = shortlistOf(l, mine);
+    const current = shortlistOf(l, overlay[l.id] ?? null);
     return [
     inPipeline(l)
       ? { label: `View in Pipeline · ${humanStatus(l.stage)}`, href: `/vc/pipeline?stage=${l.stage}` }
@@ -144,11 +143,10 @@ export function FoundersTable({
     ...STATUS_OPTIONS.map((o) => ({
       label: o.label,
       checked: current === o.value,
-      // choosing my current value again clears it; a value held on the shared
-      // record can only be changed by choosing another (the page says so)
-      onSelect: () => onSetStatus(l.id, mine === o.value ? null : o.value),
+      // choosing the current value again removes it
+      onSelect: () => onSetStatus(l.id, current === o.value ? null : o.value),
     })),
-    ...(mine ? [{ label: "Remove from Shortlist", onSelect: () => onSetStatus(l.id, null) }] : []),
+    ...(current ? [{ label: "Remove from Shortlist", onSelect: () => onSetStatus(l.id, null) }] : []),
     ];
   };
 

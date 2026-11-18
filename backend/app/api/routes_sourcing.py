@@ -260,6 +260,16 @@ def list_prospects(db: Session = Depends(get_db)) -> dict:
     ]}
 
 
+_SHORTLIST = {OpportunityStatus.SAVED, OpportunityStatus.MONITORING, OpportunityStatus.DISMISSED}
+# a record's status when nothing shortlists it, by stage
+_UNLISTED_STATUS: dict[str, OpportunityStatus] = {
+    WorkflowStage.SOURCING: OpportunityStatus.PROSPECT,
+    WorkflowStage.SCREENING: OpportunityStatus.APPLIED,
+    WorkflowStage.DILIGENCE: OpportunityStatus.IN_DILIGENCE,
+    WorkflowStage.DECISION: OpportunityStatus.IN_DILIGENCE,
+}
+
+
 @router.post("/sourcing/prospects/{opp_id}/action")
 def prospect_action(opp_id: int, body: ProspectActionIn, db: Session = Depends(get_db)) -> dict:
     o = db.get(Opportunity, opp_id)
@@ -274,6 +284,14 @@ def prospect_action(opp_id: int, body: ProspectActionIn, db: Session = Depends(g
     if action in mapping:
         o.status = mapping[action]
         detail = f"Prospect {action}"
+    elif action == "clear_shortlist":
+        # Removes Saved / Monitoring / Dismissed: the record goes back to the status
+        # it has at its stage when it isn't shortlisted. The stage never changes.
+        if str(o.status) in _SHORTLIST:
+            o.status = _UNLISTED_STATUS.get(str(o.stage), OpportunityStatus.PROSPECT)
+            detail = "Removed from shortlist. Stage unchanged."
+        else:
+            detail = "Not shortlisted; nothing changed."
     elif action == "recommend_outreach":
         # prepare/recommend — does NOT send. Human must approve.
         for prev in db.scalars(select(RecommendedAction).where(

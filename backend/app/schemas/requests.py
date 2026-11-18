@@ -130,7 +130,7 @@ class SearchApplyIn(BaseModel):
 
 
 class ProspectActionIn(BaseModel):
-    action: str  # save | dismiss | monitor | recommend_outreach | invite_to_apply
+    action: str  # save | dismiss | monitor | clear_shortlist | recommend_outreach | invite_to_apply
 
 
 class DiligenceStatusIn(BaseModel):

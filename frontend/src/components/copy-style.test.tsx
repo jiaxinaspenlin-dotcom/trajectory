@@ -437,6 +437,19 @@ describe("every route uses Title Case labels", () => {
     expectCleanCopy();
   });
 
+  it("/vc/founders: Remove from Shortlist in the row menu clears the record's value", async () => {
+    const { api } = await import("@/lib/api");
+    vi.mocked(api.post).mockClear();
+    pathname = "/vc/founders";
+    fetched["/api/sourcing/prospects"] = { items: [leadRow({ status: "saved" })] };
+    const { default: Founders } = await import("@/app/vc/founders/page");
+    render(<Founders />);
+    fireEvent.click(document.querySelector<HTMLElement>("[aria-haspopup=menu]")!);
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Remove from Shortlist" }));
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith("/api/sourcing/prospects/1/action", { action: "clear_shortlist" }));
+    expect(screen.queryByText(/Already Saved/)).toBeNull();
+  });
+
   it("/vc/founders: empty", async () => {
     fetched["/api/sourcing/prospects"] = { items: [] };
     const { default: Founders } = await import("@/app/vc/founders/page");
@@ -657,9 +670,23 @@ describe("every route uses Title Case labels", () => {
     const confirm = screen.getByRole("region", { name: "Confirm Move to Screening" });
     expect(confirm).toHaveTextContent("No outreach is sent.");
     const { api } = await import("@/lib/api");
-    expect(api.post).not.toHaveBeenCalledWith(expect.stringContaining("/action"), expect.anything());
+    expect(api.post).not.toHaveBeenCalledWith(expect.anything(), { action: "invite_to_apply" });
     fireEvent.click(within(confirm).getByRole("button", { name: "Confirm Move" }));
     await waitFor(() => expect(api.post).toHaveBeenCalledWith("/api/sourcing/prospects/1/action", { action: "invite_to_apply" }));
+    expectCleanCopy();
+  });
+
+  it("/vc/opportunities/[id]: Remove from Shortlist clears a value held on the record, and the stage stays", async () => {
+    const { api } = await import("@/lib/api");
+    vi.mocked(api.post).mockClear();
+    localStorage.setItem("trajectory_investor_pipeline", JSON.stringify({ 1: "monitoring" }));
+    await recordWith({ ...lead, status: "saved" }, "overview");
+    await flush();
+    fireEvent.click(screen.getByRole("button", { name: "Remove from Shortlist" }));
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith("/api/sourcing/prospects/1/action", { action: "clear_shortlist" }));
+    expect(api.post).not.toHaveBeenCalledWith(expect.anything(), { action: "invite_to_apply" });
+    expect(JSON.parse(localStorage.getItem("trajectory_investor_pipeline") ?? "{}")[1]).toBeUndefined();
+    expect(screen.queryByText(/Already Saved/)).toBeNull();
     expectCleanCopy();
   });
 
