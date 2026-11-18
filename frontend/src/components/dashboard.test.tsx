@@ -180,6 +180,25 @@ describe("Dashboard deck", () => {
   });
 });
 
+describe("Dashboard jump tiles", () => {
+  const kinds: [string, string, string][] = [
+    ["recommendation", "diligence", "review_recommendation"], ["application", "screening", "review_application"], ["lead", "sourcing", "run_analysis"],
+    ["diligence", "diligence", "resolve_diligence"], ["memo", "screening", "generate_memo"],
+  ];
+  it.each([1, 2, 3, 4, 5])("with %i kinds of work, the rows stay balanced", async (n) => {
+    populated();
+    (fetched["/api/dashboard"] as { action_queue: unknown[] }).action_queue = kinds.slice(0, n).map(([group, stage, key], i) => item(10 + i, `R${i}`, group, stage, key, null));
+    await renderDashboard();
+    const list = screen.getByTestId("jump-tiles");
+    const tiles = [...list.children];
+    expect(tiles).toHaveLength(n);
+    // one column on phones; all in one row on wide screens
+    expect(list.className).toContain(n === 1 ? "sm:grid-cols-1" : `xl:grid-cols-${n}`);
+    // two columns in between: an odd last tile spans both instead of sitting alone
+    tiles.forEach((t, i) => expect(t.className.includes("sm:col-span-2")).toBe(n > 1 && n % 2 === 1 && i === n - 1));
+  });
+});
+
 describe("Dashboard", () => {
   it("shows the four stages as one summary, each opening its list", async () => {
     populated();

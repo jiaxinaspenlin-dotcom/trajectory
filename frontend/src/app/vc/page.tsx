@@ -23,6 +23,9 @@ interface Dashboard {
   recent_evidence: { id: number; kind: string; title: string; source_name: string; collected_at: string; opportunity_id: number | null; opportunity_name: string | null }[];
 }
 
+// the jump tiles' columns on wide screens, by how many kinds of work are waiting
+const WIDE_COLS: Record<number, string> = { 1: "sm:grid-cols-1", 2: "xl:grid-cols-2", 3: "xl:grid-cols-3", 4: "xl:grid-cols-4", 5: "xl:grid-cols-5" };
+
 const STAGES = ["sourcing", "screening", "diligence", "decision"] as const;
 const STAGE_LINKS: Record<string, string> = {
   sourcing: "/vc/founders",
@@ -129,18 +132,20 @@ function DashboardContent() {
       </section>
 
       {/* 2. the deck by kind of work: each jumps to the first card of its kind */}
-      {groups.length > 1 && (
+      {groups.length > 0 && (
         <section aria-labelledby="waiting-title" data-tour="waiting">
           <div className="mb-4 flex items-baseline justify-between gap-3">
             <h2 id="waiting-title" className="text-title text-ink">Jump to a Kind of Work</h2>
             <span className="num text-meta text-ink-muted">{items.length} Waiting</span>
           </div>
-          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {/* always balanced: one row on wide screens (up to five), two columns in
+              between with an odd last tile spanning both, one column on phones */}
+          <ul className={`grid gap-3 sm:grid-cols-2 ${WIDE_COLS[Math.min(groups.length, 5)]}`} data-testid="jump-tiles">
             {groups.map((g, i) => {
               const on = current?.group === g.key;
               const meta = DECK_GROUPS[g.key];
               return (
-                <Reveal as="li" key={g.key} i={i} className="animate-rise">
+                <Reveal as="li" key={g.key} i={i} className={`animate-rise ${groups.length > 1 && groups.length % 2 === 1 && i === groups.length - 1 ? "sm:col-span-2 xl:col-span-1" : ""}`}>
                   <button
                     type="button"
                     aria-current={on ? "true" : undefined}
