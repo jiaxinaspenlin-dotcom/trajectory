@@ -242,10 +242,28 @@ async def update_application(
 def list_applications(db: Session = Depends(get_db)) -> dict:
     apps = db.scalars(select(Application).order_by(Application.id.desc())).all()
     return {"items": [
-        {"id": a.id, "company_name": a.company_name, "sector": a.sector,
+        {"id": a.id, "company_id": a.company_id, "opportunity_id": _opportunity_id(db, a),
+         "company_name": a.company_name, "sector": a.sector,
          "missing_fields": a.missing_fields, "has_deck": a.document_id is not None}
         for a in apps
     ]}
+
+
+def _opportunity_id(db, app: Application) -> int | None:
+    """The opportunity this application created. Applications are linked by id;
+    ones from before that link existed fall back to their company's only inbound
+    opportunity without a linked application, and to none if that is ambiguous."""
+    linked = db.scalar(select(Opportunity.id).where(Opportunity.application_id == app.id))
+    if linked is not None:
+        return linked
+    if app.company_id is None:
+        return None
+    candidates = db.scalars(select(Opportunity.id).where(
+        Opportunity.company_id == app.company_id,
+        Opportunity.application_id.is_(None),
+        Opportunity.entry_type == EntryType.INBOUND,
+    )).all()
+    return candidates[0] if len(candidates) == 1 else None
 
 
 # --- helpers ---------------------------------------------------------------
@@ -330,7 +348,7 @@ def _store_reported_evidence(db, company_id: int, body) -> None:
             existing.collected_at = now
             return
         db.add(Evidence(
-            company_id=company_id, source_name="Founder application",
+            company_id=company_id, source_name="Founder Application",
             source_type=SourceType.FOUNDER_SUBMITTED, source_url=None, kind=kind,
             title=title, raw_value=str(value), structured_value=structured,
             event_date=now, collected_at=now, provenance=Provenance.FOUNDER_REPORTED,

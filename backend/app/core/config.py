@@ -10,7 +10,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Resolve repo-relative paths so the app runs from any working directory.
@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     github_token: str = Field(default="", alias="GITHUB_TOKEN")
     http_timeout_seconds: float = Field(default=30.0, alias="HTTP_TIMEOUT_SECONDS")
 
+    # Web search (server-side only; the key never reaches the browser)
+    web_search_provider: str = Field(default="tavily", alias="WEB_SEARCH_PROVIDER")
+    tavily_api_key: str = Field(default="", alias="TAVILY_API_KEY")
+
     # Database
     database_url: str = Field(default="", alias="DATABASE_URL")
 
@@ -53,6 +57,25 @@ class Settings(BaseSettings):
     # Security / runtime
     secret_key: str = Field(default="change-me-in-production", alias="SECRET_KEY")
     environment: str = Field(default="development", alias="ENVIRONMENT")
+
+    # Demo data. Unset: seed an empty database unless ENVIRONMENT=production.
+    seed_demo_data: bool | None = Field(default=None, alias="SEED_DEMO_DATA")
+
+    @field_validator("seed_demo_data", mode="before")
+    @classmethod
+    def _blank_is_unset(cls, v: object) -> object:
+        return None if isinstance(v, str) and not v.strip() else v
+
+    @property
+    def is_production(self) -> bool:
+        return self.environment.strip().lower() == "production"
+
+    @property
+    def should_seed_demo(self) -> bool:
+        """An explicit SEED_DEMO_DATA wins; otherwise seed outside production only."""
+        if self.seed_demo_data is not None:
+            return self.seed_demo_data
+        return not self.is_production
 
     @property
     def resolved_database_url(self) -> str:
@@ -91,6 +114,10 @@ class Settings(BaseSettings):
     @property
     def ai_enabled(self) -> bool:
         return bool(self.openai_api_key.strip())
+
+    @property
+    def web_search_enabled(self) -> bool:
+        return self.web_search_provider == "tavily" and bool(self.tavily_api_key.strip())
 
     @property
     def max_upload_bytes(self) -> int:

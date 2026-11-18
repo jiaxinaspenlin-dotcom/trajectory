@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.models.assessment import Opportunity, OpportunityAssessment
@@ -10,7 +10,10 @@ from app.models.core import InvestmentThesis
 from app.models.entities import Company, Founder
 from app.models.sources import Claim, Evidence
 from app.models.workflow import Debate, DiligenceQuestion, InvestmentMemo, RecommendedAction
+from app.scoring.founder_score import COMPONENT_LABELS
+from app.services.copy import title_case
 from app.services.founder import latest_founder_score, momentum_for
+from app.services.thesis import fit_is_stale
 
 
 def iso(dt):
@@ -76,12 +79,23 @@ def claim_out(db: Session, c: Claim) -> dict:
     }
 
 
+def _display_components(components: list | None) -> list:
+    """Component names as current Title Case display text, whatever casing the
+    stored score was computed with (stored rows are never rewritten)."""
+    out = []
+    for c in components or []:
+        if isinstance(c, dict) and c.get("key"):
+            c = {**c, "name": COMPONENT_LABELS.get(c["key"]) or title_case(str(c.get("name", "")))}
+        out.append(c)
+    return out
+
+
 def founder_score_out(fs) -> dict | None:
     if not fs:
         return None
     return {
         "id": fs.id, "founder_id": fs.founder_id, "version": fs.version, "score": fs.score,
-        "confidence": fs.confidence, "components": fs.components, "explanation": fs.explanation,
+        "confidence": fs.confidence, "components": _display_components(fs.components), "explanation": fs.explanation,
         "evidence_ids": fs.evidence_ids, "computed_at": iso(fs.computed_at),
     }
 
@@ -136,7 +150,11 @@ def memo_out(m: InvestmentMemo) -> dict:
     return {
         "id": m.id, "opportunity_id": m.opportunity_id, "version": m.version,
         "generated_by": m.generated_by, "computed_at": iso(m.computed_at),
-        "sections": m.sections, "recommended_action": m.recommended_action, "confidence": m.confidence,
+        "sections": [
+            {**s, "title": title_case(s["title"])} if isinstance(s, dict) and s.get("title") else s
+            for s in (m.sections or [])
+        ],
+        "recommended_action": m.recommended_action, "confidence": m.confidence,
     }
 
 
@@ -152,13 +170,18 @@ def diligence_out(q: DiligenceQuestion) -> dict:
     }
 
 
-def founder_signals_out(db: Session, founder_id: int | None) -> dict:
-    """List-level evidence signals for a founder: how much evidence exists and
-    their most-starred public repo (a 'project' when there's no company yet).
-    Stars are external interest only, never commercial traction."""
-    if not founder_id:
+def founder_signals_out(db: Session, founder_id: int | None, company_id: int | None = None) -> dict:
+    """List-level evidence signals for a lead: how much evidence exists (founder
+    and company) and the founder's most-starred public repo (a 'project' when
+    there's no company yet). Stars are external interest only, never traction."""
+    conds = []
+    if founder_id:
+        conds.append(Evidence.founder_id == founder_id)
+    if company_id:
+        conds.append(Evidence.company_id == company_id)
+    if not conds:
         return {"evidence_count": 0, "top_project": None}
-    evidence = db.scalars(select(Evidence).where(Evidence.founder_id == founder_id)).all()
+    evidence = db.scalars(select(Evidence).where(or_(*conds))).all()
     repos = [e for e in evidence if e.kind == "github_repo"]
     top = max(repos, key=lambda e: (e.structured_value or {}).get("stars") or 0, default=None)
     return {
@@ -169,6 +192,14 @@ def founder_signals_out(db: Session, founder_id: int | None) -> dict:
             if top else None
         ),
     }
+
+
+def _active_thesis(db: Session, fund_id: int) -> InvestmentThesis | None:
+    return db.scalar(
+        select(InvestmentThesis)
+        .where(InvestmentThesis.fund_id == fund_id, InvestmentThesis.is_active == True)  # noqa: E712
+        .order_by(InvestmentThesis.id.desc())
+    )
 
 
 def opportunity_out(db: Session, o: Opportunity, *, detail: bool = False) -> dict:
@@ -183,6 +214,7 @@ def opportunity_out(db: Session, o: Opportunity, *, detail: bool = False) -> dic
         "thesis_fit_score": o.thesis_fit_score, "surfaced_reason": o.surfaced_reason,
         "first_signal_at": iso(o.first_signal_at), "recommendation_at": iso(o.recommendation_at),
         "founder_score": founder_score_out(fs), "is_demo": o.is_demo,
+        "thesis_fit_stale": fit_is_stale(_active_thesis(db, o.fund_id), company, o.thesis_fit_score),
     }
     if o.founder_id:
         base["momentum"] = momentum_for(db, o.founder_id)

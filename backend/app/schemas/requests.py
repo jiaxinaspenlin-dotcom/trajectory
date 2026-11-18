@@ -117,12 +117,20 @@ class DiscoverIn(BaseModel):
     limit: int = Field(default=8, ge=1, le=15)
 
 
+class WebSearchIn(BaseModel):
+    request: str = Field(min_length=3, max_length=1000)
+
+
+class WebSaveIn(BaseModel):
+    status: Literal["saved", "monitoring"] = "saved"
+
+
 class SearchApplyIn(BaseModel):
     filters: dict
 
 
 class ProspectActionIn(BaseModel):
-    action: str  # save | dismiss | monitor | recommend_outreach | invite_to_apply
+    action: str  # save | dismiss | monitor | clear_shortlist | recommend_outreach | invite_to_apply
 
 
 class DiligenceStatusIn(BaseModel):
@@ -136,9 +144,10 @@ class DiligenceResponseIn(BaseModel):
 
 
 class HumanDecisionIn(BaseModel):
-    decided_by: str
+    # every field is an explicit choice; nothing defaults to an outcome
+    decided_by: str = Field(min_length=1, max_length=255)
     decision: str  # approved | rejected | deferred | overridden
-    chosen_action: str
+    chosen_action: str = Field(min_length=1, max_length=64)
     notes: str = ""
 
 

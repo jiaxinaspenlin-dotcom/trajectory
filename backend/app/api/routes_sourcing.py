@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -10,14 +11,25 @@ from sqlalchemy.orm import Session
 
 from app.ai import services as ai
 from app.api.deps import active_thesis, default_fund, get_db
+from app.connectors.web_search import WebSearchError
+from app.core.config import settings
 from app.core.rate_limit import ai_rate_limit
 from app.core.security import parse_github_repo_url
 from app.models.assessment import Opportunity
 from app.models.entities import Company, Founder
 from app.models.enums import EntryType, OpportunityStatus, WorkflowStage
 from app.models.sources import Evidence
+from app.models.web_sourcing import WebSearch
 from app.models.workflow import RecommendedAction, WorkflowEvent
-from app.schemas.requests import DiscoverIn, GitHubSyncIn, ProspectActionIn, SearchIn
+from app.schemas.requests import (
+    DiscoverIn,
+    GitHubSyncIn,
+    ProspectActionIn,
+    SearchIn,
+    WebSaveIn,
+    WebSearchIn,
+)
+from app.services import web_sourcing
 from app.services.discovery import run_ai_discovery
 from app.services.github_sync import sync_github_user
 from app.services.serializers import founder_signals_out, opportunity_out
@@ -116,6 +128,84 @@ async def ai_discover(body: DiscoverIn, db: Session = Depends(get_db)) -> dict:
     return await run_ai_discovery(db, fund.id, brief=body.brief, limit=body.limit)
 
 
+# ---- web sourcing ----------------------------------------------------------
+
+_WEB_ERROR_STATUS = {"not_configured": 503, "invalid_credentials": 503, "plan_limit": 503,
+                     "rate_limited": 429, "provider_error": 502, "provider_unreachable": 502}
+
+
+def _web_error(exc: WebSearchError) -> HTTPException:
+    return HTTPException(_WEB_ERROR_STATUS.get(exc.code, 502), detail={"code": exc.code, "message": exc.message})
+
+
+@router.get("/sourcing/web/status")
+def web_status(db: Session = Depends(get_db)) -> dict:
+    """Whether web search can run, plus a thesis-based starting request."""
+    fund = default_fund(db)
+    thesis = active_thesis(db, fund.id)
+    last = db.scalar(select(WebSearch).where(WebSearch.fund_id == fund.id).order_by(WebSearch.id.desc()))
+    return {
+        "provider": settings.web_search_provider,
+        "search_configured": settings.web_search_enabled,
+        "ai_configured": settings.ai_enabled,
+        "thesis_request": web_sourcing.thesis_request(thesis),
+        "last_search_id": last.id if last else None,
+    }
+
+
+@router.post("/sourcing/web/search", dependencies=[Depends(ai_rate_limit)])
+async def web_search(body: WebSearchIn, db: Session = Depends(get_db)) -> dict:
+    """Search the web for leads, structure them with AI, keep only claims tied
+    to retrieved sources, and append new evidence to leads already saved.
+    Nothing is saved as a new lead until the investor saves a result."""
+    fund = default_fund(db)
+    try:
+        return await web_sourcing.run_web_search(db, fund.id, body.request.strip(), active_thesis(db, fund.id))
+    except WebSearchError as exc:
+        raise _web_error(exc) from exc
+
+
+@router.post("/sourcing/web/check/{opp_id}", dependencies=[Depends(ai_rate_limit)])
+async def web_check_lead(opp_id: int, db: Session = Depends(get_db)) -> dict:
+    """Search the web for one saved lead (its own site's release pages and
+    launch sites) and append sources it doesn't have yet. Never changes stage."""
+    o = db.get(Opportunity, opp_id)
+    if not o:
+        raise HTTPException(404, "Opportunity not found.")
+    fund = default_fund(db)
+    try:
+        out = await web_sourcing.run_web_search(db, fund.id, "", active_thesis(db, fund.id), focus=o)
+    except WebSearchError as exc:
+        raise _web_error(exc) from exc
+    except LookupError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    added = sum(u["evidence_added"] for u in out["updated_leads"] if u["opportunity_id"] == opp_id)
+    return {**out, "lead": {"opportunity_id": opp_id, "evidence_added": added,
+                            "matched": any((r.get("existing") or {}).get("opportunity_id") == opp_id for r in out["results"])}}
+
+
+@router.get("/sourcing/web/searches/{search_id}")
+def get_web_search(search_id: int, db: Session = Depends(get_db)) -> dict:
+    record = db.get(WebSearch, search_id)
+    if not record:
+        raise HTTPException(404, "Search not found.")
+    return web_sourcing.search_out(record)
+
+
+@router.post("/sourcing/web/searches/{search_id}/results/{key}/save")
+async def save_web_result(search_id: int, key: str, body: WebSaveIn, db: Session = Depends(get_db)) -> dict:
+    """Investor action: create or update a lead from a validated result. The
+    lead stays in Sourcing; Move to Screening is a separate action."""
+    record = db.get(WebSearch, search_id)
+    if not record:
+        raise HTTPException(404, "Search not found.")
+    fund = default_fund(db)
+    try:
+        return await web_sourcing.save_web_result(db, fund.id, record, key, body.status, active_thesis(db, fund.id))
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
 @router.post("/search/parse", dependencies=[Depends(ai_rate_limit)])
 def parse_search(body: SearchIn, db: Session = Depends(get_db)) -> dict:
     """Convert an NL compound query into editable structured filters."""
@@ -163,8 +253,21 @@ def list_prospects(db: Session = Depends(get_db)) -> dict:
         .order_by(Opportunity.id.desc())
     ).all()
     return {"items": [
-        {**opportunity_out(db, o), **founder_signals_out(db, o.founder_id)} for o in opps
+        {**opportunity_out(db, o), **founder_signals_out(db, o.founder_id, o.company_id),
+         "new_evidence_count": web_sourcing.new_evidence_count(db, o),
+         "identity": web_sourcing.lead_identity(db, o)}
+        for o in opps
     ]}
+
+
+_SHORTLIST = {OpportunityStatus.SAVED, OpportunityStatus.MONITORING, OpportunityStatus.DISMISSED}
+# a record's status when nothing shortlists it, by stage
+_UNLISTED_STATUS: dict[str, OpportunityStatus] = {
+    WorkflowStage.SOURCING: OpportunityStatus.PROSPECT,
+    WorkflowStage.SCREENING: OpportunityStatus.APPLIED,
+    WorkflowStage.DILIGENCE: OpportunityStatus.IN_DILIGENCE,
+    WorkflowStage.DECISION: OpportunityStatus.IN_DILIGENCE,
+}
 
 
 @router.post("/sourcing/prospects/{opp_id}/action")
@@ -181,6 +284,14 @@ def prospect_action(opp_id: int, body: ProspectActionIn, db: Session = Depends(g
     if action in mapping:
         o.status = mapping[action]
         detail = f"Prospect {action}"
+    elif action == "clear_shortlist":
+        # Removes Saved / Monitoring / Dismissed: the record goes back to the status
+        # it has at its stage when it isn't shortlisted. The stage never changes.
+        if str(o.status) in _SHORTLIST:
+            o.status = _UNLISTED_STATUS.get(str(o.stage), OpportunityStatus.PROSPECT)
+            detail = "Removed from shortlist. Stage unchanged."
+        else:
+            detail = "Not shortlisted; nothing changed."
     elif action == "recommend_outreach":
         # prepare/recommend — does NOT send. Human must approve.
         for prev in db.scalars(select(RecommendedAction).where(
@@ -214,18 +325,36 @@ def prospect_action(opp_id: int, body: ProspectActionIn, db: Session = Depends(g
             "note": "No automated outreach is ever sent; consequential actions require human approval."}
 
 
+def _evidence_owner(opps: Sequence[Opportunity], e: Evidence, db: Session) -> dict:
+    """The opportunity a piece of evidence belongs to (company first, then
+    founder), so the Dashboard can link straight to it."""
+    o = next((o for o in opps if e.company_id and o.company_id == e.company_id), None) or next(
+        (o for o in opps if e.founder_id and o.founder_id == e.founder_id), None)
+    if not o:
+        return {"opportunity_id": None, "opportunity_name": None}
+    company = db.get(Company, o.company_id) if o.company_id else None
+    founder = db.get(Founder, o.founder_id) if o.founder_id else None
+    return {"opportunity_id": o.id,
+            "opportunity_name": (company.name if company else None) or (founder.full_name if founder else None)}
+
+
 @router.get("/dashboard")
 def dashboard(db: Session = Depends(get_db)) -> dict:
     fund = default_fund(db)
     thesis = active_thesis(db, fund.id)
     opps = db.scalars(select(Opportunity).where(Opportunity.fund_id == fund.id)).all()
 
-    from app.services.action_queue import build_action_queue
+    from app.services.action_queue import build_action_queue, group_counts
     from app.services.founder import momentum_for
 
     stage_counts: dict[str, int] = {}
+    stage_names: dict[str, list[str]] = {}
     for o in opps:
         stage_counts[str(o.stage)] = stage_counts.get(str(o.stage), 0) + 1
+        company = db.get(Company, o.company_id) if o.company_id else None
+        founder = db.get(Founder, o.founder_id) if o.founder_id else None
+        name = (company.name if company else None) or (founder.full_name if founder else None) or f"Opportunity #{o.id}"
+        stage_names.setdefault(str(o.stage), []).append(name)
 
     # top momentum
     momentum_ranked = []
@@ -256,8 +385,9 @@ def dashboard(db: Session = Depends(get_db)) -> dict:
     outbound_opps.sort(key=lambda o: -o.id)
     outbound = [opportunity_out(db, o) for o in outbound_opps[:24]]
 
-    # prioritized action queue — the investor's next steps
-    action_queue = build_action_queue(db, fund.id, limit=8)
+    # prioritized action queue — the investor's next steps. The whole queue (the
+    # Dashboard deck covers every waiting record), with its counts per group.
+    action_queue = build_action_queue(db, fund.id, limit=None)
 
     recent_evidence = db.scalars(
         select(Evidence).order_by(Evidence.collected_at.desc()).limit(8)
@@ -267,14 +397,17 @@ def dashboard(db: Session = Depends(get_db)) -> dict:
         "thesis": {"fund_name": thesis.fund_name, "sectors": thesis.sectors,
                    "stages": thesis.stages, "geographies": thesis.geographies} if thesis else None,
         "stage_counts": stage_counts,
+        "stage_names": stage_names,
         "top_outbound_prospects": outbound,
         "recent_inbound_applications": inbound,
         "highest_momentum": momentum_ranked[:5],
         "action_queue": action_queue,
+        "queue_groups": group_counts(action_queue),
         "recent_evidence": [
             {"id": e.id, "kind": e.kind, "title": e.title, "source_name": e.source_name,
-             "collected_at": e.collected_at.isoformat()}
+             "collected_at": e.collected_at.isoformat(), **_evidence_owner(opps, e, db)}
             for e in recent_evidence
         ],
-        "connectors": {"live": ["github"], "planned": ["hackathons", "papers", "patents"]},
+        "connectors": {"live": ["github", *(["web"] if settings.web_search_enabled else [])],
+                       "planned": ["hackathons", "papers", "patents"]},
     }

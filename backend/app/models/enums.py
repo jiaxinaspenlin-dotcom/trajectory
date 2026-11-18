@@ -35,9 +35,9 @@ class SourceType(StrEnum):
     GITHUB_REPO = "github_repo"
     COMPANY_WEBSITE = "company_website"
     PRODUCT_INFO = "product_info"
+    PRODUCT_LAUNCH = "product_launch"  # launch posts / changelogs found by web search
     # future connectors (declared but NOT implemented / not live):
     HACKATHON = "hackathon"
-    PRODUCT_LAUNCH = "product_launch"
     PAPER = "paper"
     PATENT = "patent"
     ACCELERATOR = "accelerator"

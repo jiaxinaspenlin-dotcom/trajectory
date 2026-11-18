@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Debate } from "@/lib/types";
-import { pct } from "@/lib/format";
+import { asSentence, humanStatus, pct } from "@/lib/format";
 import { BullCharacter, BearCharacter, RefereeCharacter, CharState } from "./Characters";
 import { ArenaBackdrop } from "./stage";
+import { EvidenceRef } from "../EvidenceRef";
 
 type Role = "bull" | "bear" | "referee";
 
@@ -48,7 +49,7 @@ function buildTurns(debate: Debate): Turn[] {
     turns.push({
       role: "referee",
       verdict: true,
-      text: `My recommendation: ${ref.recommended_action} (confidence ${pct(ref.confidence)}). ${ref.rationale}`,
+      text: `My recommendation: ${humanStatus(ref.recommended_action)} (confidence ${pct(ref.confidence)}). ${ref.rationale}`,
     });
   }
   return turns;
@@ -62,9 +63,9 @@ function Avatar({ role, state, size }: { role: Role; state: CharState; size: num
 function Refs({ ids }: { ids?: number[] }) {
   if (!ids || !ids.length) return null;
   return (
-    <span className="ml-1 text-[10px] text-ink-muted">
+    <span className="ml-1 text-[11px] text-ink-muted">
       {ids.slice(0, 6).map((id) => (
-        <span key={id} className="mr-1 rounded bg-surface-sunken px-1 font-mono">E{id}</span>
+        <EvidenceRef key={id} id={id} />
       ))}
     </span>
   );
@@ -127,7 +128,7 @@ export function DebatePlayer({ debate, onClose }: { debate: Debate; onClose: () 
         className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-ink"
         role="dialog"
         aria-modal="true"
-        aria-label="Investment Arena — starting the debate"
+        aria-label="Investment Arena — Starting the Debate"
         onClick={() => setPhase("debate")}
       >
         <div className="absolute inset-0 opacity-40"><ArenaBackdrop /></div>
@@ -136,14 +137,14 @@ export function DebatePlayer({ debate, onClose }: { debate: Debate; onClose: () 
         <div className="relative z-10 grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-6 motion-safe:animate-[vsZoomOut_.5s_ease-in_1.9s_forwards] sm:gap-8">
           <div className="flex flex-col items-center motion-safe:animate-[vsBullIn_.55s_ease-out_both]">
             <BullCharacter state="speaking" size={150} />
-            <span className="mt-2 text-lg font-extrabold text-bull drop-shadow">BULL</span>
+            <span className="mt-2 text-lg font-extrabold uppercase text-bull drop-shadow">Bull</span>
           </div>
-          <div className="text-6xl font-black italic tracking-tighter text-white drop-shadow-lg motion-safe:animate-[vsPop_.6s_ease-out_.35s_both] sm:text-8xl">
-            VS
+          <div className="text-6xl font-black uppercase italic tracking-tighter text-white drop-shadow-lg motion-safe:animate-[vsPop_.6s_ease-out_.35s_both] sm:text-8xl" aria-hidden>
+            vs
           </div>
           <div className="flex flex-col items-center motion-safe:animate-[vsBearIn_.55s_ease-out_both]">
             <BearCharacter state="speaking" size={150} />
-            <span className="mt-2 text-lg font-extrabold text-bear drop-shadow">BEAR</span>
+            <span className="mt-2 text-lg font-extrabold uppercase text-bear drop-shadow">Bear</span>
           </div>
         </div>
 
@@ -151,7 +152,7 @@ export function DebatePlayer({ debate, onClose }: { debate: Debate; onClose: () 
           className="absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-white/90 px-4 py-1.5 text-sm font-medium text-ink shadow-raised hover:bg-white"
           onClick={(e) => { e.stopPropagation(); setPhase("debate"); }}
         >
-          Skip intro →
+          Skip Intro →
         </button>
       </div>
     );
@@ -162,15 +163,15 @@ export function DebatePlayer({ debate, onClose }: { debate: Debate; onClose: () 
       className="fixed inset-0 z-50 flex flex-col bg-surface motion-safe:animate-[debateReveal_.4s_ease-out]"
       role="dialog"
       aria-modal="true"
-      aria-label="Investment Arena — full debate"
+      aria-label="Investment Arena — Full Debate"
     >
       {/* header */}
       <div className="relative flex items-center justify-between border-b border-line bg-white/90 px-4 py-3 backdrop-blur sm:px-6">
         <div>
           <h2 className="text-lg font-extrabold tracking-tight text-ink sm:text-xl">Investment Arena — Full Debate</h2>
-          <p className="text-xs text-ink-muted">v{debate.version} · {debate.generated_by} · click Next to hear each turn</p>
+          <p className="text-xs text-ink-muted">{`v${debate.version} · ${humanStatus(debate.generated_by)} · Click Next to Hear Each Turn`}</p>
         </div>
-        <button className="btn-secondary" onClick={onClose} aria-label="Close full debate">Close ✕</button>
+        <button className="btn-secondary" onClick={onClose} aria-label="Close Full Debate">Close ✕</button>
       </div>
 
       {/* stage — the three characters, current speaker highlighted */}
@@ -206,8 +207,8 @@ export function DebatePlayer({ debate, onClose }: { debate: Debate; onClose: () 
                   <Avatar role={t.role} state="idle" size={40} />
                 </div>
                 <div className={`max-w-[80%] rounded-2xl border px-3 py-2 ${meta.wash} ${meta.border} ${alignRight ? "rounded-tr-sm" : "rounded-tl-sm"} ${t.verdict ? "ring-2 ring-brand/40" : ""}`}>
-                  <div className={`text-[11px] font-bold ${meta.color}`}>{meta.name}<span className="ml-1 font-normal text-ink-muted">· {meta.sub}</span></div>
-                  <p className="mt-0.5 text-sm text-ink-soft">{t.text}<Refs ids={t.evidence_ids} /></p>
+                  <div className={`text-xs font-bold ${meta.color}`}>{meta.name}<span className="ml-1 font-normal text-ink-muted">· {meta.sub}</span></div>
+                  <p className="mt-0.5 text-sm text-ink-soft">{asSentence(t.text)}<Refs ids={t.evidence_ids} /></p>
                 </div>
               </div>
             );

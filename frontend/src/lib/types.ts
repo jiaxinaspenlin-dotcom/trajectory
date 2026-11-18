@@ -20,6 +20,7 @@ export interface Thesis {
   custom_description: string;
   custom_scoring_criteria: Record<string, unknown>[];
   score_weights: Record<string, number>;
+  updated_at?: string | null;
 }
 
 export interface ScoreComponent {
@@ -60,6 +61,9 @@ export interface Momentum {
   previous_score: number | null;
   change_30d: number | null;
   change_90d: number | null;
+  // days the 30/90-day figures really span; shorter when history is young
+  change_30d_window_days?: number | null;
+  change_90d_window_days?: number | null;
   trajectory: string;
   signal_trends: SignalTrend[];
   explanation: string;
@@ -235,6 +239,8 @@ export interface Opportunity {
   founder: Founder | null;
   company: Company | null;
   thesis_fit_score: number;
+  // stored fit differs from what the active thesis would score now
+  thesis_fit_stale?: boolean;
   surfaced_reason: string;
   first_signal_at: string;
   recommendation_at: string | null;
@@ -247,6 +253,19 @@ export interface Opportunity {
   memo?: Memo | null;
   diligence?: DiligenceQuestion[];
   evidence?: Evidence[];
+  // the one next step for this opportunity (detail view); null once decided
+  next_step?: { key: string; label: string; detail: string | null; priority: number } | null;
+  // web-sourced evidence added since the investor last reviewed this lead
+  new_evidence_ids?: number[];
+  identity?: LeadIdentity;
+}
+
+// How a lead is identified: reliable identifiers used for dedup, plus a founder
+// named on a source but not verified (never treated as a confirmed person).
+export interface LeadIdentity {
+  founder_named: string | null;
+  founder_named_source: string | null;
+  identifiers: { kind: "domain" | "github" | "url"; value: string }[];
 }
 
 
@@ -254,11 +273,124 @@ export interface Opportunity {
 export interface FounderLead extends Opportunity {
   evidence_count: number;
   top_project: { name: string; url: string | null; stars: number | null } | null;
+  new_evidence_count?: number;
+  identity?: LeadIdentity;
 }
 
 // Pipeline view row: an active deal plus its single next action (null once decided).
 export interface PipelineDeal extends Opportunity {
   next_action: string | null;
+  next_action_key?: string | null;
+  next_action_detail?: string | null;
   priority: number | null;
   age_days: number;
+}
+
+// Map read model (GET /api/map): founder leads + active deals, same IDs as Founders / Pipeline.
+export interface MapNode {
+  id: number;
+  name: string;
+  entry_type: string;
+  stage: string;
+  status: string;
+  kind: "lead" | "deal";
+  in_founders: boolean;
+  in_pipeline: boolean;
+  founder: { id: number; full_name: string; github_username: string | null } | null;
+  company: { id: number; name: string; sector: string | null; one_liner: string } | null;
+  founder_score: number | null;
+  evidence_count: number;
+  top_project: { name: string; url: string | null; stars: number | null } | null;
+  topics: string[];
+  group: { key: string; label: string; field: string | null };
+  thesis_fit: { value: number | null; reason: string | null };
+  momentum: { value: number | null; current_score: number | null; trajectory: string | null; history_days?: number; reason: string | null };
+  next_action: string | null;
+  next_action_key?: string | null;
+  new_evidence_count?: number;
+  is_demo: boolean;
+}
+
+export interface MapLink {
+  source: number;
+  target: number;
+  kind: "same_founder" | "same_company" | "shared_topic";
+  label: string;
+  topics?: string[];
+}
+
+export interface MapData {
+  items: MapNode[];
+  links: MapLink[];
+  has_thesis: boolean;
+}
+
+// Web sourcing (POST /api/sourcing/web/search). Every claim cites retrieved
+// sources (S1, S2, ...); dates and identities that aren't supported are null.
+export interface WebEvidence {
+  source_id: string;
+  url: string;
+  canonical_url: string;
+  title: string;
+  domain: string;
+  kind: "launch" | "release" | "changelog" | "company_site" | "press" | "other";
+  source_role?: "company_site" | "launch_page";
+  claim: string;
+  quote: string;
+  event_date: string | null;
+  date_precision: "day" | "month" | null;
+  date_basis: "stated_in_source" | "search_provider" | null;
+  date_text: string | null;
+  status?: "new" | "known";
+}
+
+export interface WebResult {
+  key: string;
+  company_name: string;
+  website: string | null;
+  domain: string | null;
+  website_basis: string | null;
+  sector: string | null;
+  building: { text: string; source_ids: string[] };
+  why_matched: { text: string; source_ids: string[] };
+  founder: { name: string | null; status: "unknown" | "named_unverified" | "verified_github"; source_url: string | null; profile_url: string | null };
+  github: { login: string; type: string | null; url: string | null; verified: boolean; basis: string } | null;
+  evidence: WebEvidence[];
+  unknowns: string[];
+  identifiers: { kind: string; value: string; verified: boolean }[];
+  existing: { opportunity_id: number; name: string; stage: string; evidence_added: number; evidence_known: number } | null;
+  saved_opportunity_id: number | null;
+}
+
+export interface WebSource {
+  id: string;
+  url: string;
+  title: string;
+  domain: string;
+  published_date: string | null;
+  query: string;
+}
+
+export interface WebSearchResponse {
+  search_id: number;
+  request: string;
+  status: "success" | "no_sources" | "no_results";
+  provider: string;
+  queries: string[];
+  interpretation: string;
+  source_count: number;
+  sources: WebSource[];
+  results: WebResult[];
+  rejected: { company_name: string | null; reason: string }[];
+  notes: string[];
+  updated_leads: { opportunity_id: number; name: string; evidence_added: number }[];
+  created_at: string | null;
+}
+
+export interface WebSearchStatus {
+  provider: string;
+  search_configured: boolean;
+  ai_configured: boolean;
+  thesis_request: string;
+  last_search_id: number | null;
 }

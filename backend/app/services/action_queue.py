@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.models.assessment import Opportunity, OpportunityAssessment
 from app.models.entities import Company, Founder
 from app.models.workflow import DiligenceQuestion, HumanDecision, RecommendedAction
+from app.services.copy import title_case
 
 _OPEN_DILIGENCE = ("open", "requested", "unresolved")
 
@@ -26,9 +27,21 @@ def _aware(dt: datetime | None) -> datetime | None:
     return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
 
 
-def next_action_for(db: Session, o: Opportunity) -> tuple[str, int] | None:
-    """The ONE concrete next action for an open opportunity, plus its priority
-    (1 = act now). None for decided or dismissed opportunities."""
+def action_label(action: str) -> str:
+    """A recommended action as Title Case display text (docs/copy-style.md).
+
+    Display only: never store the result.
+    """
+    return title_case(str(action))
+
+
+def next_action_info(db: Session, o: Opportunity) -> dict | None:
+    """The ONE concrete next action for an open opportunity.
+
+    Returns {key, label, detail, priority} (priority 1 = act now) or None for
+    decided or dismissed opportunities. `key` is stable so the UI can link the
+    action to where it's done; `label` is short, plain language.
+    """
     # Deals already decided drop off the queue.
     if str(o.status) == "decided":
         return None
@@ -57,17 +70,28 @@ def next_action_for(db: Session, o: Opportunity) -> tuple[str, int] | None:
         ).all()
     )
 
+    def action(key: str, label: str, priority: int, detail: str | None = None) -> dict:
+        return {"key": key, "label": label, "detail": detail, "priority": priority}
+
     is_inbound = str(o.entry_type) == "inbound"
     if rec and not decided:
-        return f"Review recommendation ({rec.action}) & decide", 1
+        # awaiting the investor's review — not the same as the Decision stage
+        return action("review_recommendation", "Review Recommendation", 1, f"Recommended: {action_label(rec.action)}")
     if is_inbound and not assessment:
         # a founder just applied and is waiting — surface it prominently.
-        return "Review new application", 2
+        return action("review_application", "Review Application", 2, "New Inbound Application")
     if open_diligence > 0:
-        return f"Resolve {open_diligence} diligence item{'s' if open_diligence != 1 else ''}", 3
+        plural = "s" if open_diligence != 1 else ""
+        return action("resolve_diligence", f"Resolve {open_diligence} Diligence Question{plural}", 3)
     if not assessment:
-        return "Run analysis", 4
-    return "Generate Arena & memo", 5
+        return action("run_analysis", "Run Analysis", 4, "Scores the Three Screening Axes")
+    return action("generate_memo", "Generate Debate & Memo", 5)
+
+
+def next_action_for(db: Session, o: Opportunity) -> tuple[str, int] | None:
+    """(label, priority) form of next_action_info, for list views."""
+    info = next_action_info(db, o)
+    return (info["label"], info["priority"]) if info else None
 
 
 def opportunity_age_days(o: Opportunity, now: datetime | None = None) -> int:
@@ -76,21 +100,53 @@ def opportunity_age_days(o: Opportunity, now: datetime | None = None) -> int:
     return max(0, (now - start).days)
 
 
-def build_action_queue(db: Session, fund_id: int, limit: int = 8) -> list[dict]:
+# The Dashboard deck's groups, in the order they're shown. A pending recommendation
+# or application is its own kind of work wherever it sits; anything else still in
+# Sourcing is a lead; the rest is grouped by its next action.
+QUEUE_GROUPS: tuple[str, ...] = ("recommendation", "application", "lead", "diligence", "analysis", "memo")
+_GROUP_BY_KEY = {
+    "review_recommendation": "recommendation",
+    "review_application": "application",
+    "resolve_diligence": "diligence",
+    "run_analysis": "analysis",
+    "generate_memo": "memo",
+}
+
+
+def queue_group(stage: str, key: str) -> str:
+    if key in ("review_recommendation", "review_application"):
+        return _GROUP_BY_KEY[key]
+    if stage == "sourcing":
+        return "lead"
+    return _GROUP_BY_KEY.get(key, "analysis")
+
+
+def group_counts(queue: list[dict]) -> list[dict]:
+    """Per group, in deck order: how many are waiting and the first one in the deck."""
+    out = []
+    for g in QUEUE_GROUPS:
+        members = [x for x in queue if x["group"] == g]
+        if members:
+            out.append({"key": g, "count": len(members), "first_opportunity_id": members[0]["opportunity_id"]})
+    return out
+
+
+def build_action_queue(db: Session, fund_id: int, limit: int | None = 8) -> list[dict]:
     now = datetime.now(UTC)
     opps = db.scalars(select(Opportunity).where(Opportunity.fund_id == fund_id)).all()
 
     items: list[dict] = []
+    waiting_since: dict[int, datetime] = {}
     for o in opps:
-        nxt = next_action_for(db, o)
+        nxt = next_action_info(db, o)
         if nxt is None:
             continue
-        action, priority = nxt
 
         founder = db.get(Founder, o.founder_id) if o.founder_id else None
         company = db.get(Company, o.company_id) if o.company_id else None
         name = (company.name if company else None) or (founder.full_name if founder else None) or f"Opportunity #{o.id}"
         founder_name = founder.full_name if founder else None
+        waiting_since[o.id] = _aware(o.first_signal_at) or now
 
         items.append(
             {
@@ -99,12 +155,17 @@ def build_action_queue(db: Session, fund_id: int, limit: int = 8) -> list[dict]:
                 "founder_name": founder_name,
                 "entry_type": str(o.entry_type),
                 "stage": str(o.stage),
-                "next_action": action,
-                "priority": priority,
+                "next_action": nxt["label"],
+                "next_action_key": nxt["key"],
+                "next_action_detail": nxt["detail"],
+                "priority": nxt["priority"],
                 "age_days": opportunity_age_days(o, now),
+                "waiting_since": waiting_since[o.id].isoformat(),
+                "group": queue_group(str(o.stage), nxt["key"]),
             }
         )
 
-    # act-now first (lower priority number), then oldest-waiting first
-    items.sort(key=lambda x: (x["priority"], -x["age_days"]))
-    return items[:limit]
+    # act-now first (lower priority number), then oldest-waiting first. Whole days
+    # tie often, so the exact waiting time and then the id keep the order stable.
+    items.sort(key=lambda x: (x["priority"], waiting_since[x["opportunity_id"]], x["opportunity_id"]))
+    return items if limit is None else items[:limit]

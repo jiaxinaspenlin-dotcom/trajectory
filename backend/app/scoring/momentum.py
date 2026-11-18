@@ -57,6 +57,20 @@ class MomentumResult:
     signal_trends: list[SignalTrend]
     explanation: str
     series: list[dict] = field(default_factory=list)  # [{date, score, signals}]
+    # Days the 30/90-day figures really span: from the reference snapshot to the
+    # latest one. Shorter than nominal when history is young (we fall back to the
+    # oldest snapshot); None when there is no reference.
+    change_30d_window_days: int | None = None
+    change_90d_window_days: int | None = None
+
+
+def window_label(window_days: int | None, nominal: int = 30) -> str:
+    """Name the window a change really covers, e.g. "change over 3 days"."""
+    if window_days is None or window_days >= nominal:
+        return f"{nominal}-day change"
+    if window_days == 0:
+        return "change since the first sync, under a day ago"
+    return f"change over {window_days} day{'' if window_days == 1 else 's'}"
 
 
 def _nearest_before(
@@ -107,6 +121,8 @@ def compute_momentum(
     )
     change_30 = round(current - float(ref_30.score), 2) if ref_30 else None
     change_90 = round(current - float(ref_90.score), 2) if ref_90 else None
+    window_30 = _window_days(ref_30, latest)
+    window_90 = _window_days(ref_90, latest)
 
     # signal trends: compare latest vs the ~30d reference (or previous)
     ref_for_signals = ref_30 or (snaps[-2] if len(snaps) >= 2 else None)
@@ -131,7 +147,7 @@ def compute_momentum(
             )
 
     trajectory = _trajectory_label(len(snaps), change_30, change_90)
-    explanation = _explain(trajectory, change_30, trends)
+    explanation = _explain(trajectory, change_30, trends, window_30)
 
     series = [
         {
@@ -151,7 +167,17 @@ def compute_momentum(
         signal_trends=trends,
         explanation=explanation,
         series=series,
+        change_30d_window_days=window_30,
+        change_90d_window_days=window_90,
     )
+
+
+def _window_days(
+    ref: FounderMomentumSnapshot | None, latest: FounderMomentumSnapshot
+) -> int | None:
+    if ref is None:
+        return None
+    return (_aware(latest.snapshot_date) - _aware(ref.snapshot_date)).days
 
 
 def _trajectory_label(
@@ -171,7 +197,10 @@ def _trajectory_label(
 
 
 def _explain(
-    trajectory: TrajectoryLabel, change_30: float | None, trends: list[SignalTrend]
+    trajectory: TrajectoryLabel,
+    change_30: float | None,
+    trends: list[SignalTrend],
+    window_30: int | None = None,
 ) -> str:
     ups = [t for t in trends if t.direction == "up"]
     downs = [t for t in trends if t.direction == "down"]
@@ -199,7 +228,8 @@ def _explain(
             + ", ".join(t.label for t in downs[:2])
             + " decreased"
         )
-    delta = f" (30-day change {change_30:+.1f})" if change_30 is not None else ""
+    # whole points, as the score itself and every momentum figure in the product are shown
+    delta = f" ({window_label(window_30)} {round(change_30):+d})" if change_30 is not None else ""
     if reasons:
         return f"{lead} {' '.join(reasons)}{delta}."
     return f"{lead}{delta}."

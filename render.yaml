@@ -1,7 +1,9 @@
 # Render Blueprint — deploys the Trajectory FastAPI backend + a Postgres database.
 # Deploy: push to GitHub, then in Render: New > Blueprint, pick this repo.
-# The Docker entrypoint waits for Postgres, runs Alembic migrations, seeds demo
-# data if the DB is empty, then starts uvicorn on $PORT.
+# The Docker entrypoint waits for Postgres, runs Alembic migrations, then starts
+# uvicorn on $PORT. Production starts with an empty workspace: SEED_DEMO_DATA is
+# "false" here (and ENVIRONMENT=production skips the seed anyway). Set it to
+# "true" only for a demo deployment; it seeds only when the DB is empty.
 #
 # After the first deploy, set these in the Render dashboard (marked sync:false):
 #   OPENAI_API_KEY        your OpenAI key (AI features need it; otherwise 503)
@@ -35,6 +37,8 @@ services:
           property: connectionString
       - key: ENVIRONMENT
         value: production
+      - key: SEED_DEMO_DATA
+        value: "false"
       - key: OPENAI_MODEL
         value: gpt-4o
       - key: UPLOAD_DIR

@@ -34,7 +34,7 @@ describe("InvestmentArena", () => {
   it("marks unverified points that lack evidence ids", () => {
     render(<InvestmentArena debate={debate} />);
     fireEvent.click(screen.getByTestId("arena-bear"));
-    expect(screen.getByText("unverified")).toBeInTheDocument();
+    expect(screen.getByText("Unverified")).toBeInTheDocument();
   });
 
   it("renders the empty state when the debate is missing", () => {

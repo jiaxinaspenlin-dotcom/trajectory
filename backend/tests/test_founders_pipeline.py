@@ -3,31 +3,6 @@ two investor views by stable ID, never duplicated."""
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-
-import pytest
-from app.models.enums import Provenance, SourceType, VerificationStatus
-from app.models.sources import Evidence
-
-
-@pytest.fixture
-def stub_github(monkeypatch):
-    """Replace the live GitHub fetch with one public-repo evidence item, so the
-    real sync route (founder + outbound opportunity creation) runs offline."""
-
-    async def fake_sync(db, founder_id, username, thesis):
-        db.add(Evidence(
-            founder_id=founder_id, source_name=f"GitHub {username}/ledgerkit",
-            source_type=SourceType.GITHUB_REPO, source_url=f"https://github.com/{username}/ledgerkit",
-            kind="github_repo", title="Public repository: ledgerkit", raw_value="",
-            structured_value={"stars": 42}, collected_at=datetime.now(UTC),
-            provenance=Provenance.INDEPENDENT, verification_status=VerificationStatus.VERIFIED,
-        ))
-        db.flush()
-        return {"status": "success", "message": "stubbed", "evidence_added": 1}
-
-    monkeypatch.setattr("app.api.routes_sourcing.sync_github_user", fake_sync)
-
 
 def _pipeline_ids(client, **params) -> list[int]:
     r = client.get("/api/pipeline", params=params)
@@ -60,7 +35,8 @@ def test_github_prospect_flows_from_founders_to_pipeline(client, seeded, stub_gi
     pipeline = client.get("/api/pipeline").json()["items"]
     deal = next(o for o in pipeline if o["id"] == opp_id)
     assert deal["stage"] == "screening" and deal["entry_type"] == "outbound"
-    assert deal["next_action"] == "Run analysis"
+    assert deal["next_action"] == "Run Analysis"
+    assert deal["next_action_key"] == "run_analysis"
     assert _pipeline_ids(client).count(opp_id) == 1
 
     # Still discoverable in Founders, now showing its pipeline stage.
@@ -88,7 +64,8 @@ def test_inbound_application_enters_pipeline_at_screening(client, seeded):
     inbound = client.get("/api/pipeline", params={"entry_type": "inbound", "stage": "screening"}).json()["items"]
     deal = next(o for o in inbound if o["id"] == opp_id)
     assert deal["founder"] is None and deal["company"]["name"] == "Pipeline Test Co"
-    assert deal["next_action"] == "Review new application"
+    assert deal["next_action"] == "Review Application"
+    assert deal["next_action_key"] == "review_application"
     # inbound applications never show up as outbound leads in Founders
     assert opp_id not in [p["id"] for p in client.get("/api/sourcing/prospects").json()["items"]]
     assert opp_id not in _pipeline_ids(client, entry_type="outbound")
@@ -104,3 +81,22 @@ def test_pipeline_excludes_sourcing_and_dismissed(client, seeded):
 def test_pipeline_rejects_unknown_filters(client, seeded):
     assert client.get("/api/pipeline", params={"stage": "sourcing"}).status_code == 422
     assert client.get("/api/pipeline", params={"entry_type": "referral"}).status_code == 422
+
+
+def test_decision_requires_an_explicit_outcome_and_action(client, seeded):
+    opp_id = client.get("/api/pipeline").json()["items"][0]["id"]
+    url = f"/api/opportunities/{opp_id}/decision"
+    base = {"decided_by": "Investor", "decision": "approved", "chosen_action": "Continue Diligence"}
+    assert client.post(url, json={**base, "decision": ""}).status_code == 422
+    assert client.post(url, json={**base, "chosen_action": ""}).status_code == 422
+    assert client.post(url, json={**base, "decided_by": ""}).status_code == 422
+    assert client.post(url, json=base).status_code == 200
+    history = client.get(f"/api/opportunities/{opp_id}/decisions").json()["items"]
+    assert history[-1]["chosen_action"] == "Continue Diligence"
+
+
+def test_dashboard_recent_evidence_names_its_opportunity(client, seeded):
+    items = client.get("/api/dashboard").json()["recent_evidence"]
+    linked = [e for e in items if e["opportunity_id"]]
+    assert linked, "seeded evidence belongs to seeded opportunities"
+    assert all(e["opportunity_name"] for e in linked)

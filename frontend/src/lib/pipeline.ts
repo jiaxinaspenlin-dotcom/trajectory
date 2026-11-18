@@ -10,18 +10,9 @@ import { FounderLead, PipelineDeal } from "./types";
 export const PIPELINE_STAGES = ["screening", "diligence", "decision"] as const;
 export type SourceFilter = "all" | "inbound" | "outbound";
 
-// Stage badges step up in intensity as a deal advances.
-export function stageTone(stage: string): string {
-  switch (stage) {
-    case "screening":
-      return "bg-brand-wash text-brand";
-    case "diligence":
-      return "bg-brand text-white";
-    case "decision":
-      return "bg-ink text-white";
-    default:
-      return "bg-neutral-wash text-neutral";
-  }
+// Solid dot per stage; the dot carries the stage's color everywhere it appears.
+export function stageDot(stage: string): string {
+  return { sourcing: "bg-positive", screening: "bg-brand-soft", diligence: "bg-brand", decision: "bg-ink" }[stage] ?? "bg-neutral";
 }
 
 export function sourceLabel(entryType: string): string {
@@ -37,9 +28,9 @@ export function opportunityName(o: { id: number; company: { name: string } | nul
 export type FounderView = "active" | "pinned" | "in_pipeline" | "dismissed" | "all";
 
 export const FOUNDER_VIEWS: { key: FounderView; label: string }[] = [
-  { key: "active", label: "Active leads" },
-  { key: "pinned", label: "Saved & monitoring" },
-  { key: "in_pipeline", label: "In pipeline" },
+  { key: "active", label: "Active" },
+  { key: "pinned", label: "Shortlisted" },
+  { key: "in_pipeline", label: "In Pipeline" },
   { key: "dismissed", label: "Dismissed" },
   { key: "all", label: "All" },
 ];
@@ -98,10 +89,79 @@ export function filterDeals(deals: PipelineDeal[], stage: string, source: Source
   );
 }
 
+// The order deals are worked in, everywhere (Pipeline table, its header action,
+// Dashboard): awaiting your review first, then oldest waiting, then id. Mirrors
+// the backend action queue. Deals with nothing left to do go last.
+export function sortDeals(deals: PipelineDeal[]): PipelineDeal[] {
+  const t = (d: PipelineDeal) => new Date(d.first_signal_at).getTime() || 0;
+  return [...deals].sort((a, b) => (a.priority ?? 99) - (b.priority ?? 99) || t(a) - t(b) || a.id - b.id);
+}
+
 export function parseStage(v: string | null): string {
   return v && (PIPELINE_STAGES as readonly string[]).includes(v) ? v : "all";
 }
 
+// The kind of work a deal is waiting on (its next action), from ?next= (Dashboard groups).
+export const NEXT_ACTION_LABELS: Record<string, string> = {
+  review_recommendation: "Recommendations to Review",
+  review_application: "Applications to Review",
+  resolve_diligence: "Open Diligence",
+  run_analysis: "To Analyze",
+  generate_memo: "Memos to Generate",
+};
+export function parseNext(v: string | null): string | null {
+  return v && v in NEXT_ACTION_LABELS ? v : null;
+}
+
 export function parseSource(v: string | null): SourceFilter {
   return v === "inbound" || v === "outbound" ? v : "all";
+}
+
+// ---- Shared vocabulary ----------------------------------------------------
+// Two separate ideas, named the same way everywhere:
+//  • Stage (shared): Sourcing → Screening → Diligence → Decision. Moving a lead
+//    to Screening puts it in Pipeline for the whole fund.
+//  • Shortlist (personal, this browser): Saved / Monitoring / Dismissed.
+
+export type Shortlist = "saved" | "monitoring" | "dismissed";
+
+export const SHORTLIST_LABEL: Record<Shortlist, string> = {
+  saved: "Saved",
+  monitoring: "Monitoring",
+  dismissed: "Dismissed",
+};
+
+// This browser's shortlist, else a shortlist status saved on the shared record
+// (e.g. a web-sourced lead saved as "monitoring"); null when not shortlisted.
+export function shortlistOf(lead: { status: string }, overlay: PipelineStatus | null): Shortlist | null {
+  if (overlay) return overlay;
+  return lead.status === "saved" || lead.status === "monitoring" || lead.status === "dismissed" ? lead.status : null;
+}
+
+// ---- Next actions ---------------------------------------------------------
+// The backend names one next action per open opportunity with a stable key;
+// this is where each one is done.
+export type NextActionKey = "review_recommendation" | "review_application" | "resolve_diligence" | "run_analysis" | "generate_memo";
+
+export function nextActionHref(opportunityId: number, key: string | null | undefined): string {
+  const base = `/vc/opportunities/${opportunityId}`;
+  switch (key) {
+    case "review_recommendation": return `${base}?tab=decision`;
+    case "resolve_diligence": return `${base}/diligence`;
+    case "generate_memo": return `${base}?tab=arena`;
+    // run analysis / review an application: the record's header holds the action
+    default: return base;
+  }
+}
+
+// Tabs of an opportunity record, in order; the URL (?tab=) selects one.
+export const OPPORTUNITY_TABS = ["overview", "founder", "screening", "arena", "claims", "evidence", "decision"] as const;
+export type OpportunityTab = (typeof OPPORTUNITY_TABS)[number];
+
+export function parseOpportunityTab(v: string | null | undefined): OpportunityTab {
+  return (OPPORTUNITY_TABS as readonly string[]).includes(v ?? "") ? (v as OpportunityTab) : "overview";
+}
+
+export function evidenceHref(opportunityId: number, evidenceId: number): string {
+  return `/vc/opportunities/${opportunityId}?tab=evidence&evidence=${evidenceId}`;
 }

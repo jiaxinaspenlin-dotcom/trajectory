@@ -1,41 +1,111 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useFetch } from "@/lib/useFetch";
-import { Badge, ConfidenceBar, DemoBadge, EmptyState, ErrorState, ScoreRing, Section, Spinner } from "@/components/ui";
+import { Badge, Button, ConfidenceBar, CountUp, DemoBadge, EmptyState, ErrorState, PageSkeleton, ScoreRing, Section, Segmented, Skeleton } from "@/components/ui";
+import { ShortlistBadge, StageBadge } from "@/components/DealBadges";
+import { ArrowRightIcon } from "@/components/icons";
+import { useToast } from "@/components/Toast";
 import { MomentumChart } from "@/components/MomentumChart";
 import { ThreeAxes } from "@/components/ThreeAxes";
 import { InvestmentArena } from "@/components/arena/InvestmentArena";
 import { ClaimsTable } from "@/components/ClaimsTable";
 import { FounderScoreBreakdown } from "@/components/FounderScoreBreakdown";
 import { HumanDecisionPanel } from "@/components/HumanDecisionPanel";
+import { decisionReasons } from "@/lib/decision";
+import { dashboardCardHref, DeckItem, nextWaiting } from "@/lib/deck";
+import { useDeck } from "@/lib/useDeck";
+import { removeFromShortlist } from "@/lib/shortlist";
+import { DeckStrip } from "@/components/DeckStrip";
+import { ApplicationDetail, ApplicationScreen, LeadEvidence } from "@/components/RecordFocus";
 import { Claim, Evidence, Opportunity } from "@/lib/types";
-import { humanStatus, verificationTone } from "@/lib/format";
-import { leadStatus } from "@/lib/pipeline";
+import { LeadWebCheck } from "@/components/WebSourcing";
+import { humanStatus, labelPhrase, sourceName, verificationTone } from "@/lib/format";
+import { evidenceHref, OpportunityTab, parseOpportunityTab, SHORTLIST_LABEL, shortlistOf, sourceLabel, stageDot } from "@/lib/pipeline";
+import { Tabs, tabPanelProps } from "@/components/Tabs";
+import { EvidenceLinkProvider } from "@/components/EvidenceRef";
 import {
   getMyDecision, getPipelineStatus, LocalDecision, PipelineStatus,
   saveMyDecision, setPipelineStatus,
 } from "@/lib/myWorkspace";
 
 export default function OpportunityPage() {
+  // useSearchParams (the ?tab= state) needs a Suspense boundary
+  return (
+    <Suspense fallback={<RecordSkeleton />}>
+      <OpportunityRecord />
+    </Suspense>
+  );
+}
+
+const TAB_LABELS: Record<OpportunityTab, string> = {
+  overview: "Overview", founder: "Founder", screening: "Screening", arena: "Arena",
+  claims: "Claims", evidence: "Evidence", decision: "Decision",
+};
+// links from before tabs existed (#decision, #evidence, …) still land on the right panel
+const LEGACY_HASH: Record<string, OpportunityTab> = {
+  "#overview": "overview", "#next-step": "overview", "#screening": "screening", "#arena": "arena",
+  "#claims": "claims", "#evidence": "evidence", "#decision": "decision",
+};
+
+function OpportunityRecord() {
   const { id } = useParams<{ id: string }>();
+  const params = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const tab = parseOpportunityTab(params.get("tab"));
+  const focusEvidence = Number(params.get("evidence")) || null;
+  // opened from the Dashboard deck: the record shows where it sits in it
+  const fromDeck = params.get("from") === "deck";
+  // tab changes are history entries, so Back returns to the previous panel
+  const setTab = useCallback((t: OpportunityTab) => {
+    const q = new URLSearchParams();
+    if (t !== "overview") q.set("tab", t);
+    if (fromDeck) q.set("from", "deck");
+    router.push(q.size ? `${pathname}?${q}` : pathname, { scroll: false });
+  }, [pathname, router, fromDeck]);
+  // the deck as it was when this record opened: for the position strip and for
+  // "Next" after a decision
+  const deck = useDeck(fromDeck || tab === "decision");
+  // after a decision, the next record still waiting according to the backend
+  const [afterDecision, setAfterDecision] = useState<DeckItem | null | undefined>(undefined);
+  const decided = useCallback(async () => {
+    reloadRef.current?.();
+    const now = await deck.refresh();
+    if (now && deck.items) setAfterDecision(nextWaiting(deck.items, now, Number(id)));
+  }, [deck, id]);
+  useEffect(() => {
+    const legacy = LEGACY_HASH[window.location.hash];
+    if (legacy && !params.get("tab")) router.replace(legacy === "overview" ? pathname : `${pathname}?tab=${legacy}`, { scroll: false });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const { data: o, loading, error, reload } = useFetch<Opportunity>(`/api/opportunities/${id}`);
+  const reloadRef = useRef(reload);
+  reloadRef.current = reload;
   const scope = o?.company?.id
     ? `company_id=${o.company.id}`
     : o?.founder?.id
     ? `founder_id=${o.founder.id}`
     : null;
   const claims = useFetch<{ items: Claim[] }>(scope ? `/api/claims?${scope}` : null);
+  // an inbound application waiting for review: its first-pass screen leads the
+  // record. The application is the one this record was created from (by id).
+  const reviewingApplication = o?.next_step?.key === "review_application";
+  const apps = useFetch<{ items: { id: number; opportunity_id: number | null }[] }>(reviewingApplication ? "/api/applications" : null);
+  const appId = apps.data?.items.find((a) => a.opportunity_id === o?.id)?.id;
+  const application = useFetch<ApplicationDetail>(reviewingApplication && appId ? `/api/applications/${appId}` : null);
   const contradictions = useFetch<{ items: any[] }>(scope ? `/api/contradictions?${scope}` : null);
   const [busy, setBusy] = useState(false);
   const [confirmRegen, setConfirmRegen] = useState(false);
   const [regenError, setRegenError] = useState<string | null>(null);
   const [memoBusy, setMemoBusy] = useState(false);
+  const [fitBusy, setFitBusy] = useState(false);
   const [confirmScreening, setConfirmScreening] = useState(false);
   const [screeningError, setScreeningError] = useState<string | null>(null);
+  const [moving, setMoving] = useState(false);
+  const notify = useToast();
   // per-browser workspace overlay for this opportunity
   const [myStatus, setMyStatus] = useState<PipelineStatus | null>(null);
   const [myDecision, setMyDecision] = useState<LocalDecision | null>(null);
@@ -45,28 +115,69 @@ export default function OpportunityPage() {
     setMyDecision(getMyDecision(n));
   }, [id]);
 
-  async function prospectAction(action: string) {
-    // Save / Monitor / Dismiss are the investor's personal pipeline — scoped to
-    // this browser (like founder applications), never shared with other investors.
-    const pipelineMap: Record<string, PipelineStatus> = {
-      save: "saved", monitor: "monitoring", dismiss: "dismissed",
-    };
-    if (pipelineMap[action]) {
-      setPipelineStatus(Number(id), pipelineMap[action]);
-      setMyStatus(pipelineMap[action]);
+  // My shortlist (Saved / Monitoring / Dismissed): choosing a value keeps it in
+  // this browser. Remove from Shortlist (or choosing the current value again)
+  // clears it entirely, including a value held on the shared record. The stage
+  // never changes.
+  async function removeShortlist() {
+    try {
+      await removeFromShortlist(Number(id));
+    } catch (e) {
+      notify({ tone: "error", message: e instanceof Error ? `Couldn't remove from the shortlist: ${e.message}` : "Couldn't remove from the shortlist." });
       return;
     }
-    // Recommend outreach / move to screening are real, shared workflow steps.
+    setMyStatus(null);
+    await reload();
+    notify({ message: "Removed from your shortlist. Stage unchanged." });
+  }
+
+  function setShortlist(next: PipelineStatus) {
+    if (shortlistOf(o ?? { status: "" }, myStatus) === next) return void removeShortlist();
+    setPipelineStatus(Number(id), next);
+    setMyStatus(next);
+    notify({ message: next === "dismissed" ? "Dismissed — hidden from your active leads." : `Shortlist set to ${SHORTLIST_LABEL[next]}.` });
+  }
+
+  // Suggesting outreach and moving to Screening are shared workflow steps.
+  async function prospectAction(action: string) {
     await api.post(`/api/sourcing/prospects/${id}/action`, { action });
     await reload();
   }
 
-  async function moveToScreening() {
+  async function suggestOutreach() {
+    try {
+      await prospectAction("recommend_outreach");
+      notify({ message: "Outreach suggested — it's now the next step, awaiting your review. Nothing was sent.", href: `${pathname}?tab=decision`, linkLabel: "Review It" });
+    } catch (e) {
+      notify({ tone: "error", message: e instanceof Error ? e.message : "Couldn't suggest outreach." });
+    }
+  }
+
+  async function recalculateFit() {
+    setFitBusy(true);
+    try {
+      await api.post(`/api/thesis/recalculate-fit?opportunity_id=${id}`);
+      await reload();
+      notify({ message: "Thesis fit recalculated. Stage and shortlist didn't change." });
+    } catch (e) {
+      notify({ tone: "error", message: e instanceof Error ? `Couldn't recalculate: ${e.message}` : "Couldn't recalculate the fit." });
+    } finally {
+      setFitBusy(false);
+    }
+  }
+
+  async function markReviewed() {
+    await api.post(`/api/opportunities/${id}/evidence/reviewed`);
+    await reload();
+  }
+
+  async function moveToScreening(): Promise<void> {
     setScreeningError(null);
     try {
       // historically named invite_to_apply; it moves this opportunity to Screening and sends nothing
       await prospectAction("invite_to_apply");
       setConfirmScreening(false);
+      notify({ message: "Moved to Screening — it's now in Pipeline. No outreach was sent.", href: "/vc/pipeline?stage=screening", linkLabel: "View in Pipeline" });
     } catch (e) {
       setScreeningError(e instanceof Error ? e.message : "Could not move to screening.");
     }
@@ -102,94 +213,113 @@ export default function OpportunityPage() {
     }
   }
 
-  if (loading) return <Spinner label="Loading founder…" />;
-  if (error) return <ErrorState message={error} />;
+  // reloads keep the page (and in-flight messages) mounted; only the first load shows a spinner
+  if (loading && !o) return <RecordSkeleton />;
+  if (error) return <ErrorState message={error} onRetry={reload} />;
   if (!o) return null;
 
-  const founderEvidence: Evidence[] = o.evidence || o.founder?.evidence || [];
-  const notAnalyzed = !o.assessment && !o.debate;
-
+  const name = o.company?.name || o.founder?.full_name || `Opportunity #${o.id}`;
+  const newIds = new Set(o.new_evidence_ids ?? []);
+  // new web evidence first
+  const evidence: Evidence[] = [...(o.evidence || o.founder?.evidence || [])].sort(
+    (a, b) => Number(newIds.has(b.id)) - Number(newIds.has(a.id))
+  );
+  const analyzed = !!(o.assessment || o.debate);
   const inPipeline = o.stage !== "sourcing";
+  const shortlist = shortlistOf(o, myStatus);
+  const step = o.next_step ?? null;
+  const claimCount = claims.data?.items.length ?? 0;
+  // the card after this one: as the backend has it after a decision made here, or
+  // (for a decision recorded earlier) as the queue stood when the page opened
+  const nextAfter = afterDecision !== undefined ? afterDecision : deck.items ? nextWaiting(deck.items, deck.items, o.id) : undefined;
+
+  // the ONE primary action for this record, from its next step
+  const arrow = <ArrowRightIcon size={16} className="transition-transform duration-base ease-out group-hover:translate-x-0.5" />;
+  // a lead (still in Sourcing) is reviewed by deciding whether it enters the
+  // Pipeline: Move to Screening, which asks first
+  const isLead = !inPipeline && step?.key !== "review_recommendation";
+  const primary =
+    isLead
+      ? <Button variant="primary" onClick={() => setConfirmScreening(true)}>Move to Screening</Button>
+    : step?.key === "run_analysis" || step?.key === "review_application"
+      ? <Button variant="primary" onClick={() => setConfirmRegen(true)} busy={busy}>Run Analysis</Button>
+    // already on the Decision tab: the form is the action, so no button points back at it
+    : step?.key === "review_recommendation" && tab === "decision"
+      ? null
+    : step?.key === "review_recommendation"
+      ? <Link href={`${pathname}?tab=decision`} scroll={false} className="btn-primary group">Review Recommendation{arrow}</Link>
+    : step?.key === "resolve_diligence"
+      ? <Link href={`/vc/opportunities/${id}/diligence`} className="btn-primary group">Open Diligence{arrow}</Link>
+    : step?.key === "generate_memo"
+      ? <Link href={`/vc/opportunities/${id}/memo`} className="btn-primary group">Open Memo{arrow}</Link>
+    : null;
+
+  const tabs = (Object.keys(TAB_LABELS) as OpportunityTab[]).map((k) => ({
+    key: k,
+    label: TAB_LABELS[k],
+    badge:
+      k === "evidence" && newIds.size ? <span className="chip bg-signal-wash text-caution" aria-label={`${newIds.size} New`}>{newIds.size} New</span>
+      : k === "evidence" ? <span className="num text-[13px] text-ink-faint">{evidence.length}</span>
+      : k === "claims" && claimCount ? <span className="num text-[13px] text-ink-faint">{claimCount}</span>
+      : k === "decision" && step?.key === "review_recommendation" ? <span className="h-2 w-2 rounded-full bg-brand" aria-label="Awaiting Your Review" />
+      : undefined,
+  }));
 
   return (
-    <div className="space-y-6">
-      <nav aria-label="Breadcrumb" className="text-xs text-ink-muted">
-        {o.entry_type === "outbound" && <><Link href="/vc/founders" className="hover:text-brand">Founders</Link><span className="mx-1.5">/</span></>}
-        {inPipeline && <><Link href={`/vc/pipeline?stage=${o.stage}`} className="hover:text-brand">Pipeline</Link><span className="mx-1.5">/</span></>}
-        <span className="text-ink-soft">{o.company?.name || o.founder?.full_name}</span>
-      </nav>
+    <EvidenceLinkProvider href={(eid) => evidenceHref(o.id, eid)}>
+    {/* capped so long analysis text keeps a comfortable line length on wide screens */}
+    <div className="space-y-8">
+      <div className="animate-rise space-y-3">
+        {fromDeck && <DeckStrip items={deck.items} id={o.id} />}
+        <nav aria-label="Breadcrumb" className="flex items-center text-[13px] text-ink-muted">
+          {o.entry_type === "outbound" && <><Link href="/vc/founders" className="link text-ink-muted hover:text-ink">Founders</Link><span className="mx-1.5 text-ink-faint">/</span></>}
+          {inPipeline && <><Link href={`/vc/pipeline?stage=${o.stage}`} className="link text-ink-muted hover:text-ink">Pipeline</Link><span className="mx-1.5 text-ink-faint">/</span></>}
+          <span className="truncate text-ink-soft" data-content>{name}</span>
+          <Link href={`/vc/map?focus=${o.id}`} className="link ml-auto shrink-0 pl-3 text-ink-muted hover:text-ink">View on Map</Link>
+        </nav>
 
-      {/* header */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-semibold text-ink">{o.company?.name || o.founder?.full_name}</h1>
-            {o.is_demo && <DemoBadge />}
-            <Badge tone="bg-neutral-wash text-neutral">{humanStatus(o.entry_type)}</Badge>
-            <Badge tone="bg-brand-wash text-brand">{humanStatus(o.stage)}</Badge>
-            {(() => {
-              const shown = leadStatus(o, myStatus);
-              const tone = shown === "saved" || shown === "monitoring"
-                ? "bg-positive-wash text-positive"
-                : shown === "dismissed"
-                ? "bg-negative-wash text-negative"
-                : "bg-neutral-wash text-neutral";
-              return <Badge tone={tone}>{humanStatus(shown)}</Badge>;
-            })()}
+        {/* name, where it stands, and the one next action */}
+        <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="mr-1 text-[1.75rem] font-[650] leading-9 tracking-[-0.025em] text-ink sm:text-page" data-content>{name}</h1>
+              <StageBadge stage={o.stage} />
+              {shortlist && <ShortlistBadge shortlist={shortlist} />}
+              {o.is_demo && <DemoBadge />}
+            </div>
+            {o.company?.one_liner && <p className="mt-1.5 max-w-3xl text-body text-ink-soft" data-content>{o.company.one_liner}</p>}
           </div>
-          <p className="mt-1 text-sm text-ink-soft">{o.company?.one_liner}</p>
-          <p className="mt-1 text-xs text-ink-muted">
-            {o.founder?.full_name} · {o.founder?.headline} · {o.founder?.location}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Link href={`/vc/opportunities/${id}/diligence`} className="btn-secondary">Diligence Workspace</Link>
-          <button className="btn-primary" onClick={() => setConfirmRegen(true)} disabled={busy}>
-            {busy ? "Regenerating…" : "Regenerate analysis"}
-          </button>
-        </div>
+          {/* one primary action; Memo and Diligence as quiet links beside it */}
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            {step?.key !== "generate_memo" && <Link href={`/vc/opportunities/${id}/memo`} className="link text-sm text-ink-soft hover:text-ink">Memo</Link>}
+            {step?.key !== "resolve_diligence" && <Link href={`/vc/opportunities/${id}/diligence`} className="link text-sm text-ink-soft hover:text-ink">Diligence</Link>}
+            {primary}
+          </div>
+        </header>
       </div>
 
-      {/* clip an outbound prospect to your pipeline */}
-      {o.entry_type === "outbound" && (
-        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-line bg-surface-sunken px-4 py-3">
-          <span className="text-sm text-ink-soft">Pipeline:</span>
-          <button className={`text-xs ${myStatus === "saved" ? "btn-primary" : "btn-secondary"}`} onClick={() => prospectAction("save")}>Save to pipeline</button>
-          <button className={`text-xs ${myStatus === "monitoring" ? "btn-primary" : "btn-secondary"}`} onClick={() => prospectAction("monitor")}>Monitor</button>
-          <button className={`text-xs ${myStatus === "dismissed" ? "btn-primary" : "btn-ghost"}`} onClick={() => prospectAction("dismiss")}>Dismiss</button>
-          <button className="btn-ghost text-xs" onClick={() => prospectAction("recommend_outreach")}>Recommend outreach</button>
-          {!inPipeline && (confirmScreening ? (
-            <>
-              <span className="text-xs text-ink-soft">Move into the fund&apos;s Pipeline at Screening? No outreach is sent.</span>
-              <button className="btn-primary text-xs" onClick={moveToScreening}>Confirm move</button>
-              <button className="btn-ghost text-xs" onClick={() => setConfirmScreening(false)}>Cancel</button>
-            </>
-          ) : (
-            <button className="btn-secondary text-xs" onClick={() => setConfirmScreening(true)}>Move to Screening</button>
-          ))}
-          {inPipeline && <Link href={`/vc/pipeline?stage=${o.stage}`} className="btn-ghost text-xs">In Pipeline · {humanStatus(o.stage)} →</Link>}
-          {screeningError && <span className="text-xs text-negative" role="alert">{screeningError}</span>}
-          <span className="ml-auto text-xs text-ink-muted">
-            {myStatus === "saved" || myStatus === "monitoring"
-              ? "Pinned to the top of your dashboard (this browser only)."
-              : myStatus === "dismissed"
-              ? "Hidden from your dashboard (this browser only)."
-              : "Your pipeline is saved in this browser — other investors don't see it."}
-          </span>
+      {confirmScreening && (
+        <div className="animate-rise rounded-xl bg-brand-wash px-5 py-4" role="region" aria-label="Confirm Move to Screening">
+          <p className="text-sm text-ink-soft">Move <span data-content>{name}</span> into the fund&apos;s Pipeline at Screening? No outreach is sent.</p>
+          <div className="mt-3 flex gap-2">
+            <Button variant="primary" size="sm" busy={moving} onClick={async () => { setMoving(true); try { await moveToScreening(); } finally { setMoving(false); } }}>Confirm Move</Button>
+            <button className="btn-ghost btn-sm" onClick={() => { setConfirmScreening(false); setScreeningError(null); }} disabled={moving}>Cancel</button>
+          </div>
+          {screeningError && <p className="field-error" role="alert">{screeningError}</p>}
         </div>
       )}
 
       {confirmRegen && (
-        <div className="rounded-lg border border-brand/30 bg-brand-wash p-4">
-          <p className="text-sm text-brand">
-            Regenerate the assessment, diligence, Arena debate, and memo with OpenAI? Prior versions are preserved — nothing is overwritten.
+        <div className="animate-rise rounded-xl bg-brand-wash px-5 py-4" role="region" aria-label="Confirm Analysis">
+          <p className="text-sm text-ink-soft">
+            {analyzed ? "Regenerate" : "Generate"} the assessment, diligence questions, Arena debate, and memo with OpenAI? Prior versions are kept — nothing is overwritten.
           </p>
-          <div className="mt-2 flex gap-2">
-            <button className="btn-primary" onClick={regenerate} disabled={busy}>Confirm</button>
-            <button className="btn-secondary" onClick={() => setConfirmRegen(false)}>Cancel</button>
+          <div className="mt-3 flex gap-2">
+            <Button variant="primary" size="sm" onClick={regenerate} busy={busy}>{analyzed ? "Regenerate" : "Run Analysis"}</Button>
+            <button className="btn-ghost btn-sm" onClick={() => setConfirmRegen(false)} disabled={busy}>Cancel</button>
           </div>
           {regenError && (
-            <p className="mt-2 text-sm text-negative">
+            <p className="field-error" role="alert">
               {regenError.includes("OPENAI") || regenError.toLowerCase().includes("ai provider")
                 ? "AI is not configured. Set OPENAI_API_KEY on the backend to enable analysis. Deterministic scores and the seeded demo analysis remain available."
                 : regenError}
@@ -198,108 +328,400 @@ export default function OpportunityPage() {
         </div>
       )}
 
-      {notAnalyzed && (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-brand/30 bg-brand-wash px-4 py-3">
-          <p className="text-sm text-brand">
-            This founder was just sourced. Their GitHub evidence and Founder Score are ready below —
-            run analysis to generate the three-axis assessment, the Investment Arena, and the memo.
-          </p>
-          <button className="btn-primary shrink-0" onClick={() => setConfirmRegen(true)} disabled={busy}>
-            {busy ? "Analyzing…" : "Run analysis"}
-          </button>
+      <Tabs label="Record Sections" idPrefix="opp" tabs={tabs} value={tab} onChange={setTab} />
+
+      <div key={tab} {...tabPanelProps("opp", tab)}>
+        {tab === "overview" && (
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] [&>*]:min-w-0">
+            <div className="space-y-8">
+              {reviewingApplication && <ApplicationScreen o={o} app={application.data} evidence={evidence} />}
+              {isLead && <LeadEvidence o={o} evidence={evidence} onRunAnalysis={() => setConfirmRegen(true)} />}
+              <Section title="Summary" card={false}>
+                <div className="max-w-prose space-y-4 text-[15px] leading-7 text-ink-soft">
+                  {o.company?.description || o.company?.one_liner || o.founder?.headline
+                    ? <p data-content>{o.company?.description || o.company?.one_liner || o.founder?.headline}</p>
+                    : <p>No description yet.</p>}
+                  <p className="text-sm text-ink-muted">
+                    {o.founder
+                      ? <span data-content>{[o.founder.full_name, o.founder.location].filter(Boolean).join(" · ")}</span>
+                      : o.identity?.founder_named ? <>Founder Named on a Source: <span data-content>{o.identity.founder_named}</span> · <span className="text-caution">Unverified</span></> : "Founder Not Linked Yet"}
+                    {o.company?.website && <> · <a href={o.company.website} target="_blank" rel="noreferrer" className="link text-ink-muted" data-content>{o.company.website.replace(/^https?:\/\/(www\.)?/, "")} ↗</a></>}
+                  </p>
+                  {/* the focus panel above already says why it surfaced */}
+                  {o.surfaced_reason && !reviewingApplication && !isLead && (
+                    <div className="border-l-2 border-brand/40 pl-4">
+                      <p className="label">Why It Surfaced</p>
+                      <p className="mt-1 text-sm leading-6">{o.surfaced_reason}</p>
+                    </div>
+                  )}
+                </div>
+              </Section>
+              <Section title="At a Glance" card={false}>
+                <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  <Fact label="Thesis Fit" value={o.company ? `${Math.round(o.thesis_fit_score)}` : "Needs a Company"} note={o.company ? (o.thesis_fit_stale ? "Not Current" : "/ 100") : undefined} tab="screening" pathname={pathname} />
+                  <Fact label="Founder Score" value={o.founder_score ? `${Math.round(o.founder_score.score)}` : "Not Scored"} tab="founder" pathname={pathname} />
+                  <Fact label="Evidence" value={`${evidence.length}`} note={newIds.size ? `${newIds.size} New` : evidence.length === 1 ? "Item" : "Items"} tab="evidence" pathname={pathname} />
+                  <Fact label="Claims" value={claims.data ? `${claimCount}` : "…"} tab="claims" pathname={pathname} />
+                  <Fact label="Analysis" value={analyzed ? "Done" : "Not Run Yet"} tab="screening" pathname={pathname} />
+                </dl>
+              </Section>
+            </div>
+            <StatusCard
+              o={o} inPipeline={inPipeline} shortlist={shortlist}
+              setShortlist={setShortlist} removeShortlist={removeShortlist} suggestOutreach={suggestOutreach}
+            />
+          </div>
+        )}
+
+        {tab === "founder" && (
+          o.founder ? (
+            <div className="space-y-10">
+              <Section title="Founder" card={false}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-lg font-semibold text-ink" data-content>{o.founder.full_name}</p>
+                    <p className="text-sm text-ink-muted">
+                      {o.founder.headline || o.founder.location
+                        ? <span data-content>{[o.founder.headline, o.founder.location].filter(Boolean).join(" · ")}</span>
+                        : "No Headline or Location"}
+                    </p>
+                  </div>
+                  {o.founder.github_username ? (
+                    <span className="flex flex-col items-end gap-1 text-sm">
+                      <Badge tone="bg-positive-wash text-positive">GitHub Profile Linked</Badge>
+                      <a href={`https://github.com/${o.founder.github_username}`} target="_blank" rel="noreferrer" className="text-brand hover:underline" data-content>@{o.founder.github_username} ↗</a>
+                    </span>
+                  ) : <Badge tone="bg-caution-wash text-caution">No Public Profile Linked</Badge>}
+                </div>
+              </Section>
+              <div className="grid gap-10 lg:grid-cols-2 [&>*]:min-w-0">
+                <Section title="Founder Score" subtitle="Deterministic, from Public Evidence · Persists Across Companies" card={false}>
+                  {o.founder_score ? (
+                    <div className="flex gap-4">
+                      <div className="flex flex-col items-center gap-1.5">
+                        <ScoreRing score={o.founder_score.score} size={80} />
+                        <ConfidenceBar value={o.founder_score.confidence} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm leading-5 text-ink-soft">{o.founder_score.explanation}</p>
+                        <FounderScoreBreakdown components={o.founder_score.components} />
+                      </div>
+                    </div>
+                  ) : <EmptyState title="No Score Yet" hint="The Founder Score is computed from the founder's public GitHub evidence. Sync their GitHub profile from Founders → Source Founders." />}
+                </Section>
+                <Section title="Momentum" subtitle="Direction and Rate of Change Over Time" card={false}>
+                  {o.momentum ? <MomentumChart momentum={o.momentum} /> : <EmptyState title="No Momentum History" hint="Momentum appears after the Founder Score has been computed more than once." />}
+                </Section>
+              </div>
+            </div>
+          ) : (
+            <Section title="Founder" card={false}>
+              <div className="max-w-prose space-y-3" data-testid="founder-missing">
+                <p className="text-base font-semibold text-ink">No Founder Linked Yet</p>
+                <p className="text-[15px] leading-7 text-ink-soft">
+                  {o.identity?.founder_named
+                    ? <><span data-content>{o.identity.founder_named}</span> {o.identity.founder_named.includes(" and ") ? "are" : "is"} named on a <a href={o.identity.founder_named_source ?? undefined} target="_blank" rel="noreferrer" className="text-brand hover:underline">source</a>, but not verified. </>
+                    : "None of this lead's sources name a founder. "}
+                  Founder Score and Momentum need a founder with public GitHub activity — sync their GitHub profile to add one.
+                </p>
+                <Link href="/vc/founders?source=open" className="btn-secondary btn-sm">Source Founders</Link>
+              </div>
+            </Section>
+          )
+        )}
+
+        {tab === "screening" && (
+          <div className="space-y-10">
+            <div className="grid gap-10 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] [&>*]:min-w-0">
+              <Section title="Thesis Fit" subtitle="Against Your Fund Thesis" card={false}>
+                {o.company ? (
+                  <div className="text-[2.5rem] font-semibold leading-none tracking-tight text-ink"><CountUp value={o.thesis_fit_score} /><span className="text-base font-normal text-ink-muted"> / 100</span></div>
+                ) : <p className="text-sm text-ink-muted">Not computed — fit is evaluated from a company, and this lead has none yet.</p>}
+                {o.company && o.thesis_fit_stale && (
+                  <div className="mt-3 rounded-lg bg-caution-wash px-3 py-2.5 text-sm text-caution" data-testid="fit-stale">
+                    <p>Not scored against your current thesis.</p>
+                    <Button size="sm" className="mt-2" onClick={recalculateFit} busy={fitBusy}>Recalculate Fit</Button>
+                  </div>
+                )}
+                <Link href="/vc/fund" className="link mt-3 inline-block text-sm">View Thesis</Link>
+              </Section>
+              <Section title="Gaps to Investigate" subtitle="Missing Information and Contradictions, Most Important First" card={false}>
+                <Gaps assessment={o.assessment ?? null} contradictions={contradictions.data?.items ?? []} />
+              </Section>
+            </div>
+            <Section
+              title="Assessment"
+              card={false}
+              right={analyzed && <button className="btn-secondary btn-sm" onClick={() => setConfirmRegen(true)} disabled={busy}>Regenerate Analysis</button>}
+            >
+              {o.assessment ? <ThreeAxes assessment={o.assessment} /> : (
+                <EmptyState title="No Assessment Yet" hint="Run Analysis scores the three screening axes and drafts the debate and memo." action={<button className="btn-secondary" onClick={() => setConfirmRegen(true)} disabled={busy}>Run Analysis</button>} />
+              )}
+            </Section>
+          </div>
+        )}
+
+        {tab === "arena" && (
+          <InvestmentArena debate={o.debate || null} memo={o.memo ?? null} onGenerateMemo={generateMemo} memoBusy={memoBusy} />
+        )}
+
+        {tab === "claims" && (
+          <Section title="Claims" subtitle="Each claim's verification status and trust score. Citations open the supporting evidence." card={false}>
+            {claims.data ? <ClaimsTable claims={claims.data.items} /> : claims.error ? <ErrorState message={claims.error} onRetry={claims.reload} /> : <div role="status" aria-label="Loading Claims…" className="space-y-2"><Skeleton className="h-10" /><Skeleton className="h-10" /></div>}
+          </Section>
+        )}
+
+        {tab === "evidence" && (
+          <EvidencePanel
+            o={o} evidence={evidence} newIds={newIds} focusId={focusEvidence}
+            onClearFocus={() => router.replace(`${pathname}?tab=evidence`, { scroll: false })}
+            markReviewed={markReviewed} reload={reload}
+          />
+        )}
+
+        {tab === "decision" && (
+          <div className="max-w-3xl">
+            <Section title="Your Decision" subtitle="The system recommends; you decide." card={false}>
+              <HumanDecisionPanel
+                opportunityId={o.id}
+                recommendation={o.current_recommendation || null}
+                why={decisionReasons(o, o.current_recommendation?.action ?? null)}
+                next={nextAfter}
+                dashboardHref={dashboardCardHref(nextAfter?.opportunity_id)}
+                onDecision={decided}
+                savedLocal={myDecision}
+                onSavedLocal={(d) => { saveMyDecision(o.id, d); setMyDecision(d); }}
+              />
+            </Section>
+          </div>
+        )}
+      </div>
+    </div>
+    </EvidenceLinkProvider>
+  );
+}
+
+function Fact({ label, value, note, tab, pathname }: { label: string; value: string; note?: string; tab: OpportunityTab; pathname: string }) {
+  return (
+    <Link href={`${pathname}?tab=${tab}`} scroll={false} className="card-interactive group block rounded-xl border border-line px-4 py-3">
+      <dt className="flex items-center justify-between text-meta text-ink-muted">{label}<ArrowRightIcon size={14} className="slide-arrow" /></dt>
+      <dd className="mt-1 flex items-baseline gap-1.5">
+        <span className="num text-xl font-semibold text-ink">{value}</span>
+        {note && <span className="text-meta text-ink-muted">{note}</span>}
+      </dd>
+    </Link>
+  );
+}
+
+// Where the record stands: the shared stage (and the deliberate move into
+// Screening) and, for outbound leads, my personal shortlist. The next step lives
+// in the header with the record's one primary button.
+function StatusCard({
+  o, inPipeline, shortlist, setShortlist, removeShortlist, suggestOutreach,
+}: {
+  o: Opportunity; inPipeline: boolean; shortlist: ReturnType<typeof shortlistOf>;
+  setShortlist: (s: PipelineStatus) => void; removeShortlist: () => void; suggestOutreach: () => void;
+}) {
+  return (
+    <aside aria-label="Stage and Shortlist" className="space-y-8 lg:border-l lg:border-line lg:pl-8">
+      <div>
+        <p className="label">Stage</p>
+        <StageTrack stage={o.stage} />
+        <p className="mt-2 text-[13px] text-ink-muted">Source · {sourceLabel(o.entry_type)}</p>
+        {/* moving a lead to Screening is the record's primary action (header) */}
+        {inPipeline && <div className="mt-3"><Link href={`/vc/pipeline?stage=${o.stage}`} className="link text-sm">Open in Pipeline</Link></div>}
+      </div>
+
+      {o.entry_type === "outbound" && (
+        <div>
+          <p className="label mb-1.5" id="shortlist-label">My Shortlist</p>
+          <Segmented<PipelineStatus | "none">
+            size="sm"
+            label="My Shortlist"
+            value={shortlist ?? "none"}
+            onChange={(v) => v !== "none" && setShortlist(v)}
+            options={(["saved", "monitoring", "dismissed"] as const).map((st) => ({ value: st, label: SHORTLIST_LABEL[st] }))}
+          />
+          {shortlist && <button type="button" className="link mt-2 block text-sm" onClick={removeShortlist}>Remove from Shortlist</button>}
+          <p className="mt-2 text-xs text-ink-muted">A choice is kept in this browser; removing clears it from the record too. Neither changes the stage.</p>
+          {!inPipeline && (
+            <button className="link mt-3 text-sm" onClick={suggestOutreach}
+              title="Adds an 'Invite to Apply' suggestion for you to approve. Nothing is sent.">
+              Suggest Outreach
+            </button>
+          )}
         </div>
       )}
+    </aside>
+  );
+}
 
-      {/* Investment Arena — full-width illustrated stage; the full memo drops down inline */}
-      <InvestmentArena
-        debate={o.debate || null}
-        memo={o.memo ?? null}
-        onGenerateMemo={generateMemo}
-        memoBusy={memoBusy}
-      />
+// Missing information from the screening axes plus detected contradictions —
+// the things to dig into next. Contradictions first: they're the riskiest.
+function Gaps({ assessment, contradictions }: { assessment: Opportunity["assessment"] | null; contradictions: { id: number; severity: string; description: string }[] }) {
+  const missing = (assessment?.axes ?? []).flatMap((ax) =>
+    (ax.missing_information ?? []).map((m: string) => ({ axis: humanStatus(ax.axis), text: m }))
+  );
+  const seen = new Set<string>();
+  const unique = missing.filter((m) => (seen.has(m.text.toLowerCase()) ? false : (seen.add(m.text.toLowerCase()), true)));
+  if (!contradictions.length && !unique.length) {
+    return <p className="text-sm text-ink-muted">{assessment ? "No contradictions or missing information flagged." : "Gaps appear after analysis runs."}</p>;
+  }
+  return (
+    <ul className="space-y-2" data-testid="screening-gaps">
+      {contradictions.slice(0, 3).map((c) => (
+        <li key={`c${c.id}`} className="flex items-start gap-2 text-sm text-ink-soft">
+          <Badge tone="bg-negative-wash text-negative">Contradiction · {humanStatus(c.severity)}</Badge><span>{c.description}</span>
+        </li>
+      ))}
+      {unique.slice(0, Math.max(0, 6 - Math.min(3, contradictions.length))).map((m) => (
+        <li key={m.text} className="flex items-start gap-2 text-sm text-ink-soft">
+          <Badge tone="bg-caution-wash text-caution">Missing · {m.axis}</Badge><span>{labelPhrase(m.text)}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* main column */}
-        <div className="space-y-6 lg:col-span-2">
-          <Section title="Persistent Founder Score" subtitle="Deterministic baseline, explained — persists across companies">
-            {o.founder_score ? (
-              <div className="flex flex-col gap-4 sm:flex-row">
-                <div className="flex flex-col items-center">
-                  <ScoreRing score={o.founder_score.score} size={96} />
-                  <div className="mt-2"><ConfidenceBar value={o.founder_score.confidence} /></div>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm text-ink-soft">{o.founder_score.explanation}</p>
-                  <FounderScoreBreakdown components={o.founder_score.components} />
-                </div>
-              </div>
-            ) : <EmptyState title="No score yet" hint="Sync evidence to compute a Founder Score." />}
-          </Section>
+function EvidencePanel({
+  o, evidence, newIds, focusId, onClearFocus, markReviewed, reload,
+}: {
+  o: Opportunity; evidence: Evidence[]; newIds: Set<number>; focusId: number | null;
+  onClearFocus: () => void; markReviewed: () => void; reload: () => void;
+}) {
+  const [showAll, setShowAll] = useState(false);
+  const focusIndex = focusId ? evidence.findIndex((e) => e.id === focusId) : -1;
+  const shown = showAll || focusIndex >= 25 ? evidence : evidence.slice(0, 25);
 
-          <Section title="Founder Momentum" subtitle="Direction & rate of change over time">
-            {o.momentum ? <MomentumChart momentum={o.momentum} /> : <EmptyState title="No momentum history" />}
-          </Section>
+  // bring a cited item into view and move focus to it
+  useEffect(() => {
+    if (!focusId || focusIndex < 0) return;
+    const row = document.getElementById(`evidence-row-${focusId}`);
+    row?.scrollIntoView({ block: "center", behavior: "smooth" });
+    row?.focus({ preventScroll: true });
+  }, [focusId, focusIndex]);
 
-          <Section title="Three Independent Screening Axes" subtitle="Founder · Market · Idea vs Market — never averaged">
-            {o.assessment ? <ThreeAxes assessment={o.assessment} /> : (
-              <EmptyState title="No assessment yet" hint="Run Regenerate analysis to generate the three axes." />
-            )}
-          </Section>
-
-          <Section title="Claims & Trust Scores" subtitle="Per-claim trust, verification status, and evidence links">
-            {claims.data ? <ClaimsTable claims={claims.data.items} /> : <Spinner />}
-          </Section>
-
-          <Section title="Contradictions & Missing Information" subtitle="Surfaced from evidence">
-            {contradictions.data?.items.length ? (
-              <ul className="space-y-2">
-                {contradictions.data.items.map((c) => (
-                  <li key={c.id} className="rounded-lg border border-negative/30 bg-negative-wash p-3 text-sm text-negative">
-                    <Badge tone="bg-white text-negative">{c.severity}</Badge> {c.description}
-                  </li>
-                ))}
-              </ul>
-            ) : <p className="text-sm text-ink-muted">No contradictions detected.</p>}
-          </Section>
-
-          <Section title="Evidence Timeline" subtitle="Normalized, timestamped, attributed" right={o.is_demo ? <DemoBadge /> : undefined}>
-            {founderEvidence.length ? (
-              <ol className="relative space-y-3 border-l border-line pl-4">
-                {founderEvidence.slice(0, 20).map((e) => (
-                  <li key={e.id} className="relative">
-                    <span className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-brand" />
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-ink-soft">{e.title}</span>
-                      <span className="font-mono text-[11px] text-ink-muted">E{e.id}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-ink-muted">
-                      <span>{e.source_name}</span>
-                      <Badge tone={verificationTone(e.verification_status)}>{humanStatus(e.verification_status)}</Badge>
-                      <span>{e.event_date ? new Date(e.event_date).toLocaleDateString() : ""}</span>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            ) : <p className="text-sm text-ink-muted">No evidence collected for this founder yet.</p>}
-          </Section>
+  return (
+    <Section
+      title="Evidence"
+      subtitle={`${evidence.length} Sourced, Dated Items`}
+      right={
+        <span className="flex flex-wrap items-center justify-end gap-2">
+          {newIds.size ? (
+            <span className="flex items-center gap-2" data-testid="evidence-new-summary">
+              <Badge tone="bg-signal-wash text-caution">{newIds.size} New from Web Search</Badge>
+              <button className="btn-secondary btn-sm" onClick={markReviewed}>Mark Reviewed</button>
+            </span>
+          ) : o.is_demo ? <DemoBadge /> : null}
+          {!o.is_demo && (o.company || o.founder) && <LeadWebCheck opportunityId={o.id} onUpdated={reload} />}
+        </span>
+      }
+      flush
+    >
+      {focusId && (
+        <div className="animate-fade flex flex-wrap items-center justify-between gap-2 border-b border-line bg-brand-wash px-5 py-2.5 text-sm text-brand" role="status">
+          <span>{focusIndex >= 0 ? <>Showing cited evidence <strong className="font-mono">E{focusId}</strong>.</> : <>Evidence <strong className="font-mono">E{focusId}</strong> isn&apos;t part of this record&apos;s evidence.</>}</span>
+          <button className="btn-ghost btn-sm" onClick={onClearFocus}>Clear</button>
         </div>
-
-        {/* right column — decision */}
-        <div className="space-y-6">
-          <Section title="Recommendation & Human Decision" subtitle="System recommends; a human decides">
-            <HumanDecisionPanel
-              opportunityId={o.id}
-              recommendation={o.current_recommendation || null}
-              onDecision={reload}
-              savedLocal={myDecision}
-              onSavedLocal={(d) => { saveMyDecision(o.id, d); setMyDecision(d); }}
-            />
-          </Section>
-          <Section title="Thesis Fit" subtitle="Evaluated through the active thesis">
-            <div className="text-3xl font-semibold text-ink">{Math.round(o.thesis_fit_score)}<span className="text-base text-ink-muted"> / 100</span></div>
-            <p className="mt-1 text-sm text-ink-muted">{o.surfaced_reason}</p>
-          </Section>
+      )}
+      {evidence.length ? (
+        <div>
+          <ol className="divide-y divide-line" aria-label="Evidence Items">
+            {shown.map((e) => {
+              const quote = ((e.structured_value ?? {}) as { quote?: string }).quote;
+              const focused = e.id === focusId;
+              return (
+                <li
+                  key={e.id}
+                  id={`evidence-row-${e.id}`}
+                  tabIndex={focused ? -1 : undefined}
+                  aria-current={focused ? "true" : undefined}
+                  className={`scroll-mt-28 px-5 py-3.5 transition-colors duration-base focus:outline-none ${focused ? "bg-brand-wash shadow-[inset_3px_0_0_#3047e8]" : newIds.has(e.id) ? "bg-signal-wash/60" : "hover:bg-surface-sunken"}`}
+                  data-testid={focused ? "evidence-focused-row" : newIds.has(e.id) ? "evidence-new-row" : undefined}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      {newIds.has(e.id) && <Badge tone="mr-1.5 bg-signal-wash text-caution">New</Badge>}
+                      {e.source_url
+                        ? <a href={e.source_url} target="_blank" rel="noreferrer" className="text-ink hover:text-brand" data-content>{e.title} <span className="text-ink-faint">↗</span></a>
+                        : <span className="text-ink" data-content>{e.title}</span>}
+                      {quote && <span className="mt-1 block border-l-2 border-line pl-2 text-[13px] italic text-ink-muted" data-content>“{quote}”</span>}
+                    </div>
+                    <span className="shrink-0 font-mono text-xs text-ink-faint">E{e.id}</span>
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-ink-muted">
+                    <span data-content>{sourceName(e.source_name)}</span>
+                    <Badge tone={verificationTone(e.verification_status)}>{humanStatus(e.verification_status)}</Badge>
+                    <span className="num"><EvidenceDate e={e} /></span>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+          {evidence.length > shown.length && (
+            <div className="border-t border-line px-5 py-3 text-[13px] text-ink-muted">
+              Showing {shown.length} of {evidence.length}. <button className="link" onClick={() => setShowAll(true)}>Show All</button>
+            </div>
+          )}
         </div>
+      ) : <p className="px-5 py-6 text-sm text-ink-muted">No evidence collected for this lead yet. Use Check the Web for Updates, or sync a GitHub profile from Founders.</p>}
+    </Section>
+  );
+}
+
+// Web evidence carries how its date was established; anything unsupported is
+// shown as unknown rather than guessed.
+function EvidenceDate({ e }: { e: Evidence }) {
+  const sv = (e.structured_value ?? {}) as { date_basis?: string | null; date_precision?: string | null; date_text?: string | null };
+  if (!e.event_date) return e.kind.startsWith("web_") ? <span className="italic">Date Unknown</span> : <>—</>;
+  const d = new Date(e.event_date);
+  const text = d.toLocaleDateString("en-US", {
+    timeZone: "UTC", month: "short", year: "numeric", ...(sv.date_precision === "month" ? {} : { day: "numeric" }),
+  });
+  const title = sv.date_basis === "stated_in_source" ? `Stated in the source: “${sv.date_text}”.`
+    : sv.date_basis === "search_provider" ? "Published date reported by the search provider." : undefined;
+  return <span title={title}>{text}{sv.date_basis === "search_provider" && " *"}</span>;
+}
+
+const STAGE_ORDER = ["sourcing", "screening", "diligence", "decision"] as const;
+
+// Shared stage as a short track: done → current → upcoming.
+function StageTrack({ stage }: { stage: string }) {
+  const at = STAGE_ORDER.indexOf(stage as (typeof STAGE_ORDER)[number]);
+  return (
+    <div className="mt-2.5">
+      <ol className="grid grid-cols-4 gap-1" aria-label={`Stage: ${humanStatus(stage)}`}>
+        {STAGE_ORDER.map((s, i) => (
+          <li key={s} aria-current={i === at ? "step" : undefined} title={humanStatus(s)}>
+            <span className="sr-only">{humanStatus(s)}{i < at ? " (Done)" : ""}</span>
+            <span className="block h-1.5 overflow-hidden rounded-full bg-line" aria-hidden>
+              <span className={`block h-full origin-left rounded-full transition-transform duration-[500ms] ease-out ${stageDot(s)}`}
+                style={{ transform: `scaleX(${i <= at ? 1 : 0})`, transitionDelay: `${i * 80}ms` }} />
+            </span>
+          </li>
+        ))}
+      </ol>
+      <p className="mt-2 text-sm" aria-hidden>
+        <span className="font-semibold text-ink">{humanStatus(stage)}</span>
+        <span className="text-ink-muted"> · Step {at + 1} of {STAGE_ORDER.length}</span>
+      </p>
+    </div>
+  );
+}
+
+function RecordSkeleton() {
+  return (
+    <div role="status" aria-label="Loading Opportunity…" className="space-y-8">
+      <span className="sr-only">Loading Opportunity…</span>
+      <div className="space-y-3" aria-hidden>
+        <Skeleton className="h-3 w-40" />
+        <Skeleton className="h-9 w-72 max-w-full" />
+        <Skeleton className="h-4 w-96 max-w-full" />
+      </div>
+      <Skeleton className="h-11 w-full" />
+      <div className="grid gap-10 lg:grid-cols-[1fr_20rem]" aria-hidden>
+        <div className="space-y-3"><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-5/6" /><Skeleton className="h-4 w-2/3" /></div>
+        <Skeleton className="h-40 rounded-xl" />
       </div>
     </div>
   );

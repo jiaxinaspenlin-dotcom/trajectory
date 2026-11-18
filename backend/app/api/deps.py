@@ -18,7 +18,7 @@ def default_fund(db: Session) -> Fund:
     """
     fund = db.scalar(select(Fund).order_by(Fund.id))
     if fund is None:
-        fund = Fund(name="Demo Fund")
+        fund = Fund(name="My fund")
         db.add(fund)
         db.flush()
     return fund

@@ -3,7 +3,8 @@
 import { Assessment, AxisAssessment } from "@/lib/types";
 import { Badge, ConfidenceBar } from "./ui";
 import { InfoTip } from "./InfoTip";
-import { humanStatus, labelTone, pct, trajectoryTone } from "@/lib/format";
+import { asSentence, humanStatus, labelPhrase, labelTone, pct, trajectoryTone } from "@/lib/format";
+import { EvidenceRef } from "./EvidenceRef";
 
 const AXIS_TITLES: Record<string, string> = {
   founder: "Founder",
@@ -36,18 +37,18 @@ function AxisCard({ axis }: { axis: AxisAssessment }) {
           <h4 className="text-sm font-semibold text-ink">{AXIS_TITLES[axis.axis] || axis.axis}</h4>
           {AXIS_INFO[axis.axis] && <InfoTip text={AXIS_INFO[axis.axis]} />}
         </span>
-        <Badge tone={labelTone(axis.label)}>{axis.label}</Badge>
+        <Badge tone={labelTone(axis.label)}>{humanStatus(axis.label)}</Badge>
       </div>
       <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
         <span className="text-2xl font-semibold text-ink">{Math.round(axis.display_score)}</span>
         <span className="text-xs text-ink-muted">/ 100</span>
         {axis.axis === "market" && (
-          <span className="ml-auto text-xs capitalize text-ink-muted">outlook: {axis.outlook}</span>
+          <span className="ml-auto text-xs text-ink-muted">Outlook: {humanStatus(axis.outlook)}</span>
         )}
       </div>
       {axis.trend && (
         <div className="mt-2 flex items-center gap-1">
-          <span className="text-[11px] uppercase tracking-wide text-ink-muted">Trend</span>
+          <span className="text-xs text-ink-muted">Trend</span>
           <Badge tone={trajectoryTone(axis.trend)}>
             <span className="mr-0.5">{TREND_ARROW[axis.trend] ?? "→"}</span>{humanStatus(axis.trend)}
           </Badge>
@@ -60,13 +61,13 @@ function AxisCard({ axis }: { axis: AxisAssessment }) {
         <ul className="mt-2 space-y-1 text-sm text-ink-soft">
           {axis.supporting_points.slice(0, 3).map((p, i) => (
             <li key={i} className="break-words">
-              • {p.text}
+              • {asSentence(p.text)}
               {p.evidence_ids.length > 0 ? (
-                <span className="ml-1 text-[11px] text-ink-muted">
-                  {p.evidence_ids.slice(0, 4).map((id) => <span key={id} className="mr-1 inline-block rounded bg-surface-sunken px-1 font-mono">E{id}</span>)}
+                <span className="ml-1 text-xs text-ink-muted">
+                  {p.evidence_ids.slice(0, 4).map((id) => <EvidenceRef key={id} id={id} />)}
                 </span>
               ) : (
-                <span className="ml-1 text-[11px] text-caution">unverified</span>
+                <span className="ml-1 text-xs text-caution">Unverified</span>
               )}
             </li>
           ))}
@@ -74,10 +75,10 @@ function AxisCard({ axis }: { axis: AxisAssessment }) {
       )}
 
       {axis.risks.length > 0 && (
-        <p className="mt-2 break-words text-xs text-caution"><strong>Risks:</strong> {axis.risks.slice(0, 3).join("; ")}</p>
+        <p className="mt-2 break-words text-xs text-caution"><strong>Risks:</strong> {axis.risks.slice(0, 3).map(labelPhrase).join("; ")}</p>
       )}
       {axis.missing_information.length > 0 && (
-        <p className="mt-1 break-words text-xs text-ink-muted"><strong>Missing:</strong> {axis.missing_information.slice(0, 3).join("; ")}</p>
+        <p className="mt-1 break-words text-xs text-ink-muted"><strong>Missing:</strong> {axis.missing_information.slice(0, 3).map(labelPhrase).join("; ")}</p>
       )}
       {axis.contradictions.length > 0 && (
         <p className="mt-1 break-words text-xs text-negative"><strong>Contradictions:</strong> {axis.contradictions.slice(0, 2).join("; ")}</p>

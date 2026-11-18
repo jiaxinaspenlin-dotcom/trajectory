@@ -129,7 +129,7 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
     left: pos ? pos.left : -9999,
     maxHeight: "calc(100vh - 32px)",
     opacity: pos ? 1 : 0,
-    transition: prefersReducedMotion() ? "none" : "top 0.18s ease, left 0.18s ease",
+    transition: prefersReducedMotion() ? "none" : "opacity 200ms var(--ease-out)",
   };
 
   return (
@@ -143,12 +143,13 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
         ref={cardRef}
         tabIndex={-1}
         style={cardStyle}
-        className="relative z-10 flex w-[380px] max-w-[92vw] flex-col overflow-hidden rounded-xl border border-brand/30 bg-white shadow-raised ring-1 ring-black/5 focus:outline-none"
+        key={i}
+        className="menu-enter relative z-10 flex w-[380px] max-w-[92vw] flex-col overflow-hidden rounded-xl bg-white shadow-overlay ring-1 ring-black/5 focus:outline-none"
         data-testid="tour-card"
       >
         {/* header — fixed */}
         <div className="flex shrink-0 items-center gap-3 border-b border-line px-4 py-3">
-          <div className="shrink-0 motion-safe:animate-[bounce_0.9s_ease-in-out_1]">
+          <div className="shrink-0">
             <RefereeCharacter state="pointing" size={44} />
           </div>
           <div className="min-w-0 flex-1">
@@ -191,12 +192,9 @@ export function GuidedTour({ steps, open, onClose }: { steps: TourStep[]; open: 
 }
 
 export const DASHBOARD_TOUR: TourStep[] = [
-  { target: "arena", title: "I'm your Referee", body: "Welcome to your investor workspace. On every founder, a Bull argues to advance and a Bear argues for caution; I weigh the evidence, not the rhetoric, and recommend your next step. You always make the final call. Here's a quick tour." },
-  { target: "thesis", title: "Your investment thesis", body: "This is your fund's strategy — sectors, stages, geographies, check sizes and exclusions. Every score, ranking and recommendation you see is filtered through it. Edit it any time from the Thesis tab." },
-  { target: "action-queue", title: "Your action queue", body: "The single prioritized list of what to do next, and on whom — the deals you can act on now come first. Each row names the company and the one concrete next action: run analysis, resolve diligence, or review a recommendation and decide." },
-  { target: "sourcing", title: "Sourcing feed (outbound)", body: "Prospects you've surfaced proactively from real public GitHub activity — founders you can evaluate before they ever apply. Add more from the Discovery tab." },
-  { target: "inbound", title: "Inbound applications", body: "Founders who applied to you directly with a company name and pitch deck. Inbound and outbound converge into the same evaluation workflow." },
-  { target: "momentum", title: "Founder Score & Momentum", body: "A persistent, evidence-based Founder Score (computed in code, not invented by AI) plus its direction and rate of change over time: accelerating, improving, stable, or declining." },
-  { target: "evidence", title: "Evidence & Trust Scores", body: "Every claim links to stored evidence with a per-claim Trust Score and verification status. The AI is only ever given this stored evidence and can't cite anything that doesn't exist." },
-  { target: "arena", title: "Open a founder to see me in action", body: "On any founder you'll get the full assessment — three independent axes (Founder, Market, Idea-vs-Market, never averaged), the Bull/Bear/Referee debate, an evidence-backed memo, and a recommended next step you approve or override." },
+  { target: "action-queue", title: "Everything Waiting, as a Deck", body: "Welcome to your investor workspace. Every record waiting for you is a card here, most urgent first. Flip through with the arrows, the arrow keys or a swipe; each card's one button opens what's waiting: its decision, its application or its evidence." },
+  { target: "waiting", title: "Jump by Kind of Work", body: "Recommendations to review, applications, new leads: each jumps the deck to the first card of its kind, and the kind you're on is marked." },
+  { target: "overview", title: "Where Everything Stands", body: "Every lead and deal by stage: Sourcing, Screening, Diligence, Decision. Hover a stage to see what's in it; click it to open those records." },
+  { target: "nav", title: "Everything Else Is One Click Away", body: "Map shows every lead and deal in one view. Founders ranks the leads you've sourced, Pipeline holds every active deal, and Fund keeps your thesis that every score is evaluated against." },
+  { target: "action-queue", title: "Open an Opportunity to Go Deeper", body: "Each opportunity has tabs: Overview, Founder, Screening, Arena, Claims, Evidence and Decision. The button at the top of a record is always its next step; you approve or override every recommendation." },
 ];

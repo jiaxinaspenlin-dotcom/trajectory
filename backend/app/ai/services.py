@@ -13,9 +13,11 @@ is validated against the real evidence set (hallucinated IDs are rejected).
 
 from __future__ import annotations
 
+import re
+from datetime import date
 from typing import Any
 
-from app.ai.provider import provider
+from app.ai.provider import AIError, provider
 from app.ai.validation import sanitize_points, validate_evidence_ids
 
 VALID_ACTIONS = {
@@ -85,6 +87,79 @@ def plan_github_search(thesis: dict[str, Any], brief: str) -> dict[str, Any]:
         "interpretation": str(data.get("interpretation", "")),
         "planned_by": "openai",
     }
+
+
+# --------------------------------------------------------------------------
+# 1c. Web sourcing: plan web queries, then structure retrieved pages
+# --------------------------------------------------------------------------
+
+def plan_web_search(thesis: dict[str, Any], request: str) -> dict[str, Any]:
+    """Turn the investor's request (or the thesis) into 2-3 web search queries
+    aimed at company sites, launch posts, and changelogs."""
+    system = (
+        "You help a VC find early-stage startups on the open web. Write web search queries "
+        "that surface primary sources about specific young companies: their own websites, "
+        "launch announcements (e.g. Show HN, Product Hunt, YC launches, launch blog posts), "
+        "and product changelogs or release notes. Avoid queries that return listicles, "
+        "funding databases, or big incumbents."
+    )
+    today = date.today().isoformat()
+    user = (
+        f"Today is {today}. Investor request: {request or '(none — use the thesis)'}\nThesis: {thesis or '(none)'}\n\n"
+        "If the request names a specific company or product, put that name in site_queries and launch_keywords. "
+        "site_queries: 1 query phrased the way a founder announces on their own site, e.g. "
+        "\"we just launched an open-source tool for ...\", \"introducing <category> for ...\". "
+        "launch_keywords: 2-4 plain words for the product category (e.g. \"developer tools\", "
+        "\"payments infrastructure\"); they are searched on launch sites. No site: operators, no years.\n"
+        "Return JSON: {\"site_queries\":[str], \"launch_keywords\":str, \"interpretation\":str}."
+    )
+    data = provider.generate_json(system, user, max_tokens=400)
+    # search operators (site:, intitle:, ...) and exact-phrase quotes narrow the
+    # provider's matching too much; the targeted launch searches handle sites
+    clean = lambda q: " ".join(re.sub(r"\b[a-z]+:\S*|[\"“”]", " ", str(q)).split())  # noqa: E731
+    queries = [q for q in (clean(x) for x in data.get("site_queries", [])) if q][:1]
+    # the launch templates add their own verbs; keep only the category words
+    filler = {"launch", "launches", "launched", "release", "releases", "new", "startup", "startups", "product", "products"}
+    keywords = " ".join([w for w in clean(data.get("launch_keywords") or "").split() if w.lower() not in filler][:4])
+    if not queries and not keywords:
+        raise AIError("The model returned no web search queries.")
+    return {"queries": queries, "launch_keywords": keywords,
+            "interpretation": str(data.get("interpretation", "")), "planned_by": "openai"}
+
+
+def structure_web_leads(thesis: dict[str, Any], request: str, sources: list[dict[str, Any]]) -> dict[str, Any]:
+    """Extract candidate companies from retrieved pages. The output is raw: the
+    caller validates it against the schema and the source texts."""
+    system = (
+        "You turn retrieved web pages into a shortlist of early-stage companies for a VC. "
+        "Use ONLY the provided sources. Every statement must cite source ids (S1, S2, ...) whose "
+        "text supports it. Quote dates and founder names exactly as they appear in the source text; "
+        "if a source does not state a date or a founder, use null. Skip large incumbents, "
+        "investors, directories, and listicles that are not about one company."
+    )
+    listing = "\n\n".join(
+        f"[{s['id']}] {s['title']}\nURL: {s['url']}\n"
+        f"Search-provider published date: {s.get('published_date') or 'unknown'}\nTEXT: {s['text']}"
+        for s in sources
+    )
+    user = (
+        f"Investor request: {request or '(from thesis)'}\nThesis: {thesis or '(none)'}\n\n"
+        f"SOURCES:\n{listing}\n\n"
+        "Return JSON: {\"results\":[{"
+        "\"company_name\":str, "
+        "\"website\":str|null (the company's own site, only if one of the cited sources is on it or links it), "
+        "\"founder_name\":str|null (exact text from a cited source), "
+        "\"github_handle\":str|null (only if a github.com/<handle> link appears in a source), "
+        "\"sector\":str|null (pick from the thesis sectors when one fits), "
+        "\"building\":{\"text\":str,\"source_ids\":[str]}, "
+        "\"why_matched\":{\"text\":str,\"source_ids\":[str]}, "
+        "\"evidence\":[{\"source_id\":str, \"kind\":\"launch\"|\"release\"|\"changelog\"|\"company_site\"|\"press\"|\"other\", "
+        "\"claim\":str, \"quote\":str (verbatim from the source text, under 200 chars), "
+        "\"event_date\":\"YYYY-MM-DD\"|\"YYYY-MM\"|null, \"date_text\":str|null (verbatim date text from the source)}], "
+        "\"unknowns\":[str] (short plain-English gaps an investor would care about, e.g. \"Pricing not stated\")}]}. "
+        "At most 8 results, best matches first."
+    )
+    return provider.generate_json(system, user, max_tokens=3500)
 
 
 # --------------------------------------------------------------------------

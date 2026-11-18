@@ -71,6 +71,8 @@ def momentum_for(db: Session, founder_id: int) -> dict:
         "previous_score": result.previous_score,
         "change_30d": result.change_30d,
         "change_90d": result.change_90d,
+        "change_30d_window_days": result.change_30d_window_days,
+        "change_90d_window_days": result.change_90d_window_days,
         "trajectory": result.trajectory.value if hasattr(result.trajectory, "value") else str(result.trajectory),
         "signal_trends": [
             {

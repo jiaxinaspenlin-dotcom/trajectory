@@ -23,13 +23,13 @@ export function InfoTip({ text, label }: { text: string; label?: string }) {
         ref={ref}
         type="button"
         aria-label={label ?? text}
-        className="grid h-3.5 w-3.5 place-items-center rounded-full border border-ink-muted/60 text-[9px] font-semibold leading-none text-ink-muted transition-colors hover:border-brand hover:text-brand focus:outline-none focus-visible:ring-1 focus-visible:ring-brand"
+        className="grid h-3.5 w-3.5 place-items-center rounded-full border border-ink-muted/60 text-[11px] font-semibold leading-none text-ink-muted transition-colors hover:border-brand hover:text-brand focus:outline-none focus-visible:ring-1 focus-visible:ring-brand"
         onMouseEnter={show}
         onMouseLeave={hide}
         onFocus={show}
         onBlur={hide}
       >
-        i
+        <span aria-hidden>i</span>
       </button>
       {box &&
         typeof document !== "undefined" &&
@@ -42,7 +42,7 @@ export function InfoTip({ text, label }: { text: string; label?: string }) {
               top: below ? box.bottom + 8 : box.top - 8,
               transform: below ? "translate(-50%, 0)" : "translate(-50%, -100%)",
             }}
-            className="z-50 w-56 rounded-lg border border-line bg-white p-2 text-left text-[11px] font-normal leading-snug text-ink-soft shadow-raised"
+            className="z-50 w-56 rounded-lg border border-line bg-white p-2 text-left text-xs font-normal leading-snug text-ink-soft shadow-raised"
           >
             {text}
           </span>,

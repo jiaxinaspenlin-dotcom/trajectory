@@ -63,7 +63,7 @@ def interpret_and_store_deck(
             continue
         ev = Evidence(
             company_id=company_id, data_source_id=ds.id,
-            source_name="Pitch deck", source_type=SourceType.PITCH_DECK,
+            source_name="Pitch Deck", source_type=SourceType.PITCH_DECK,
             source_url=None, kind="deck_metric",
             title=f"{label}: {value}" + (f" (slide {page})" if page else ""),
             raw_value=value,
@@ -78,7 +78,7 @@ def interpret_and_store_deck(
         claim = Claim(
             company_id=company_id, text=f"{label}: {value} (per pitch deck slide {page}).",
             category=_metric_category(label), owner=company.name if company else "",
-            source_name="Pitch deck", source_url=None, collection_date=now, event_date=now,
+            source_name="Pitch Deck", source_url=None, collection_date=now, event_date=now,
             excerpt=f"{label}: {value}", structured_value={"metric": label.lower(), "amount": _num(value)},
             provenance=Provenance.FOUNDER_REPORTED,
             verification_status=VerificationStatus.FOUNDER_REPORTED, confidence=0.4, trust_score=42.0,

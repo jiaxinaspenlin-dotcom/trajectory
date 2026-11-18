@@ -2,109 +2,456 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ---- motion system ------------------------------------------------------------
+   One set of durations and easings for the whole site (tailwind.config.ts names
+   them too). Interface feedback 120–250ms, reveals up to 500ms. Only transform
+   and opacity animate. Reduced motion turns every animation and transition into
+   an instant change (bottom of this section). */
 :root {
-  --font-inter: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 140ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+  --dur-reveal: 480ms;
+  --stagger: 45ms;
 }
 
 html,
 body {
-  background: #f8fafc;
-  color: #0f172a;
+  background: #ffffff;
+  color: #0b1220;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* The layout is capped at a comfortable max width (~1900px) and centered. On
-   larger displays we scale the ROOT font size up so text AND rem-based spacing
-   grow together — nothing looks tiny on a wide monitor, and everything stays in
-   proportion. Narrower windows (incl. the editor preview) keep the 16px base. */
-@media (min-width: 1280px) {
-  html {
-    font-size: 17px;
-  }
-}
-@media (min-width: 1600px) {
-  html {
-    font-size: 18px;
-  }
-}
-@media (min-width: 2000px) {
-  html {
-    font-size: 19px;
-  }
+html {
+  font-size: 16px;
 }
 
-/* Respect reduced-motion everywhere. Components also check this in JS. */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes drawer-in {
+  from { transform: translateX(100%); }
+  to { transform: none; }
+}
+@keyframes drawer-out {
+  from { transform: none; }
+  to { transform: translateX(100%); }
+}
+@keyframes sheet-in {
+  from { transform: translateY(100%); }
+  to { transform: none; }
+}
+@keyframes sheet-out {
+  from { transform: none; }
+  to { transform: translateY(100%); }
+}
+@keyframes rail-in {
+  from { transform: translateX(-100%); }
+  to { transform: none; }
+}
+@keyframes rail-out {
+  from { transform: none; }
+  to { transform: translateX(-100%); }
+}
+@keyframes pop {
+  from { opacity: 0; transform: translateY(-4px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pop-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(-4px) scale(0.97); }
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes toast-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(8px) scale(0.98); }
+}
+@keyframes draw {
+  from { stroke-dashoffset: 24; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* content that mounts (a page, a panel, data arriving). Entry animations fill
+   backwards only: once they end nothing lingers, so they never leave a stacking
+   context that would trap a menu or drawer under later content.
+   They run only after hydration (html[data-motion], lib/motion.ts markHydrated)
+   and what the server rendered finishes at once, so the server HTML is visible
+   as it arrives, whether or not scripts load. */
+html[data-motion] .animate-rise { animation: rise var(--dur-reveal) var(--ease-out) backwards; animation-delay: calc(min(var(--i, 0), 8) * var(--stagger)); }
+html[data-motion] .animate-fade { animation: fade var(--dur-base) var(--ease-out) backwards; }
+/* a page arriving after navigation (app/vc/template.tsx and friends) */
+html[data-motion] .animate-page { animation: rise 260ms var(--ease-out) backwards; }
+/* below the fold: hidden until it scrolls into view, then revealed once (lib/motion.ts useReveal) */
+.reveal-wait { opacity: 0; transform: translateY(14px); }
+.reveal-in { animation: rise var(--dur-reveal) var(--ease-out) backwards; animation-delay: calc(min(var(--i, 0), 8) * var(--stagger)); }
+
+/* the Dashboard deck: the new front card slides in from the side it was flipped
+   towards and settles; the card behind moves up a step. Under 300ms. */
+@keyframes deck-in-next {
+  from { opacity: 0; transform: translateX(28px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes deck-in-prev {
+  from { opacity: 0; transform: translateX(-28px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes deck-behind-up {
+  from { transform: translateY(var(--from-y)) scale(var(--from-s)); }
+}
+html[data-motion] .deck-in-next { animation: deck-in-next 240ms var(--ease-out) backwards; }
+html[data-motion] .deck-in-prev { animation: deck-in-prev 240ms var(--ease-out) backwards; }
+html[data-motion] .deck-behind { animation: deck-behind-up 240ms var(--ease-out) backwards; }
+
+/* overlays enter and leave from where they come from */
+.drawer-enter { animation: drawer-in var(--dur-slow) var(--ease-out) backwards; }
+.drawer-exit { animation: drawer-out var(--dur-base) var(--ease-in-out) both; }
+@media (max-width: 639px) {
+  .drawer-enter.sheet-on-phone { animation-name: sheet-in; }
+  .drawer-exit.sheet-on-phone { animation-name: sheet-out; }
+}
+.rail-enter { animation: rail-in var(--dur-slow) var(--ease-out) backwards; }
+.rail-exit { animation: rail-out var(--dur-base) var(--ease-in-out) both; }
+.scrim-enter { animation: fade var(--dur-slow) var(--ease-out) backwards; }
+.scrim-exit { animation: fade-out var(--dur-base) var(--ease-out) both; }
+.menu-enter { animation: pop var(--dur-base) var(--ease-out) backwards; }
+.menu-exit { animation: pop-out var(--dur-fast) var(--ease-out) both; }
+.toast-enter { animation: toast-in var(--dur-slow) var(--ease-out) backwards; }
+.toast-exit { animation: toast-out var(--dur-base) var(--ease-out) both; }
+.check-draw path { stroke-dasharray: 24; animation: draw 360ms var(--ease-out) 80ms both; }
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.001ms !important;
+    animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
+  .reveal-wait { opacity: 1; transform: none; }
+}
+
+/* print: everything that would wait for a scroll reveal or an entrance animation
+   prints fully visible; navigation and controls are left out; a section is kept
+   on one page where it fits. Mark anything else to leave out with data-print-hide. */
+@media print {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .reveal-wait,
+  .reveal-in,
+  .animate-rise,
+  .animate-fade,
+  .animate-page {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  [data-print-hide],
+  [data-condensed-header],
+  .btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-ghost,
+  .btn-danger,
+  .icon-btn,
+  select {
+    display: none !important;
+  }
+  section,
+  [data-print-keep] {
+    break-inside: avoid;
+  }
+  h1, h2, h3 {
+    break-after: avoid;
+  }
+}
+
+@layer base {
+  h1, h2, h3 {
+    letter-spacing: -0.011em;
+  }
+  :focus-visible {
+    outline: 2px solid #3047e8;
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: #dfe4fd;
+  }
 }
 
 @layer components {
+  /* ---- surfaces: white page, quiet wells; cards only where a group needs a frame */
   .card {
-    @apply rounded-xl border border-line bg-surface shadow-card;
+    @apply rounded-xl border border-line bg-surface;
   }
+  .well {
+    @apply rounded-xl bg-surface-sunken;
+  }
+  .panel-header {
+    @apply flex min-h-[3.25rem] items-center justify-between gap-3 px-5 pb-3 pt-4;
+  }
+  .panel-header-divided {
+    @apply border-b border-line pb-3.5;
+  }
+  .panel-title {
+    @apply text-section text-ink;
+  }
+  /* small uppercase-free section kicker above a block ("Next Up") */
+  .eyebrow {
+    @apply text-meta font-medium text-ink-muted;
+  }
+
+  /* ---- buttons: color shift on hover, a slight press-down, in-place busy state */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:opacity-50;
+    @apply relative inline-flex h-10 shrink-0 select-none items-center justify-center gap-2 whitespace-nowrap rounded-md px-4 text-[15px] font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+    transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out),
+      color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  }
+  .btn:active,
+  .press:active {
+    transform: translateY(1px) scale(0.98);
   }
   .btn-primary {
-    @apply btn bg-brand text-white hover:bg-brand-soft;
+    @apply btn bg-brand text-white shadow-card hover:bg-brand-deep hover:shadow-hover;
   }
   .btn-secondary {
-    @apply btn border border-line bg-white text-ink-soft hover:bg-surface-sunken;
+    @apply btn border border-line-strong bg-white text-ink hover:border-ink-faint/60 hover:bg-surface-sunken;
   }
   .btn-ghost {
-    @apply btn text-ink-soft hover:bg-surface-sunken;
+    @apply btn text-ink-soft hover:bg-neutral-wash hover:text-ink;
   }
+  .btn-danger {
+    @apply btn border border-negative/30 bg-white text-negative hover:bg-negative-wash;
+  }
+  .btn-lg {
+    @apply h-12 px-6 text-base;
+  }
+  .btn-sm {
+    @apply h-8 gap-1.5 px-3 text-sm;
+  }
+  .btn[aria-busy="true"] {
+    @apply pointer-events-none;
+  }
+  .icon-btn {
+    @apply inline-grid h-10 w-10 shrink-0 place-items-center rounded-md text-ink-muted hover:bg-neutral-wash hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand;
+    transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  }
+  .icon-btn:active {
+    transform: scale(0.94);
+  }
+
+  /* ---- links: an underline that draws in from the left */
+  .link {
+    @apply font-medium text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand;
+    background-image: linear-gradient(currentColor, currentColor);
+    background-size: 0% 1px;
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    transition: background-size var(--dur-base) var(--ease-out), color var(--dur-fast) var(--ease-out);
+  }
+  .link:hover,
+  .link:focus-visible {
+    background-size: 100% 1px;
+  }
+  .link:active {
+    @apply text-brand-deep;
+  }
+
+  /* ---- interactive rows and cards: soft background, the row's arrow slides in */
+  .row-interactive {
+    @apply relative cursor-pointer;
+    transition: background-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  }
+  .row-interactive:hover {
+    @apply bg-surface-sunken;
+  }
+  .row-interactive:active {
+    @apply bg-neutral-wash;
+  }
+  .card-interactive {
+    @apply relative cursor-pointer;
+    transition: box-shadow var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+  }
+  .card-interactive:hover {
+    @apply border-line-strong shadow-hover;
+    transform: translateY(-1px);
+  }
+  .card-interactive:active {
+    transform: translateY(0) scale(0.995);
+  }
+  /* a large answer in a question (Decision): lifts on hover, presses down, and the
+     focus ring follows the hidden radio inside it */
+  .choice-card {
+    transition: box-shadow var(--dur-base) var(--ease-out), border-color var(--dur-fast) var(--ease-out),
+      background-color var(--dur-fast) var(--ease-out), transform var(--dur-base) var(--ease-out);
+  }
+  .choice-card:hover {
+    @apply shadow-hover;
+    transform: translateY(-2px);
+  }
+  .choice-card:active {
+    transform: translateY(0) scale(0.99);
+  }
+  .choice-card:has(input:focus-visible) {
+    outline: 2px solid #3047e8;
+    outline-offset: 2px;
+  }
+  .slide-arrow {
+    @apply inline-block text-brand;
+    opacity: 0;
+    transform: translateX(-6px);
+    transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+  }
+  .group:hover .slide-arrow,
+  .group:focus-within .slide-arrow,
+  .group:focus-visible .slide-arrow {
+    opacity: 1;
+    transform: none;
+  }
+  /* touch screens: no hover, so the arrow is always shown and the row presses */
+  @media (hover: none) {
+    .slide-arrow { opacity: 1; transform: none; }
+  }
+
+  /* ---- status badges: small pills; stages add a colored dot (StageBadge) */
   .chip {
-    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+    @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium leading-4;
   }
+  .chip-button {
+    @apply chip cursor-pointer;
+    transition: background-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  }
+  .chip-button:active {
+    transform: scale(0.96);
+  }
+
+  /* ---- forms: an animated focus ring, validation that eases in */
   .label {
-    @apply text-xs font-medium uppercase tracking-wide text-ink-muted;
+    @apply text-meta font-medium text-ink-muted;
+  }
+  .input {
+    @apply h-10 w-full rounded-md border border-line-strong bg-white px-3 text-[15px] text-ink placeholder:text-ink-faint hover:border-ink-faint/60 focus:border-brand focus:outline-none disabled:bg-surface-sunken disabled:text-ink-muted;
+    box-shadow: 0 0 0 0 rgba(48, 71, 232, 0);
+    transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+  }
+  .input:focus {
+    box-shadow: 0 0 0 4px rgba(48, 71, 232, 0.14);
+  }
+  .input[aria-invalid="true"] {
+    @apply border-negative;
+  }
+  .input[aria-invalid="true"]:focus {
+    box-shadow: 0 0 0 4px rgba(180, 35, 24, 0.12);
+  }
+  .textarea {
+    @apply input h-auto py-2.5 leading-6;
+  }
+  .select {
+    @apply input pr-8;
+  }
+  .field-error {
+    @apply mt-1.5 text-meta text-negative;
+    animation: rise var(--dur-base) var(--ease-out) backwards;
+  }
+
+  /* ---- data tables: 14px rows, sticky header row under the condensed page header */
+  .table {
+    @apply w-full border-collapse text-left text-sm;
+  }
+  .table thead th {
+    @apply sticky top-[var(--sticky-top,0px)] z-10 h-10 whitespace-nowrap border-b border-line bg-white px-4 text-meta font-medium text-ink-muted;
+  }
+  .table tbody td {
+    @apply border-b border-line px-4 py-3.5 align-middle;
+  }
+  .table tbody tr:last-child td {
+    @apply border-b-0;
+  }
+  .table-row-link {
+    @apply row-interactive;
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- loading: skeletons shaped like the content */
+  .skeleton {
+    @apply rounded-md bg-neutral-wash;
+    animation: pulse-soft 1.6s ease-in-out infinite;
+  }
+  .spinner {
+    @apply inline-block h-4 w-4 rounded-full border-2 border-current border-r-transparent;
+    animation: spin 0.7s linear infinite;
+  }
+
+  /* ---- map canvas: faint 28px dot grid on white, floating controls */
+  .dot-grid {
+    background-color: #ffffff;
+    background-image: radial-gradient(rgba(16, 24, 40, 0.09) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+  .hud {
+    @apply rounded-lg border border-line bg-white/95 shadow-raised backdrop-blur-sm;
   }
 }
 
-/* Investment Arena — full-debate intro + chat animations */
+/* Investment Arena: full-debate intro + chat animations */
 @keyframes arenaFadeIn {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: none; }
 }
 @keyframes vsBullIn {
-  0% { opacity: 0; transform: translateX(-130%) scale(0.8); }
-  60% { opacity: 1; }
-  100% { opacity: 1; transform: translateX(0) scale(1); }
+  0% { opacity: 0; transform: translateX(-130%); }
+  100% { opacity: 1; transform: translateX(0); }
 }
 @keyframes vsBearIn {
-  0% { opacity: 0; transform: translateX(130%) scale(0.8); }
-  60% { opacity: 1; }
-  100% { opacity: 1; transform: translateX(0) scale(1); }
+  0% { opacity: 0; transform: translateX(130%); }
+  100% { opacity: 1; transform: translateX(0); }
 }
 @keyframes vsPop {
-  0% { opacity: 0; transform: scale(2.6) rotate(-10deg); }
-  55% { opacity: 1; transform: scale(1) rotate(0deg); }
-  70% { transform: scale(1.14); }
-  100% { opacity: 1; transform: scale(1); }
+  from { opacity: 0; transform: scale(1.3); }
+  to { opacity: 1; transform: scale(1); }
 }
 @keyframes vsZoomOut {
   0% { opacity: 1; transform: scale(1); }
   100% { opacity: 0; transform: scale(0.18); }
 }
 @keyframes debateReveal {
-  from { opacity: 0; transform: scale(1.06); }
+  from { opacity: 0; transform: scale(1.03); }
   to { opacity: 1; transform: scale(1); }
 }
 
-/* Guided-tour spotlight — subtle ring + light page dim.
-   Kept below the tour card's stacking context so the card is never overlapped. */
+/* Guided-tour spotlight: a ring and a light page dim. */
 .tour-highlight {
   position: relative;
   z-index: 45;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.55), 0 0 0 9999px rgba(15, 23, 42, 0.28);
-  border-radius: 0.75rem;
-  transition: box-shadow 0.2s ease;
+  box-shadow: 0 0 0 2px rgba(48, 71, 232, 0.6), 0 0 0 9999px rgba(15, 23, 42, 0.28);
+  border-radius: 0.5rem;
+  transition: box-shadow var(--dur-base) var(--ease-out);
 }

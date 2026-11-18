@@ -29,6 +29,27 @@ describe("MomentumChart", () => {
     expect(screen.getByText("Accelerating")).toBeInTheDocument();
     expect(screen.getByText(/release frequency increased/i)).toBeInTheDocument();
   });
+
+  it("shows whole points, as the Founder Score dial and the Founders table do", () => {
+    render(<MomentumChart momentum={{ ...momentum, current_score: 25.47, change_30d: 9.57, change_90d: -0.4,
+      signal_trends: [{ ...momentum.signal_trends[0], change: 1.0 }] }} />);
+    expect(screen.getByText("25")).toBeInTheDocument();
+    expect(screen.getByText("+10")).toBeInTheDocument();
+    expect(screen.getByText("0")).toBeInTheDocument();
+    expect(screen.getByText(/▲ \+1$/)).toBeInTheDocument();
+    expect(screen.getByTestId("momentum-chart").textContent).not.toMatch(/\d\.\d/);
+  });
+
+  it("names a short history's real window instead of calling it 30-day", () => {
+    render(<MomentumChart momentum={{ ...momentum, change_30d_window_days: 3, change_90d_window_days: 3 }} />);
+    expect(screen.getByText("3-Day")).toBeInTheDocument();
+    expect(screen.queryByText("30-Day")).not.toBeInTheDocument();
+    // the 90-day figure is the same partial change, so it isn't shown
+    expect(screen.queryByText("+25")).not.toBeInTheDocument();
+    expect(screen.getByTestId("momentum-short-history")).toHaveTextContent(
+      "Score history covers 3 days, so this is the change since the first sync, not a 30-day trend."
+    );
+  });
 });
 
 describe("GuidedTour", () => {

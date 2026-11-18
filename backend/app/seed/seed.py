@@ -7,11 +7,13 @@ create is_demo=False evidence attributed to live sources.
 
 from __future__ import annotations
 
+import sys
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.db.base import SessionLocal, init_db
 from app.models.assessment import AxisAssessment, Opportunity, OpportunityAssessment
 from app.models.core import Fund, InvestmentThesis, User
@@ -40,7 +42,7 @@ from app.models.workflow import (
     RefereeDecision,
     TourProgress,
 )
-from app.scoring.founder_score import compute_founder_score
+from app.scoring.founder_score import compute_founder_score, scale_founder_score
 from app.seed.data import COMPANIES, FOUNDERS
 from app.services.context import build_opportunity_context
 from app.services.thesis import compute_thesis_fit
@@ -60,7 +62,7 @@ def _reset(db: Session) -> None:
 # evidence templates by strength: (kind, title, conf, provenance, status, days_ago)
 def _evidence_for(strength: str) -> list[dict]:
     base = [
-        ("github_profile", "GitHub profile (demo)", 0.9, "independent", "verified", 400),
+        ("github_profile", "GitHub Profile (Demo)", 0.9, "independent", "verified", 400),
         ("github_repo", "Public repo: core-engine", 0.85, "independent", "verified", 300),
         ("github_repo", "Public repo: sdk", 0.85, "independent", "verified", 120),
         ("github_language", "Primary language: Python", 0.75, "independent", "verified", 300),
@@ -90,7 +92,7 @@ def _make_evidence(db: Session, founder_id: int, company_id: int, strength: str)
         ev_date = NOW - timedelta(days=spec["days_ago"])
         e = Evidence(
             founder_id=founder_id, company_id=company_id,
-            source_name="GitHub (demo)", source_type=SourceType.GITHUB_REPO,
+            source_name="GitHub (Demo)", source_type=SourceType.GITHUB_REPO,
             source_url="https://github.com/example-demo",
             kind=spec["kind"], title=spec["title"], raw_value=spec["title"],
             structured_value={"demo": True},
@@ -116,7 +118,7 @@ def _make_claims(db: Session, founder_id: int, company_id: int, idx: int, eviden
     c1 = Claim(
         founder_id=founder_id, company_id=company_id,
         text="Founder has shipped multiple public repositories with active maintenance.",
-        category="technical", owner="Independent (GitHub)", source_name="GitHub (demo)",
+        category="technical", owner="Independent (GitHub)", source_name="GitHub (Demo)",
         source_url="https://github.com/example-demo", collection_date=now,
         event_date=now - timedelta(days=30), excerpt="Public repos + recent commits",
         structured_value={}, provenance=Provenance.INDEPENDENT,
@@ -132,7 +134,7 @@ def _make_claims(db: Session, founder_id: int, company_id: int, idx: int, eviden
     c2 = Claim(
         founder_id=founder_id, company_id=company_id,
         text=f"The company has {users} monthly active users.",
-        category="users", owner="Founder", source_name="Founder application",
+        category="users", owner="Founder", source_name="Founder Application",
         source_url=None, collection_date=now, event_date=now - timedelta(days=10),
         excerpt=f"{users} MAU (deck)", structured_value={"metric": "users", "amount": users},
         provenance=Provenance.FOUNDER_REPORTED,
@@ -148,7 +150,7 @@ def _make_claims(db: Session, founder_id: int, company_id: int, idx: int, eviden
         c3 = Claim(
             founder_id=founder_id, company_id=company_id,
             text=f"Deck slide 7 shows {conflicting} monthly active users.",
-            category="users", owner="Pitch deck", source_name="Pitch deck (demo)",
+            category="users", owner="Pitch deck", source_name="Pitch Deck (Demo)",
             source_url=None, collection_date=now, event_date=now - timedelta(days=25),
             excerpt=f"{conflicting} MAU (older slide)",
             structured_value={"metric": "users", "amount": conflicting},
@@ -185,8 +187,9 @@ def _score_versions(db: Session, founder_id: int, evidence: list[Evidence], stre
         cutoff = NOW - timedelta(days=days_ago)
         visible = [e for e in ev_sorted if (e.event_date or NOW) <= cutoff]
         # apply a growth factor so later snapshots are stronger
-        result = compute_founder_score(visible)
-        adj = round(min(100.0, result.score * (0.7 + 0.3 * (version / 4)) * (0.6 + 0.4 * growth)), 2)
+        # scale the whole result, so the stored score, breakdown and explanation agree
+        result = scale_founder_score(compute_founder_score(visible), (0.7 + 0.3 * (version / 4)) * (0.6 + 0.4 * growth))
+        adj = result.score
         db.add(FounderScore(
             founder_id=founder_id, version=version, score=adj, confidence=result.confidence,
             components=result.components_as_dict(), explanation=result.explanation,
@@ -347,7 +350,13 @@ def _seed_static_analysis(db: Session, opp: Opportunity) -> None:
     db.flush()
 
 
-def run_seed() -> dict:
+def run_seed(force: bool = False) -> dict:
+    """Replace ALL data with the demo dataset. Refuses in production unless forced."""
+    if get_settings().is_production and not force:
+        raise RuntimeError(
+            "Refusing to seed: ENVIRONMENT=production and seeding empties every table. "
+            "Run `python -m app.seed.seed --force` if you really mean it."
+        )
     init_db()
     db = SessionLocal()
     try:
@@ -428,7 +437,7 @@ def run_seed() -> dict:
             opportunities.append(opp)
 
             if entry == EntryType.INBOUND:
-                db.add(Application(
+                application = Application(
                     company_id=company.id, company_name=company.name,
                     founder_names=[founder.full_name], sector=company.sector,
                     geography=company.geography, github_profile=founder.github_username,
@@ -436,7 +445,11 @@ def run_seed() -> dict:
                     screen_summary=f"First-pass screen for {company.name}: GitHub available for "
                                    "independent verification; founder-reported traction requires verification.",
                     missing_fields=["Traction Signal (Revenue or Users)"], is_demo=True,
-                ))
+                )
+                db.add(application)
+                db.flush()
+                # linked like a real application, so its record finds it by id
+                opp.application_id = application.id
 
         db.commit()
 
@@ -460,5 +473,5 @@ def run_seed() -> dict:
 
 
 if __name__ == "__main__":
-    result = run_seed()
+    result = run_seed(force="--force" in sys.argv[1:])
     print("Seed complete:", result)

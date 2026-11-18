@@ -25,8 +25,9 @@ from app.models.workflow import (
     WorkflowEvent,
 )
 from app.schemas.requests import DiligenceResponseIn, DiligenceStatusIn, HumanDecisionIn
-from app.services import analysis
-from app.services.action_queue import next_action_for, opportunity_age_days
+from app.services import analysis, web_sourcing
+from app.services.action_queue import next_action_info, opportunity_age_days
+from app.services.opportunity_map import PIPELINE_STAGES, build_map
 from app.services.serializers import (
     assessment_out,
     debate_out,
@@ -62,12 +63,6 @@ def list_opportunities(
     return {"items": [opportunity_out(db, o) for o in opps]}
 
 
-# Stages that make an opportunity an active deal. Outbound leads still in
-# Sourcing live in Founders until an investor moves them to Screening; inbound
-# applications enter at Screening, so every application appears here.
-PIPELINE_STAGES = (WorkflowStage.SCREENING, WorkflowStage.DILIGENCE, WorkflowStage.DECISION)
-
-
 @router.get("/pipeline")
 def list_pipeline(
     stage: str | None = None, entry_type: str | None = None, db: Session = Depends(get_db),
@@ -86,14 +81,23 @@ def list_pipeline(
         q = q.where(Opportunity.entry_type == entry_type)
     items = []
     for o in db.scalars(q.order_by(Opportunity.id.desc())).all():
-        nxt = next_action_for(db, o)
+        nxt = next_action_info(db, o)
         items.append({
             **opportunity_out(db, o),
-            "next_action": nxt[0] if nxt else None,
-            "priority": nxt[1] if nxt else None,
+            "next_action": nxt["label"] if nxt else None,
+            "next_action_key": nxt["key"] if nxt else None,
+            "next_action_detail": nxt["detail"] if nxt else None,
+            "priority": nxt["priority"] if nxt else None,
             "age_days": opportunity_age_days(o),
         })
     return {"items": items, "stages": stages}
+
+
+@router.get("/map")
+def opportunity_map(db: Session = Depends(get_db)) -> dict:
+    """Founder leads + active deals for the Map, with grouping and plot fields,
+    in one request. Same records and IDs as /sourcing/prospects and /pipeline."""
+    return build_map(db)
 
 
 @router.get("/opportunities/{opp_id}")
@@ -118,7 +122,18 @@ def get_opportunity(opp_id: int, db: Session = Depends(get_db)) -> dict:
             ev[e.id] = e
     ordered = sorted(ev.values(), key=lambda e: (e.event_date or e.collected_at), reverse=True)
     base["evidence"] = [evidence_out(e) for e in ordered]
+    base["next_step"] = next_action_info(db, o)
+    base["new_evidence_ids"] = web_sourcing.new_evidence_ids(db, o)
+    base["identity"] = web_sourcing.lead_identity(db, o)
     return base
+
+
+@router.post("/opportunities/{opp_id}/evidence/reviewed")
+def mark_evidence_reviewed(opp_id: int, db: Session = Depends(get_db)) -> dict:
+    """The investor has reviewed this lead's new evidence; clears New evidence."""
+    o = _get_opp(db, opp_id)
+    web_sourcing.mark_evidence_reviewed(db, o)
+    return {"ok": True, "new_evidence_count": 0}
 
 
 # ---- analysis (AI, rate-limited) -----------------------------------------
@@ -127,10 +142,12 @@ def get_opportunity(opp_id: int, db: Session = Depends(get_db)) -> dict:
 def analyze(opp_id: int, db: Session = Depends(get_db)) -> dict:
     o = _get_opp(db, opp_id)
     result = analysis.run_full_pipeline(db, o)
-    if str(o.stage) in ("sourcing", "screening"):
+    # Only a Screening deal advances. A Sourcing lead stays put: Move to Screening
+    # (invite_to_apply) is the only way into the Pipeline.
+    if str(o.stage) == "screening":
         o.stage = WorkflowStage.DILIGENCE
     db.commit()
-    return {"ok": True, **result}
+    return {"ok": True, **result, "stage": str(o.stage)}
 
 
 @router.post("/opportunities/{opp_id}/assessment", dependencies=[Depends(ai_rate_limit)])

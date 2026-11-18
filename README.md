@@ -23,6 +23,7 @@ while **a human approves every consequential action**.
 - [Environment variables](#environment-variables)
 - [OpenAI setup](#openai-setup)
 - [GitHub setup](#github-setup)
+- [Web search setup](#web-search-setup)
 - [Database, migrations, seed](#database-migrations-seed)
 - [Running tests, lint, type-checks, builds](#running-tests-lint-type-checks-builds)
 - [API overview](#api-overview)
@@ -163,7 +164,9 @@ docker compose up --build
 # postgres: localhost:5432 (trajectory/trajectory)
 ```
 
-The backend container waits for Postgres, runs migrations, and seeds demo data if the DB is empty.
+The backend container waits for Postgres, runs migrations, and seeds demo data if the DB is empty
+and seeding is enabled (see `SEED_DEMO_DATA` below). With `ENVIRONMENT=production` it skips the
+seed by default, so a production deployment starts with an empty workspace.
 
 ## Environment variables
 
@@ -174,6 +177,8 @@ Copy `.env.example` to `.env`. **Never commit `.env` or put real values in `.env
 | `OPENAI_API_KEY` | OpenAI API key (server-side only) | empty → AI features return 503 (no fallback) |
 | `OPENAI_MODEL` | OpenAI model id | `gpt-4o` |
 | `GITHUB_TOKEN` | Raises GitHub rate limit to 5000/hr | empty → anonymous 60/hr |
+| `TAVILY_API_KEY` | Web search for Founders → Source founders → Web search (server-side only) | empty → web search shows setup instructions |
+| `WEB_SEARCH_PROVIDER` | Web search provider | `tavily` (the only provider so far) |
 | `DATABASE_URL` | SQLAlchemy URL | empty → SQLite file `backend/trajectory.db` |
 | `BACKEND_CORS_ORIGINS` | Comma-separated allowed origins | `http://localhost:3000` |
 | `NEXT_PUBLIC_API_BASE_URL` | Frontend → backend base URL | `http://localhost:8000` |
@@ -181,6 +186,7 @@ Copy `.env.example` to `.env`. **Never commit `.env` or put real values in `.env
 | `AI_RATE_LIMIT_PER_MINUTE` | Per-IP throttle on AI endpoints | `20` |
 | `SECRET_KEY` | Internal signing seed | set your own in prod |
 | `ENVIRONMENT` | `development` / `production` / `test` | `development` |
+| `SEED_DEMO_DATA` | Seed fictional demo data into an empty DB on container start | unset → seed unless `ENVIRONMENT=production`; `true`/`false` always wins |
 
 The OpenAI key is only ever read on the backend and is **never** included in the client bundle.
 The `GET /api/settings` endpoint returns only a masked hint (last 4 chars) — never the full key.
@@ -203,11 +209,30 @@ evidence and is instructed never to invent facts; hallucinated evidence-ID refer
 
 1. (Optional) Create a GitHub personal access token with **public** read scope.
 2. Put it in `.env` as `GITHUB_TOKEN=...`.
-3. From **Discovery → Add a real public GitHub profile**, enter a username and sync.
+3. From **Founders → + Source founders → GitHub profile**, enter a username and sync.
 
 Only public data is collected, attributed to its source URL. Restricted platforms (LinkedIn, X)
 are never scraped. Rate limits, missing profiles, deleted repos, and incomplete responses are
 handled and reported by `GET /api/connectors/status`.
+
+## Web search setup
+
+1. Get a Tavily API key (app.tavily.com; keys start with `tvly-`).
+2. Put it in `.env` as `TAVILY_API_KEY=...` (an `OPENAI_API_KEY` is also required — results are
+   structured with AI) and restart the backend.
+3. From **Founders → + Source founders → Web search**, describe what you're looking for or press
+   **Start from fund thesis**, then **Search the web**.
+
+How it works: the planner writes one open-web query plus one launch query per launch site (YC
+Launches, Show HN, Product Hunt). The model turns the pages into results, and the backend keeps only
+what the pages support: every claim cites a retrieved source, evidence quotes must appear in that
+source, only company sites and single-product launch pages count as sources, unsupported dates are
+shown as *Date unknown*, and founders named on a page stay *Unverified* unless a GitHub account that
+lists the company's domain as its website confirms them. Nothing is saved until the investor saves a
+result; leads are deduplicated on the company domain, a verified GitHub login, or the launch-page URL.
+Later searches (or **Check the web for updates** on an opportunity) append only sources a lead doesn't
+have yet and flag them as **New evidence** in Founders and on the Map. A search uses about 4 Tavily
+credits, plus 1 per result whose company site has to be looked up (at most 5).
 
 ## Database, migrations, seed
 
@@ -216,6 +241,12 @@ handled and reported by `GET /api/connectors/status`.
   (8 fictional founders + companies, multiple historical score/momentum snapshots, mixed-status
   claims, contradictions, three-axis assessments, diligence questions, ≥2 completed Arena debates,
   an inbound application, and completed memos — all flagged as demo).
+  Seeding **empties every table first**, real records included. With `ENVIRONMENT=production` it
+  refuses to run unless you pass `--force` (`python -m app.seed.seed --force`).
+- **Remove demo data:** `./.venv/bin/python -m app.seed.clear_demo` removes the demo records but
+  keeps one fully analyzed example (Inferra). `python -m app.seed.clear_demo --all` removes every
+  demo record, deletes the demo thesis if it is still named "Northstar Ventures (Demo)", and
+  renames the demo fund to "My fund". Real founders, leads and evidence are never touched.
 - **Dev fallback:** if `DATABASE_URL` is unset the app uses SQLite and auto-creates tables on
   startup, so the app also runs without Alembic. Postgres uses migrations.
 
@@ -250,6 +281,9 @@ Interactive OpenAPI docs at **`/docs`** (schema at `/openapi.json`). 50+ documen
 - `GET /api/companies…`, `/api/evidence…`, `/api/claims…`, `/api/contradictions`
 - `POST /api/applications`, `POST /api/applications/{id}/upload-deck`
 - `POST /api/sourcing/github/sync`, `GET /api/sourcing/prospects`, `POST …/action`
+- `GET /api/sourcing/web/status`, `POST /api/sourcing/web/search`, `GET /api/sourcing/web/searches/{id}`,
+  `POST /api/sourcing/web/searches/{id}/results/{key}/save`, `POST /api/sourcing/web/check/{opp_id}`,
+  `POST /api/opportunities/{id}/evidence/reviewed`
 - `POST /api/search/parse`, `POST /api/search/apply`
 - `GET /api/opportunities…`, `POST …/analyze | assessment | diligence | arena | memo`
 - `GET …/workflow`, `POST …/decision`, `POST …/validate-evidence-refs`
@@ -259,10 +293,16 @@ Interactive OpenAPI docs at **`/docs`** (schema at `/openapi.json`). 50+ documen
 
 Two personas behind a landing chooser (login is currently disabled, so both open directly).
 
-- `/` landing (choose **I'm a VC** / **I'm a Founder**)
-- **Investor workspace** (`/vc/*`): `/vc` dashboard (Arena hero + Action Queue + guided tour) ·
-  `/vc/discovery` AI-driven outbound sourcing (NL brief → GitHub search → ranked shortlist) ·
-  `/vc/thesis` thesis editor · `/vc/opportunities/[id]` founder profile (Founder Score, momentum,
+- `/` landing (primary action: open the investor workspace; secondary: apply as a founder)
+- **Investor workspace** (`/vc/*`, left navigation rail; menu button on phones):
+  `/vc/map` canvas-first 3D map with two modes on one Three.js scene — **Relationships** (sector /
+  project clusters, named links) and **Custom Axes** (Thesis fit × 30-day momentum × an optional
+  third metric, real values only); state lives in the URL (`?view=axes&focus=<id>&x=&y=&z=`) ·
+  `/vc` dashboard (stage overview + next actions + guided tour) ·
+  `/vc/founders` sortable founder table (with a **New evidence** flag) and a **Source founders**
+  drawer (Web search, GitHub discovery, GitHub profile sync; `/vc/discovery` opens it) · `/vc/pipeline` active deals by stage and source ·
+  `/vc/fund` fund profile and thesis editor (`/vc/thesis` redirects here) ·
+  `/vc/opportunities/[id]` opportunity (Founder Score, momentum,
   three axes with per-axis trend, claims/trust, the Investment Arena with an inline memo drawer and
   a full-screen debate player, pipeline Save/Monitor/Dismiss, human decision) ·
   `/vc/opportunities/[id]/diligence` diligence workspace · `/vc/opportunities/[id]/memo` print/PDF memo.
@@ -303,9 +343,13 @@ Trajectory/
 ## Known limitations
 
 - **SQLite is the dev/test fallback**; Postgres is the production target (via docker-compose).
-- **Only the GitHub connector is live.** Hackathons, product launches, papers, patents,
-  accelerator cohorts and social signals are modeled and shown as *planned / not implemented* —
-  never presented as live.
+- **Live connectors are GitHub and web search (Tavily).** Web search covers company sites and launch
+  pages (YC Launches, Show HN, Product Hunt, BetaList) only. Hackathons, papers, patents, accelerator
+  cohorts and social signals are modeled and shown as *planned / not implemented* — never presented
+  as live.
+- **Web search finds what the provider has indexed.** Results vary between runs; a lead with no
+  company domain can only be matched again through the same launch-page URL or a verified GitHub
+  login, never by name.
 - **AI features require an OpenAI key.** Without one they are unavailable (HTTP 503) — there is no
   fake fallback. The seeded demo analysis is static, clearly-labeled demo data; deterministic
   scoring always works.

@@ -114,6 +114,26 @@ class GitHubConnector(Connector):
                 "message": str(exc)[:200],
             }
 
+    async def fetch_account(self, login: str) -> tuple[str, dict | None]:
+        """One lightweight lookup of a user or org account, used to check
+        whether it links to a company's website. Returns (status, account)
+        where status is ok | not_found | rate_limited | error."""
+        login = login.strip().lstrip("@")
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                status, data, headers = await self._get(client, f"/users/{quote(login)}")
+        except Exception:  # noqa: BLE001
+            return "error", None
+        remaining, _ = self._rate_from_headers(headers)
+        if status == 403 and remaining == 0:
+            return "rate_limited", None
+        if status != 200 or not isinstance(data, dict):
+            return ("not_found" if status == 404 else "error"), None
+        return "ok", {
+            "login": data.get("login"), "type": data.get("type"), "name": data.get("name"),
+            "blog": data.get("blog"), "html_url": data.get("html_url"),
+        }
+
     async def fetch_user(
         self, username: str, max_repos: int = 20, include_releases: bool = True
     ) -> ConnectorResult:
@@ -366,6 +386,7 @@ class GitHubConnector(Connector):
                     "forks": repo.get("forks_count"),
                     "open_issues": repo.get("open_issues_count"),
                     "language": repo.get("language"),
+                    "topics": repo.get("topics") or [],
                     "created_at": repo.get("created_at"),
                     "pushed_at": repo.get("pushed_at"),
                     "stars_note": "external interest only, NOT commercial traction",

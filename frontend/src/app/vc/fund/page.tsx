@@ -1,0 +1,432 @@
+"use client";
+
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { api } from "@/lib/api";
+import { humanStatus, sectorLabel } from "@/lib/format";
+import { Thesis } from "@/lib/types";
+import { Badge, Button, Drawer, EmptyState, ErrorState, Meter, PageHeader, PageSkeleton, Section } from "@/components/ui";
+import { FundIcon } from "@/components/icons";
+import { useToast } from "@/components/Toast";
+import { Tabs, tabPanelProps } from "@/components/Tabs";
+
+const EMPTY = {
+  fund_name: "", sectors: "", stages: "", geographies: "",
+  min_check_size: 0, max_check_size: 0, target_ownership: 0, risk_tolerance: "balanced",
+  traction_preferences: "", founder_preferences: "",
+  excluded_sectors: "", excluded_geographies: "", excluded_business_models: "",
+  custom_description: "",
+};
+type Form = typeof EMPTY;
+
+function toList(s: string): string[] {
+  return s.split(",").map((x) => x.trim()).filter(Boolean);
+}
+
+function toForm(t: Thesis): Form {
+  return {
+    fund_name: t.fund_name,
+    sectors: t.sectors.join(", "),
+    stages: t.stages.join(", "),
+    geographies: t.geographies.join(", "),
+    min_check_size: t.min_check_size,
+    max_check_size: t.max_check_size,
+    target_ownership: t.target_ownership,
+    risk_tolerance: t.risk_tolerance,
+    traction_preferences: t.traction_preferences,
+    founder_preferences: t.founder_preferences,
+    excluded_sectors: t.excluded_sectors.join(", "),
+    excluded_geographies: t.excluded_geographies.join(", "),
+    excluded_business_models: t.excluded_business_models.join(", "),
+    custom_description: t.custom_description,
+  };
+}
+
+const money = (n: number) =>
+  n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(n % 1_000_000 ? 1 : 0)}M` : n >= 1000 ? `$${Math.round(n / 1000)}K` : `$${n}`;
+
+export default function FundPage() {
+  return (
+    <Suspense fallback={<PageSkeleton label="Loading Fund…" />}>
+      <Fund />
+    </Suspense>
+  );
+}
+
+function Fund() {
+  const [thesis, setThesis] = useState<Thesis | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  // stored fit scores that no longer match the active thesis
+  const [staleFits, setStaleFits] = useState(0);
+  const [recalculating, setRecalculating] = useState(false);
+  const params = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  // ?edit=1 opens the editor, so "Edit" links and refreshes land in the right place
+  const editing = params.get("edit") === "1";
+  const notify = useToast();
+  const setEditing = useCallback(
+    (open: boolean) => router.replace(open ? `${pathname}?edit=1` : pathname, { scroll: false }),
+    [pathname, router]
+  );
+
+  const load = useCallback(() => {
+    setLoading(true);
+    setLoadError(null);
+    api.get<{ thesis: Thesis | null; stale_fit_count?: number }>("/api/thesis")
+      .then((r) => { setThesis(r.thesis); setStaleFits(r.stale_fit_count ?? 0); })
+      .catch((e) => setLoadError(e instanceof Error ? e.message : "Couldn't load the fund"))
+      .finally(() => setLoading(false));
+  }, []);
+  useEffect(load, [load]);
+
+  async function recalculate() {
+    setRecalculating(true);
+    try {
+      const r = await api.post<{ updated: number; stale_fit_count: number }>("/api/thesis/recalculate-fit", {});
+      setStaleFits(r.stale_fit_count);
+      notify({ message: `Recalculated ${r.updated} thesis fit score${r.updated === 1 ? "" : "s"}. Stages and shortlists didn't change.` });
+    } catch (e) {
+      notify({ message: e instanceof Error ? `Couldn't recalculate: ${e.message}` : "Couldn't recalculate.", tone: "error" });
+    } finally { setRecalculating(false); }
+  }
+
+  const header = (
+    <PageHeader
+      eyebrow={thesis ? <span data-content>{thesis.fund_name}</span> : undefined}
+      title="Investment Thesis"
+      subtitle="What your fund looks for. Every lead's thesis fit is scored against it."
+      actions={thesis && <button className="btn-primary" onClick={() => setEditing(true)}>Edit Thesis</button>}
+    />
+  );
+
+  return (
+    // a reading width for the fund profile, even on wide screens
+    <div className="space-y-10">
+      {header}
+      {staleFits > 0 && (
+        <div className="animate-rise flex flex-wrap items-center justify-between gap-3 rounded-xl bg-caution-wash px-4 py-3 text-[15px] text-caution" data-testid="stale-fit">
+          <span>
+            {staleFits === 1 ? "1 thesis fit score doesn't" : `${staleFits} thesis fit scores don't`} reflect your current thesis. They stay as they are until you recalculate.
+          </span>
+          <Button size="sm" onClick={recalculate} busy={recalculating}>{`Recalculate ${staleFits} Score${staleFits === 1 ? "" : "s"}`}</Button>
+        </div>
+      )}
+      {loading ? <PageSkeleton label="Loading Fund…" rows={4} /> : loadError ? <ErrorState message={loadError} onRetry={load} /> : thesis ? (
+        <Profile t={thesis} />
+      ) : (
+        <EmptyState
+          icon={<FundIcon size={20} />}
+          title="No Investment Thesis Yet"
+          hint="Start with your sectors, stages, and geographies. Trajectory uses them to score each company's thesis fit and to plan lead searches."
+          action={<button className="btn-primary" onClick={() => setEditing(true)}>Create Thesis</button>}
+        />
+      )}
+      <ThesisEditor
+        open={editing}
+        existing={thesis}
+        onClose={() => setEditing(false)}
+        onSaved={(t, created, stale) => {
+          setThesis(t);
+          setStaleFits(stale);
+          setEditing(false);
+          // one confirmation that says what changed and offers the natural next step
+          notify({
+            message: created
+              ? "Thesis created. New leads and applications get a thesis fit score against it."
+              : "Thesis saved. New leads are scored against it; existing fit scores stay until you recalculate.",
+            href: "/vc/founders?source=open",
+            linkLabel: "Source Founders",
+          });
+        }}
+      />
+    </div>
+  );
+}
+
+function Profile({ t }: { t: Thesis }) {
+  const weights = Object.entries(t.score_weights || {}).filter(([, w]) => typeof w === "number");
+  return (
+    <div className="grid gap-12 xl:grid-cols-[minmax(0,1fr)_340px] [&>*]:min-w-0">
+      <div className="space-y-12">
+        <Section title="Investment Focus" subtitle="Matches raise a company's thesis fit score." card={false}>
+          <dl className="grid gap-4 sm:grid-cols-3">
+            <Chips label="Sectors" items={t.sectors} sectors />
+            <Chips label="Stages" items={t.stages} />
+            <Chips label="Geographies" items={t.geographies} />
+          </dl>
+          {t.custom_description && (
+            <p className="mt-6 max-w-prose border-l-2 border-brand/40 pl-4 text-[15px] leading-7 text-ink-soft">{t.custom_description}</p>
+          )}
+          <dl className="mt-6 grid gap-6 sm:grid-cols-2">
+            <Text label="Founders We Look For" value={t.founder_preferences} />
+            <Text label="Traction We Look For" value={t.traction_preferences} />
+          </dl>
+        </Section>
+
+        <Section title="Exclusions" subtitle="Companies that match any of these get a very low fit score (5–8 of 100)." card={false}>
+          <dl className="grid gap-4 sm:grid-cols-3">
+            <Chips label="Sectors" items={t.excluded_sectors} tone="bg-negative-wash text-negative" empty="None" sectors />
+            <Chips label="Geographies" items={t.excluded_geographies} tone="bg-negative-wash text-negative" empty="None" />
+            <Chips label="Business Models" items={t.excluded_business_models} tone="bg-negative-wash text-negative" empty="None" />
+          </dl>
+        </Section>
+      </div>
+
+      <div className="space-y-12 xl:border-l xl:border-line xl:pl-10">
+        <Section title="Terms" subtitle="For your reference; not used in scoring." card={false}>
+          <dl className="divide-y divide-line text-[15px]">
+            <Term label="Check Size" value={t.min_check_size || t.max_check_size ? `${money(t.min_check_size)} – ${money(t.max_check_size)}` : "Not Set"} />
+            <Term label="Target Ownership" value={t.target_ownership ? `${t.target_ownership}%` : "Not Set"} />
+            <Term label="Risk Tolerance" value={humanStatus(t.risk_tolerance || "—")} />
+            {t.updated_at && <Term label="Last Updated" value={new Date(t.updated_at).toLocaleDateString()} />}
+          </dl>
+        </Section>
+        {weights.length > 0 && (
+          <Section title="Founder Score Weights" subtitle="How the Founder Score Is Composed" card={false}>
+            <ul className="space-y-3">
+              {weights.map(([k, w]) => (
+                <li key={k}>
+                  <div className="flex justify-between text-[13px]"><span className="text-ink-soft">{humanStatus(k)}</span><span className="num text-ink-muted">{Math.round(Number(w) * 100)}%</span></div>
+                  <div className="mt-1.5"><Meter value={Math.min(1, Number(w))} /></div>
+                </li>
+              ))}
+            </ul>
+          </Section>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Typed values (geographies, business models) are content; sectors are labels.
+function Chips({ label, items, tone, empty = "Any", sectors = false }: { label: string; items: string[]; tone?: string; empty?: string; sectors?: boolean }) {
+  return (
+    <div>
+      <dt className="label">{label}</dt>
+      <dd className="mt-1.5 flex flex-wrap gap-1">
+        {items.length ? items.map((s) => sectors ? <Badge key={s} tone={tone}>{sectorLabel(s)}</Badge> : <span key={s} data-content><Badge tone={tone}>{s}</Badge></span>) : <span className="text-sm text-ink-faint">{empty}</span>}
+      </dd>
+    </div>
+  );
+}
+
+function Text({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="label">{label}</dt>
+      <dd className="mt-1 text-sm leading-6 text-ink-soft">{value || <span className="text-ink-faint">Not Specified</span>}</dd>
+    </div>
+  );
+}
+
+function Term({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-2 first:pt-0 last:pb-0">
+      <dt className="text-ink-muted">{label}</dt>
+      <dd className="num text-right font-medium text-ink">{value}</dd>
+    </div>
+  );
+}
+
+type Errors = Partial<Record<keyof Form, string>>;
+
+// The editor's three sections share one draft and one Save button.
+type ThesisSection = "focus" | "terms" | "exclusions";
+const SECTIONS: { key: ThesisSection; label: string }[] = [
+  { key: "focus", label: "Investment Focus" },
+  { key: "terms", label: "Terms" },
+  { key: "exclusions", label: "Exclusions" },
+];
+// field order matches the on-screen order, so "first invalid field" means what you'd expect
+const FIELD_SECTION: [keyof Form, ThesisSection][] = [
+  ["fund_name", "focus"], ["sectors", "focus"], ["stages", "focus"], ["geographies", "focus"],
+  ["risk_tolerance", "focus"], ["custom_description", "focus"], ["founder_preferences", "focus"], ["traction_preferences", "focus"],
+  ["min_check_size", "terms"], ["max_check_size", "terms"], ["target_ownership", "terms"],
+  ["excluded_sectors", "exclusions"], ["excluded_geographies", "exclusions"], ["excluded_business_models", "exclusions"],
+];
+
+function validate(f: Form): Errors {
+  const e: Errors = {};
+  const num = (v: number | string) => Number(v);
+  if (!String(f.fund_name).trim()) e.fund_name = "Enter your fund's name.";
+  if (num(f.min_check_size) < 0) e.min_check_size = "Can't be negative.";
+  if (num(f.max_check_size) < 0) e.max_check_size = "Can't be negative.";
+  if (num(f.min_check_size) > 0 && num(f.max_check_size) > 0 && num(f.min_check_size) > num(f.max_check_size))
+    e.max_check_size = "Must be at least the minimum check.";
+  if (num(f.target_ownership) < 0 || num(f.target_ownership) > 100) e.target_ownership = "Enter a percentage from 0 to 100.";
+  return e;
+}
+
+function ThesisEditor({ open, existing, onClose, onSaved }: {
+  open: boolean;
+  existing: Thesis | null;
+  onClose: () => void;
+  onSaved: (t: Thesis, created: boolean, staleFitCount: number) => void;
+}) {
+  const [form, setForm] = useState<Form>(EMPTY);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [tried, setTried] = useState(false);
+  const [section, setSection] = useState<ThesisSection>("focus");
+  const [pendingFocus, setPendingFocus] = useState<string | null>(null);
+  useEffect(() => {
+    if (open) { setForm(existing ? toForm(existing) : EMPTY); setError(null); setTried(false); setSection("focus"); }
+  }, [open, existing]);
+  // focus a field once its section is on screen
+  useEffect(() => {
+    if (!pendingFocus) return;
+    document.getElementById(pendingFocus)?.focus();
+    setPendingFocus(null);
+  }, [pendingFocus, section]);
+  const errors = validate(form);
+  const shown: Errors = tried ? errors : {};
+  const sectionErrors = (k: ThesisSection) => FIELD_SECTION.filter(([f, sec]) => sec === k && shown[f]).length;
+
+  async function save() {
+    setTried(true);
+    const first = FIELD_SECTION.find(([f]) => errors[f]);
+    if (first) {
+      // open the section with the first field that needs attention, then focus it
+      setSection(first[1]);
+      setPendingFocus(`thesis-${first[0]}`);
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    const payload = {
+      fund_name: form.fund_name.trim(),
+      sectors: toList(form.sectors), stages: toList(form.stages), geographies: toList(form.geographies),
+      min_check_size: Number(form.min_check_size), max_check_size: Number(form.max_check_size),
+      target_ownership: Number(form.target_ownership), risk_tolerance: form.risk_tolerance,
+      traction_preferences: form.traction_preferences, founder_preferences: form.founder_preferences,
+      excluded_sectors: toList(form.excluded_sectors), excluded_geographies: toList(form.excluded_geographies),
+      excluded_business_models: toList(form.excluded_business_models), custom_description: form.custom_description,
+    };
+    try {
+      const r = existing
+        ? await api.put<{ thesis: Thesis; stale_fit_count?: number }>(`/api/thesis/${existing.id}`, payload)
+        : await api.post<{ thesis: Thesis; stale_fit_count?: number }>("/api/thesis", payload);
+      onSaved(r.thesis, !existing, r.stale_fit_count ?? 0);
+    } catch (e) {
+      setError(e instanceof Error ? `Couldn't save the thesis: ${e.message}` : "Couldn't save the thesis.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const field = (k: keyof Form, label: string, opts: { ph?: string; type?: string; hint?: string; required?: boolean; suffix?: string } = {}) => {
+    const id = `thesis-${k}`;
+    const err = shown[k];
+    return (
+      <div>
+        <label htmlFor={id} className="label">
+          {label}{opts.required && <span className="text-negative" aria-hidden> *</span>}
+        </label>
+        <input
+          id={id}
+          type={opts.type ?? "text"}
+          inputMode={opts.type === "number" ? "decimal" : undefined}
+          min={opts.type === "number" ? 0 : undefined}
+          className="input mt-1"
+          value={form[k] as string | number}
+          placeholder={opts.ph}
+          required={opts.required}
+          aria-invalid={!!err}
+          aria-describedby={[opts.hint && `${id}-hint`, err && `${id}-error`].filter(Boolean).join(" ") || undefined}
+          onChange={(e) => setForm({ ...form, [k]: e.target.value })}
+        />
+        {err && <p id={`${id}-error`} className="field-error">{err}</p>}
+        {opts.hint && <p id={`${id}-hint`} className="mt-1 text-[13px] text-ink-muted">{opts.hint}</p>}
+      </div>
+    );
+  };
+
+  const errorCount = Object.keys(shown).length;
+  return (
+    <Drawer
+      open={open}
+      onClose={onClose}
+      title={existing ? "Edit Thesis" : "Create Thesis"}
+      subtitle="One draft across all three sections — switch freely, then save once. Separate lists with commas."
+      footer={
+        <>
+          {errorCount > 0 && <span className="field-error mr-auto mt-0" role="alert">Fix {errorCount} {errorCount === 1 ? "field" : "fields"} to save.</span>}
+          <button className="btn-ghost" onClick={onClose}>Cancel</button>
+          <Button variant="primary" onClick={save} busy={saving}>{existing ? "Save Changes" : "Create Thesis"}</Button>
+        </>
+      }
+    >
+      <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); save(); }} noValidate>
+        {error && <ErrorState message={error} onRetry={save} />}
+        <Tabs
+          label="Thesis Sections"
+          idPrefix="thesis"
+          size="sm"
+          value={section}
+          onChange={setSection}
+          tabs={SECTIONS.map((sec) => {
+            const n = sectionErrors(sec.key);
+            return { key: sec.key, label: sec.label, badge: n ? <span className="chip bg-negative-wash text-negative" aria-label={`${n} to Fix`}>{n}</span> : undefined };
+          })}
+        />
+        <div key={section} {...tabPanelProps("thesis", section)}>
+        {section === "focus" && (
+        <fieldset className="space-y-4">
+          <legend className="sr-only">Investment Focus</legend>
+          <p className="text-[13px] text-ink-muted"><span className="text-negative">*</span> Required. Matches on sectors, stages, and geographies raise a company&apos;s thesis fit.</p>
+          {field("fund_name", "Fund Name", { ph: "e.g. Northstar Ventures", required: true })}
+          <div className="grid gap-4 sm:grid-cols-2">
+            {field("sectors", "Sectors", { ph: "e.g. fintech, ai/ml, devtools", hint: "A matching sector adds the most to thesis fit. Also used to plan lead searches." })}
+            {field("stages", "Stages", { ph: "e.g. pre-seed, seed", hint: "Matching stage adds to thesis fit." })}
+            {field("geographies", "Geographies", { ph: "e.g. Boston, San Francisco", hint: "Matching location adds to thesis fit." })}
+            <div>
+              <label htmlFor="thesis-risk" className="label">Risk Tolerance</label>
+              <select id="thesis-risk" className="select mt-1" value={form.risk_tolerance} aria-describedby="thesis-risk-hint" onChange={(e) => setForm({ ...form, risk_tolerance: e.target.value })}>
+                {["conservative", "balanced", "aggressive"].map((r) => <option key={r} value={r}>{humanStatus(r)}</option>)}
+                {!["conservative", "balanced", "aggressive"].includes(form.risk_tolerance) && <option value={form.risk_tolerance}>{form.risk_tolerance}</option>}
+              </select>
+              <p id="thesis-risk-hint" className="mt-1 text-[13px] text-ink-muted">Given to AI analysis when it weighs risks. Doesn&apos;t change fit scores.</p>
+            </div>
+          </div>
+          <div>
+            <label htmlFor="thesis-description" className="label">Thesis in a Sentence or Two</label>
+            <textarea id="thesis-description" className="textarea mt-1" rows={3} value={form.custom_description} aria-describedby="thesis-description-hint"
+              placeholder="We back technical pre-seed founders building financial infrastructure."
+              onChange={(e) => setForm({ ...form, custom_description: e.target.value })} />
+            <p id="thesis-description-hint" className="mt-1 text-[13px] text-ink-muted">Used to plan web searches and as context for AI analysis.</p>
+          </div>
+          {field("founder_preferences", "Founders We Look For", { ph: "e.g. Technical founders with repeated execution", hint: "Used to plan lead searches." })}
+          {field("traction_preferences", "Traction We Look For", { ph: "e.g. Evidence of product adoption", hint: "Shown on your fund profile." })}
+        </fieldset>
+        )}
+        {section === "terms" && (
+        <fieldset className="space-y-4">
+          <legend className="sr-only">Terms</legend>
+          <p className="text-[13px] text-ink-muted">For your reference on the fund profile; not used in scoring.</p>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {field("min_check_size", "Min Check ($)", { ph: "250000", type: "number" })}
+            {field("max_check_size", "Max Check ($)", { ph: "1500000", type: "number" })}
+            {field("target_ownership", "Target Ownership (%)", { ph: "8", type: "number" })}
+          </div>
+        </fieldset>
+        )}
+        {section === "exclusions" && (
+        <fieldset className="space-y-4">
+          <legend className="sr-only">Exclusions</legend>
+          <p className="text-[13px] text-ink-muted">A company matching any exclusion gets a fit score of 5–8 out of 100, whatever else matches. Separate entries with commas.</p>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {field("excluded_sectors", "Sectors", { ph: "e.g. gambling" })}
+            {field("excluded_geographies", "Geographies")}
+            {field("excluded_business_models", "Business Models", { ph: "e.g. services agency" })}
+          </div>
+        </fieldset>
+        )}
+        </div>
+        {/* lets Enter in a field submit the form */}
+        <button type="submit" hidden aria-hidden tabIndex={-1} />
+      </form>
+    </Drawer>
+  );
+}

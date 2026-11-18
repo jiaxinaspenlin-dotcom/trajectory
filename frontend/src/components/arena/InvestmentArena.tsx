@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { Debate, Memo } from "@/lib/types";
-import { pct } from "@/lib/format";
+import { asSentence, humanStatus, labelPhrase, pct } from "@/lib/format";
 import { MemoView } from "@/components/MemoView";
+import { Button } from "@/components/ui";
 import { BullCharacter, BearCharacter, RefereeCharacter, CharState } from "./Characters";
 import { DebatePlayer } from "./DebatePlayer";
 import { ArenaBackdrop, Emblem, Flourish, Pedestal, RefereeBadge } from "./stage";
+import { EvidenceRef } from "../EvidenceRef";
 
 type Role = "bull" | "bear" | "referee";
 
@@ -17,11 +19,11 @@ const ROLE_META: Record<Role, { name: string; sub: string; color: string }> = {
 };
 
 function EvidenceRefs({ ids }: { ids: number[] }) {
-  if (!ids.length) return <span className="ml-1 text-[11px] text-caution">unverified</span>;
+  if (!ids.length) return <span className="ml-1 text-xs text-caution">Unverified</span>;
   return (
-    <span className="ml-1 text-[11px] text-ink-muted">
+    <span className="ml-1 text-xs text-ink-muted">
       {ids.slice(0, 6).map((id) => (
-        <span key={id} className="mr-1 rounded bg-surface-sunken px-1 font-mono">E{id}</span>
+        <EvidenceRef key={id} id={id} />
       ))}
     </span>
   );
@@ -104,7 +106,7 @@ export function InvestmentArena({
             type="button"
             aria-pressed={pinned === role}
             aria-label={`${meta.name}. ${bubbleFor(role)} Activate to pin the detailed analysis.`}
-            className="rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+            className="press rounded-xl transition-transform duration-base ease-out hover:-translate-y-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
             onMouseEnter={() => setHovered(role)}
             onMouseLeave={() => setHovered(null)}
             onFocus={() => setHovered(role)}
@@ -131,7 +133,7 @@ export function InvestmentArena({
         <ArenaBackdrop />
         <div className="relative z-10 px-4 pb-5 pt-5">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] text-ink-muted">v{debate.version} · {debate.generated_by}</span>
+            <span className="text-xs text-ink-muted">{`v${debate.version} · ${humanStatus(debate.generated_by)}`}</span>
             {expandable && (
               <button className="btn-ghost text-xs" onClick={() => setExpanded(true)}>Expand Full Debate ↗</button>
             )}
@@ -143,7 +145,7 @@ export function InvestmentArena({
             <h3 className="text-center text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">Investment Arena</h3>
             <Flourish side="right" />
           </div>
-          <p className="mt-1 text-center text-xs text-ink-muted">
+          <p data-print-hide className="mt-1 text-center text-xs text-ink-muted">
             Hover or focus a character for its case; click to pin the full analysis.
           </p>
 
@@ -159,12 +161,12 @@ export function InvestmentArena({
       {referee && (
         <div className="border-t border-line bg-brand-wash px-5 py-3 text-center">
           <div className="label text-brand">Referee Recommends</div>
-          <div className="text-lg font-semibold text-brand">{referee.recommended_action}</div>
+          <div className="text-lg font-semibold text-brand">{humanStatus(referee.recommended_action)}</div>
           <div className="text-xs text-ink-muted">
             Confidence {pct(referee.confidence)} ·{" "}
             {referee.final_decision_supportable
-              ? "final decision currently supportable"
-              : "not yet decisive — more evidence needed"}
+              ? "Final Decision Currently Supportable"
+              : "Not Yet Decisive — More Evidence Needed"}
           </div>
         </div>
       )}
@@ -187,7 +189,7 @@ export function InvestmentArena({
         <div className="border-t border-line" data-testid="arena-memo">
           <button
             type="button"
-            className="flex w-full items-center justify-between px-5 py-3 text-left transition-colors hover:bg-surface-sunken"
+            className="press flex w-full items-center justify-between px-5 py-3 text-left transition-colors duration-fast hover:bg-surface-sunken"
             aria-expanded={memoOpen}
             onClick={() => setMemoOpen((v) => !v)}
           >
@@ -197,24 +199,18 @@ export function InvestmentArena({
                 Full evidence-backed write-up — every standard section, missing data labeled, never invented.
               </span>
             </span>
-            <span className={`text-ink-muted transition-transform ${memoOpen ? "rotate-180" : ""}`}>▾</span>
+            <span className={`text-ink-muted transition-transform duration-base ease-out ${memoOpen ? "rotate-180" : ""}`}>▾</span>
           </button>
 
           {memoOpen && (
-            <div className="border-t border-line bg-surface-sunken/40 px-5 py-4">
+            <div className="animate-fade border-t border-line bg-surface-sunken/40 px-5 py-4">
               {memo ? (
                 <MemoView memo={memo} />
               ) : (
                 <div className="rounded-lg border border-line bg-white p-4 text-sm text-ink-muted">
                   No memo generated yet.{" "}
                   {onGenerateMemo ? (
-                    <button
-                      className="btn-primary ml-1"
-                      onClick={onGenerateMemo}
-                      disabled={memoBusy}
-                    >
-                      {memoBusy ? "Generating…" : "Generate memo"}
-                    </button>
+                    <Button variant="primary" className="ml-1" onClick={onGenerateMemo} busy={memoBusy}>Generate Memo</Button>
                   ) : (
                     <span>Run analysis to generate the full memo.</span>
                   )}
@@ -235,11 +231,11 @@ function SideDetail({ title, tone, argument }: { title: string; tone: string; ar
   return (
     <div>
       <h4 className={`text-sm font-semibold ${tone}`}>{title}</h4>
-      <p className="mt-1 text-sm font-medium text-ink">{argument.headline}</p>
+      <p className="mt-1 text-sm font-medium text-ink">{labelPhrase(argument.headline)}</p>
       <ul className="mt-2 space-y-2">
         {argument.points.map((p, i) => (
           <li key={i} className="text-sm text-ink-soft">
-            • {p.text}
+            • {asSentence(p.text)}
             <EvidenceRefs ids={p.evidence_ids} />
           </li>
         ))}
@@ -256,18 +252,18 @@ function RefereeDetail({ referee }: { referee: NonNullable<Debate["referee"]> })
       <dl className="mt-3 grid gap-3 sm:grid-cols-2">
         <div>
           <dt className="label">Strongest Bull Point</dt>
-          <dd className="text-sm text-ink-soft">{referee.strongest_bull_point}</dd>
+          <dd className="text-sm text-ink-soft">{asSentence(referee.strongest_bull_point)}</dd>
         </div>
         <div>
           <dt className="label">Strongest Bear Point</dt>
-          <dd className="text-sm text-ink-soft">{referee.strongest_bear_point}</dd>
+          <dd className="text-sm text-ink-soft">{asSentence(referee.strongest_bear_point)}</dd>
         </div>
       </dl>
       {referee.unresolved_questions.length > 0 && (
         <div className="mt-3">
           <div className="label">Unresolved Questions</div>
           <ul className="mt-1 list-inside list-disc text-sm text-ink-soft">
-            {referee.unresolved_questions.map((q, i) => <li key={i}>{q}</li>)}
+            {referee.unresolved_questions.map((q, i) => <li key={i}>{asSentence(q)}</li>)}
           </ul>
         </div>
       )}
@@ -275,12 +271,12 @@ function RefereeDetail({ referee }: { referee: NonNullable<Debate["referee"]> })
         <div className="mt-3">
           <div className="label">Required Diligence</div>
           <ul className="mt-1 list-inside list-disc text-sm text-ink-soft">
-            {referee.required_diligence.map((q, i) => <li key={i}>{q}</li>)}
+            {referee.required_diligence.map((q, i) => <li key={i}>{labelPhrase(q)}</li>)}
           </ul>
         </div>
       )}
       <p className="mt-3 text-xs text-ink-muted">
-        Evidence that would change the call: {referee.evidence_that_would_change}
+        Evidence That Would Change the Call: <span data-content>{referee.evidence_that_would_change}</span>
       </p>
     </div>
   );
