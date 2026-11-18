@@ -53,18 +53,13 @@ export function cardHref(it: DeckItem): string {
 
 export const dashboardCardHref = (id: number | null | undefined) => (id ? `/vc?card=${id}` : "/vc");
 
-// Records this browser has decided or dismissed are done here, even if the shared
-// queue hasn't caught up.
-export function openItems(queue: DeckItem[], decided: Record<number, unknown>, shortlist: Record<number, string>): DeckItem[] {
-  return queue.filter((a) => !decided[a.opportunity_id] && shortlist[a.opportunity_id] !== "dismissed");
-}
-
-// Counts per kind of work, in deck order, each with the first card of its kind.
+// Counts per kind of work, each with the first card of its kind, in the order the
+// kinds first appear in the deck (so the tiles read in the same order as the cards).
 export function deckGroups(items: DeckItem[]): { key: DeckGroup; count: number; first: number; names: string[] }[] {
   return DECK_ORDER.map((key) => {
     const members = items.filter((it) => it.group === key);
     return { key, count: members.length, first: items.findIndex((it) => it.group === key), names: members.map((m) => m.name) };
-  }).filter((g) => g.count > 0);
+  }).filter((g) => g.count > 0).sort((a, b) => a.first - b.first);
 }
 
 // The card after `id` in the deck as it was when the record was opened. If `id`
@@ -73,4 +68,17 @@ export function nextCard(items: DeckItem[], id: number): DeckItem | null {
   const i = items.findIndex((it) => it.opportunity_id === id);
   const rest = i < 0 ? items : items.slice(i + 1);
   return rest.find((it) => it.opportunity_id !== id) ?? null;
+}
+
+// After a decision on `id`: the next record that is still waiting according to
+// the backend (`now`), in the order the deck was in (`before`). It continues from
+// where `id` sat; with nothing left after it, the first still-waiting record. The
+// card comes from `now`, so its step and button are current.
+export function nextWaiting(before: DeckItem[], now: DeckItem[], id: number): DeckItem | null {
+  const waiting = new Map(now.filter((it) => it.opportunity_id !== id).map((it) => [it.opportunity_id, it]));
+  const i = before.findIndex((it) => it.opportunity_id === id);
+  for (const it of before.slice(i + 1)) if (waiting.has(it.opportunity_id)) return waiting.get(it.opportunity_id)!;
+  // records that began waiting since, then anything before `id`
+  return now.find((it) => it.opportunity_id !== id && !before.some((b) => b.opportunity_id === it.opportunity_id))
+    ?? now.find((it) => it.opportunity_id !== id) ?? null;
 }

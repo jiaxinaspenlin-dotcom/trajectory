@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
@@ -16,7 +16,7 @@ import { ClaimsTable } from "@/components/ClaimsTable";
 import { FounderScoreBreakdown } from "@/components/FounderScoreBreakdown";
 import { HumanDecisionPanel } from "@/components/HumanDecisionPanel";
 import { decisionReasons } from "@/lib/decision";
-import { dashboardCardHref, nextCard } from "@/lib/deck";
+import { dashboardCardHref, DeckItem, nextWaiting } from "@/lib/deck";
 import { useDeck } from "@/lib/useDeck";
 import { DeckStrip } from "@/components/DeckStrip";
 import { ApplicationDetail, ApplicationScreen, LeadEvidence } from "@/components/RecordFocus";
@@ -69,11 +69,20 @@ function OpportunityRecord() {
   // the deck as it was when this record opened: for the position strip and for
   // "Next" after a decision
   const deck = useDeck(fromDeck || tab === "decision");
+  // after a decision, the next record still waiting according to the backend
+  const [afterDecision, setAfterDecision] = useState<DeckItem | null | undefined>(undefined);
+  const decided = useCallback(async () => {
+    reloadRef.current?.();
+    const now = await deck.refresh();
+    if (now && deck.items) setAfterDecision(nextWaiting(deck.items, now, Number(id)));
+  }, [deck, id]);
   useEffect(() => {
     const legacy = LEGACY_HASH[window.location.hash];
     if (legacy && !params.get("tab")) router.replace(legacy === "overview" ? pathname : `${pathname}?tab=${legacy}`, { scroll: false });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const { data: o, loading, error, reload } = useFetch<Opportunity>(`/api/opportunities/${id}`);
+  const reloadRef = useRef(reload);
+  reloadRef.current = reload;
   const scope = o?.company?.id
     ? `company_id=${o.company.id}`
     : o?.founder?.id
@@ -216,6 +225,9 @@ function OpportunityRecord() {
   const shortlist = shortlistOf(o, myStatus);
   const step = o.next_step ?? null;
   const claimCount = claims.data?.items.length ?? 0;
+  // the card after this one: as the backend has it after a decision made here, or
+  // (for a decision recorded earlier) as the queue stood when the page opened
+  const nextAfter = afterDecision !== undefined ? afterDecision : deck.items ? nextWaiting(deck.items, deck.items, o.id) : undefined;
 
   // the ONE primary action for this record, from its next step
   const arrow = <ArrowRightIcon size={16} className="transition-transform duration-base ease-out group-hover:translate-x-0.5" />;
@@ -254,7 +266,7 @@ function OpportunityRecord() {
     {/* capped so long analysis text keeps a comfortable line length on wide screens */}
     <div className="space-y-8">
       <div className="animate-rise space-y-3">
-        {fromDeck && <DeckStrip items={deck} id={o.id} />}
+        {fromDeck && <DeckStrip items={deck.items} id={o.id} />}
         <nav aria-label="Breadcrumb" className="flex items-center text-[13px] text-ink-muted">
           {o.entry_type === "outbound" && <><Link href="/vc/founders" className="link text-ink-muted hover:text-ink">Founders</Link><span className="mx-1.5 text-ink-faint">/</span></>}
           {inPipeline && <><Link href={`/vc/pipeline?stage=${o.stage}`} className="link text-ink-muted hover:text-ink">Pipeline</Link><span className="mx-1.5 text-ink-faint">/</span></>}
@@ -470,9 +482,9 @@ function OpportunityRecord() {
                 opportunityId={o.id}
                 recommendation={o.current_recommendation || null}
                 why={decisionReasons(o, o.current_recommendation?.action ?? null)}
-                next={deck ? nextCard(deck, o.id) : undefined}
-                dashboardHref={dashboardCardHref(deck ? nextCard(deck, o.id)?.opportunity_id : null)}
-                onDecision={reload}
+                next={nextAfter}
+                dashboardHref={dashboardCardHref(nextAfter?.opportunity_id)}
+                onDecision={decided}
                 savedLocal={myDecision}
                 onSavedLocal={(d) => { saveMyDecision(o.id, d); setMyDecision(d); }}
               />

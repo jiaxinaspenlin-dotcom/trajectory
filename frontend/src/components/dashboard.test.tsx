@@ -148,12 +148,35 @@ describe("Dashboard deck", () => {
     expect(push).not.toHaveBeenCalled();
   });
 
-  it("drops what this browser already decided or dismissed", async () => {
+  it("is the shared queue: a decision or dismissal in this browser doesn't hide a card", async () => {
     populated();
-    localStorage.setItem("trajectory_investor_decisions", JSON.stringify({ 3: { decision: "advance" } }));
+    localStorage.setItem("trajectory_investor_decisions", JSON.stringify({ 3: { decision: "approved" } }));
+    localStorage.setItem("trajectory_investor_pipeline", JSON.stringify({ 5: "dismissed" }));
     await renderDashboard();
-    expect(within(card()).getByText("PayMesh")).toBeInTheDocument();
-    expect(card()).toHaveAttribute("aria-label", "1 of 4");
+    expect(within(card()).getByText("Inferra")).toBeInTheDocument();
+    expect(card()).toHaveAttribute("aria-label", "1 of 5");
+  });
+
+  it("after a decision, shows the record with its new step from the backend, and the counts agree", async () => {
+    populated();
+    // the backend after Continue Diligence on Inferra: open diligence is its next step
+    (fetched["/api/dashboard"] as { action_queue: unknown[]; queue_groups: unknown[] }).action_queue = [
+      queue[1], queue[2], queue[3], queue[4],
+      { ...item(3, "Inferra", "diligence", "diligence", "resolve_diligence", null), next_action: "Resolve 4 Diligence Questions", priority: 3 },
+    ];
+    search = new URLSearchParams("card=3");
+    await renderDashboard();
+    expect(card()).toHaveAttribute("aria-label", "5 of 5");
+    expect(within(card()).getByText("Inferra")).toBeInTheDocument();
+    expect(within(card()).getByText("Open Diligence")).toBeInTheDocument();
+    expect(within(card()).getByRole("link", { name: /Resolve 4 Diligence Questions/ })).toHaveAttribute("href", "/vc/opportunities/3/diligence?from=deck");
+    const tiles = within(screen.getByRole("region", { name: "Jump to a Kind of Work" })).getAllByRole("button");
+    // tiles in the order their first cards sit in the deck: diligence (card 5) after the leads (3 and 4)
+    expect(tiles.map((t) => [t.querySelector(".sr-only")!.textContent, t.querySelector(".font-medium.text-ink")!.textContent])).toEqual([
+      ["1", "Recommendation to Review"], ["1", "Application to Review"], ["2", "New Leads"], ["1", "Deal with Open Diligence"],
+    ]);
+    expect(tiles[3]).toHaveAttribute("aria-current", "true");
+    expect(screen.getByText("5 Waiting")).toBeInTheDocument();
   });
 });
 

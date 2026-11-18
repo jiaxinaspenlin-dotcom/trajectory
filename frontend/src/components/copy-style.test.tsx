@@ -603,7 +603,7 @@ describe("every route uses Title Case labels", () => {
   it("/vc/opportunities/[id]: opened from the Dashboard deck", async () => {
     const card = (id: number, name: string) => ({ opportunity_id: id, name, founder_name: null, entry_type: "outbound", stage: "diligence", next_action: "Review Recommendation",
       next_action_key: "review_recommendation", next_action_detail: "Recommended: Monitor", priority: 1, age_days: 0, waiting_since: "", group: "recommendation" });
-    fetched["/api/dashboard"] = { action_queue: [card(3, "Inferra"), card(1, "PayMesh"), card(4, "TerraSignal")] };
+    gets["/api/dashboard"] = { action_queue: [card(3, "Inferra"), card(1, "PayMesh"), card(4, "TerraSignal")] };
     await recordWith(opportunity, "overview", "from=deck");
     await flush();
     const strip = screen.getByTestId("deck-strip");

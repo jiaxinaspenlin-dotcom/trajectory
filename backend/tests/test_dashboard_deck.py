@@ -35,3 +35,25 @@ def test_queue_groups():
     assert queue_group("diligence", "resolve_diligence") == "diligence"
     assert queue_group("screening", "run_analysis") == "analysis"
     assert queue_group("screening", "generate_memo") == "memo"
+
+
+def test_a_decided_record_stays_in_the_deck_with_its_new_step(client, seeded):
+    before = client.get("/api/dashboard").json()["action_queue"]
+    rec = next(x for x in before if x["group"] == "recommendation")
+    opp_id = rec["opportunity_id"]
+    r = client.post(f"/api/opportunities/{opp_id}/decision", json={
+        "decided_by": "Demo Investor", "decision": "approved", "chosen_action": "Continue Diligence", "notes": "",
+    })
+    assert r.status_code == 200
+
+    d = client.get("/api/dashboard").json()
+    after = {x["opportunity_id"]: x for x in d["action_queue"]}
+    # still waiting, now for its open diligence, as a card for that step
+    assert opp_id in after
+    assert after[opp_id]["next_action_key"] == "resolve_diligence"
+    assert after[opp_id]["group"] == "diligence"
+    assert after[opp_id]["next_action"].startswith("Resolve ")
+    # the counts still add up to the deck
+    assert sum(g["count"] for g in d["queue_groups"]) == len(d["action_queue"])
+    # nothing left the deck: the decided record is still waiting on something
+    assert {x["opportunity_id"] for x in before} == set(after)

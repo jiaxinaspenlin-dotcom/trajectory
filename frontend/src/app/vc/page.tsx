@@ -12,8 +12,7 @@ import { humanStatus, sourceName } from "@/lib/format";
 import { evidenceHref, stageDot } from "@/lib/pipeline";
 import { accountScope } from "@/lib/auth";
 import { useSeen } from "@/lib/motion";
-import { getMyDecisions, getPipeline, LocalDecision, PipelineStatus } from "@/lib/myWorkspace";
-import { cardHref, DECK_GROUPS, DeckItem, deckGroups, openItems } from "@/lib/deck";
+import { cardHref, DECK_GROUPS, DeckItem, deckGroups } from "@/lib/deck";
 
 interface Dashboard {
   thesis: { fund_name: string; sectors: string[]; stages: string[]; geographies: string[] } | null;
@@ -43,13 +42,6 @@ function DashboardContent() {
   const params = useSearchParams();
   const [tourOpen, setTourOpen] = useState(false);
   const [tourChecked, setTourChecked] = useState(false);
-  // per-browser workspace overlay (saved / monitoring / dismissed + decisions)
-  const [pipeline, setPipeline] = useState<Record<number, PipelineStatus>>({});
-  const [decisions, setDecisions] = useState<Record<number, LocalDecision>>({});
-  useEffect(() => {
-    setPipeline(getPipeline());
-    setDecisions(getMyDecisions());
-  }, []);
 
   // Auto-start the tour the first time this investor reaches the dashboard,
   // once the panels the tour anchors to have rendered.
@@ -82,9 +74,10 @@ function DashboardContent() {
   if (error) return <div className="space-y-10">{header}<ErrorState message={error} onRetry={reload} /></div>;
   if (!data) return null;
 
-  // Shared records don't know what this browser decided or dismissed: drop those.
-  // The deck is every other waiting record, in the queue's order.
-  const items = openItems(data.action_queue || [], decisions, pipeline);
+  // The deck is the shared queue as the backend has it: every waiting record, in
+  // its order. A record decided here stays while it has a next step (as a card for
+  // that step) and leaves once nothing is waiting on it.
+  const items = data.action_queue || [];
   const wanted = Number(params.get("card"));
   const found = items.findIndex((it) => it.opportunity_id === wanted);
   // a card that's no longer waiting falls back to the first
