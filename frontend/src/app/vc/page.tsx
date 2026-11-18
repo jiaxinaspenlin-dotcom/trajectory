@@ -7,11 +7,11 @@ import { useFetch } from "@/lib/useFetch";
 import { CountUp, ErrorState, PageHeader, Reveal, Skeleton } from "@/components/ui";
 import { DASHBOARD_TOUR, GuidedTour } from "@/components/GuidedTour";
 import { Deck } from "@/components/Deck";
+import { StageFlow } from "@/components/StageFlow";
 import { ArrowRightIcon, CheckIcon } from "@/components/icons";
 import { humanStatus, sourceName } from "@/lib/format";
 import { evidenceHref, stageDot } from "@/lib/pipeline";
 import { accountScope } from "@/lib/auth";
-import { useSeen } from "@/lib/motion";
 import { cardHref, DECK_GROUPS, DeckItem, deckGroups } from "@/lib/deck";
 
 interface Dashboard {
@@ -234,22 +234,10 @@ function SetupStep({ step, total, title, body, href, cta }: { step: number; tota
 // The four stages as one bar. Each stage's share fills in on first view; hovering
 // or focusing a stage shows its count and what's in it; clicking opens it.
 function StageBar({ counts, names }: { counts: Record<string, number>; names: Record<string, string[]> }) {
-  const [ref, seen] = useSeen<HTMLDivElement>();
   const [hover, setHover] = useState<string | null>(null);
-  const total = STAGES.reduce((a, s) => a + (counts[s] || 0), 0) || 1;
   return (
-    <div ref={ref} onMouseLeave={() => setHover(null)}>
-      <div className="flex h-3 w-full gap-1 overflow-hidden rounded-full" aria-hidden>
-        {STAGES.map((s, i) => {
-          const n = counts[s] || 0;
-          if (!n) return null;
-          return (
-            <Link key={s} href={STAGE_LINKS[s]} tabIndex={-1} onMouseEnter={() => setHover(s)}
-              className={`h-full origin-left rounded-full transition-[transform,opacity] duration-[500ms] ease-out ${stageDot(s)} ${hover && hover !== s ? "opacity-35" : ""}`}
-              style={{ flexGrow: n / total, transform: `scaleX(${seen ? 1 : 0})`, transitionDelay: seen ? `${i * 90}ms` : "0ms" }} />
-          );
-        })}
-      </div>
+    <div onMouseLeave={() => setHover(null)}>
+      <StageFlow counts={counts} hover={hover} onHover={setHover} hrefFor={(s) => STAGE_LINKS[s]} />
       <nav aria-label="Pipeline Summary" className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         {STAGES.map((s) => {
           const n = counts[s] || 0;

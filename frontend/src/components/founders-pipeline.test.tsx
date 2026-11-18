@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { FoundersTable } from "./FoundersTable";
 import { PipelineTable } from "./PipelineTable";
 import { filterDeals, leadStatus, matchesFounderView, parseSource, parseStage, sortDeals, sortLeads } from "@/lib/pipeline";
@@ -111,37 +111,42 @@ describe("FoundersTable sorting", () => {
   });
 });
 
-describe("PipelineTable", () => {
-  it("shows source, stage, next action, and honest missing fit; the row's action appears once", () => {
-    render(<PipelineTable deals={[deal()]} />);
+describe("PipelineTable (list view)", () => {
+  const table = (deals: PipelineDeal[], extra: Partial<React.ComponentProps<typeof PipelineTable>> = {}) =>
+    render(<PipelineTable deals={deals} sort="queue" dir="desc" onSort={() => {}} selected={null} onSelect={() => {}} {...extra} />);
+
+  it("shows source, stage, next action and honest missing fit; a row opens the preview", () => {
+    const onSelect = vi.fn();
+    table([deal()], { onSelect });
     const row = screen.getByTestId("deal-row-11");
     expect(within(row).getByText(/Outbound ·/)).toBeInTheDocument();
     expect(within(row).getByText("Screening")).toBeInTheDocument();
-    // the next action is the row's one link, to where it's done
-    expect(within(row).getAllByRole("link").map((l) => [l.textContent, l.getAttribute("href")])).toEqual([["Run analysis", "/vc/opportunities/11"]]);
     expect(within(row).getByText("No Company")).toBeInTheDocument();
-    // the whole row opens it too
-    fireEvent.click(within(row).getByText("Ada Builder"));
-    expect(push).toHaveBeenCalledWith("/vc/opportunities/11");
+    fireEvent.click(row);
+    expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ id: 11 }));
   });
 
-  it("links a recommendation awaiting review to the decision panel", () => {
-    render(<PipelineTable deals={[deal({ next_action: "Review recommendation", next_action_key: "review_recommendation", next_action_detail: "Recommended: Continue diligence", priority: 1 })]} />);
-    const row = screen.getByTestId("deal-row-11");
-    expect(within(row).getByRole("link", { name: /Review recommendation/ })).toHaveAttribute("href", "/vc/opportunities/11?tab=decision");
-    expect(within(row).getByText("Recommended: Continue diligence")).toBeInTheDocument();
-    expect(within(row).getByLabelText("Awaiting Your Review")).toBeInTheDocument();
+  it("marks a review waiting on you, and a deal with nothing waiting", () => {
+    table([deal({ next_action: "Review Recommendation", next_action_key: "review_recommendation", next_action_detail: "Recommended: Continue Diligence", priority: 1 })]);
+    expect(within(screen.getByTestId("deal-row-11")).getByLabelText("Waiting on You")).toBeInTheDocument();
+    cleanup();
+    table([deal({ next_action: null, priority: null, stage: "decision" })]);
+    expect(within(screen.getByTestId("deal-row-11")).getByText("Nothing Waiting")).toBeInTheDocument();
   });
 
-  it("marks decided deals as having no next action", () => {
-    render(<PipelineTable deals={[deal({ next_action: null, priority: null, stage: "decision" })]} />);
-    expect(within(screen.getByTestId("deal-row-11")).getByText("None — Decided")).toBeInTheDocument();
+  it("sorts by its column headers", () => {
+    const onSort = vi.fn();
+    table([deal()], { sort: "fit", dir: "desc", onSort });
+    expect(screen.getByRole("columnheader", { name: /Thesis Fit/ })).toHaveAttribute("aria-sort", "descending");
+    expect(screen.getByRole("columnheader", { name: /Waiting/ })).toHaveAttribute("aria-sort", "none");
+    fireEvent.click(screen.getByRole("button", { name: "Waiting" }));
+    expect(onSort).toHaveBeenCalledWith("waiting");
   });
 
-  it("lays deals out as a list on narrower screens, with the same single action", () => {
-    render(<PipelineTable deals={[deal()]} />);
-    const card = screen.getByTestId("deal-card-11");
-    expect(within(card).getAllByRole("link")).toHaveLength(1);
+  it("marks deals that have waited 7 days or more", () => {
+    table([deal({ id: 1, age_days: 6 }), deal({ id: 2, age_days: 7 })]);
+    expect(within(screen.getByTestId("deal-row-1")).getByText("6d").className).not.toContain("text-caution");
+    expect(within(screen.getByTestId("deal-row-2")).getByText("7d").className).toContain("text-caution");
   });
 });
 

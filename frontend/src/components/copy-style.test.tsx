@@ -486,6 +486,24 @@ describe("every route uses Title Case labels", () => {
     expectCleanCopy();
   });
 
+  it("/vc/pipeline: a deal's preview, and the list view", async () => {
+    pathname = "/vc/pipeline";
+    fetched["/api/pipeline"] = { items: [{ ...opportunity, ...queueItem, id: 1, stage: "diligence", age_days: 9 }] };
+    fetched["/api/dashboard"] = dashboard;
+    fetched["/api/opportunities/1"] = opportunity;
+    search = new URLSearchParams("deal=1");
+    const { default: Pipeline } = await import("@/app/vc/pipeline/page");
+    render(<Pipeline />);
+    await flush();
+    expect(screen.getByTestId("deal-preview")).toBeInTheDocument();
+    expectCleanCopy();
+    cleanup();
+    search = new URLSearchParams("view=list&deal=1");
+    render(<Pipeline />);
+    await flush();
+    expectCleanCopy();
+  });
+
   it("/vc/fund: profile with stale fit scores, the editor's sections, and its errors", async () => {
     gets["/api/thesis"] = { stale_fit_count: 2, thesis };
     const { default: Fund } = await import("@/app/vc/fund/page");
